@@ -1,0 +1,420 @@
+import { motion } from "framer-motion"
+import { useState, useRef } from "react"
+import { useNavigate } from "react-router-dom"
+
+const SPEAKERS = [
+  "Dr. Aris Thorne",
+  "Sarah Jenkins",
+  "Michael Chen",
+  "Dr. Marcus Aurelius",
+]
+
+const TIMEZONES = [
+  "GMT-5 (Eastern Time)",
+  "GMT-6 (Central Time)",
+  "GMT-7 (Mountain Time)",
+  "GMT-8 (Pacific Time)",
+  "GMT+0 (UTC)",
+  "GMT+7 (Indochina Time)",
+]
+
+export default function CreateEventPage() {
+  const navigate = useNavigate()
+
+  // Event Essentials
+  const [eventName, setEventName] = useState("")
+  const [category, setCategory] = useState("Workshop")
+  const [summary, setSummary] = useState("")
+
+  // Speaker & Content
+  const [speaker, setSpeaker] = useState("")
+  const [description, setDescription] = useState("")
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const bannerRef = useRef<HTMLInputElement>(null)
+
+  // Date & Time
+  const [eventDate, setEventDate] = useState("")
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
+  const [timezone, setTimezone] = useState("GMT-5 (Eastern Time)")
+
+  // Location
+  const [locationType, setLocationType] = useState<"Physical" | "Online">("Physical")
+  const [venue, setVenue] = useState("")
+
+  // Registration
+  const [capacity, setCapacity] = useState(50)
+  const [regDeadline, setRegDeadline] = useState("")
+
+  const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBannerPreview(URL.createObjectURL(file))
+  }
+
+  const applyFormat = (tag: string) => {
+    const textarea = document.getElementById("event-desc") as HTMLTextAreaElement
+    if (!textarea) return
+    const { selectionStart: s, selectionEnd: e, value } = textarea
+    const selected = value.slice(s, e)
+    let wrapped = selected
+    if (tag === "bold") wrapped = `**${selected}**`
+    else if (tag === "italic") wrapped = `_${selected}_`
+    else if (tag === "list") wrapped = `\n- ${selected}`
+    setDescription(value.slice(0, s) + wrapped + value.slice(e))
+  }
+
+  const saveEvent = (status: "open" | "draft") => {
+    const existing = JSON.parse(localStorage.getItem("localEvents") ?? "[]")
+    const fmt = (d: string) => {
+      if (!d) return "TBD"
+      const dt = new Date(d)
+      return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    }
+    const newEvent = {
+      id: `EV-LOCAL-${Date.now()}`,
+      name: eventName.trim() || "Untitled Event",
+      type: category.toUpperCase(),
+      date: fmt(eventDate),
+      time: startTime ? `${startTime} ${timezone.split(" ")[0]}` : "TBD",
+      location: locationType === "Online" ? "Online" : venue.trim() || "TBD",
+      locationIcon: locationType === "Online" ? "videocam" : "location_on",
+      registered: 0,
+      capacity,
+      status,
+    }
+    localStorage.setItem("localEvents", JSON.stringify([...existing, newEvent]))
+    navigate("/dashboard/events")
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8"
+    >
+      {/* Header */}
+      <section>
+        <button
+          onClick={() => navigate("/dashboard/events")}
+          className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-sm font-semibold mb-3 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Back to Events
+        </button>
+        <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">
+          Create New Event
+        </h2>
+        <p className="text-slate-500 mt-2 font-body">
+          Design a high-impact leadership gathering for the community.
+        </p>
+      </section>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Event Essentials */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+              </div>
+              <h3 className="text-xl font-extrabold font-headline text-slate-900">Event Essentials</h3>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Event Name</label>
+                <input
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="e.g. Q4 Executive Leadership Summit"
+                  className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none transition-colors"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Category</label>
+                  <div className="relative border-b-2 border-slate-200 focus-within:border-secondary transition-colors">
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full appearance-none bg-transparent py-3 text-sm font-semibold text-slate-700 focus:outline-none pr-8"
+                    >
+                      <option>Workshop</option>
+                      <option>Talk</option>
+                      <option>Summit</option>
+                      <option>Webinar</option>
+                    </select>
+                    <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Short Summary</label>
+                  <input
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="One sentence pitch..."
+                    className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Speaker & Content */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
+                <span className="material-symbols-outlined text-secondary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>description</span>
+              </div>
+              <h3 className="text-xl font-extrabold font-headline text-slate-900">Speaker & Content</h3>
+            </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Speaker */}
+                <div>
+                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Speaker / Instructor</label>
+                  <div className="relative border-b-2 border-slate-200 focus-within:border-secondary transition-colors">
+                    <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-slate-300 text-[18px]">person</span>
+                    <select
+                      value={speaker}
+                      onChange={(e) => setSpeaker(e.target.value)}
+                      className="w-full appearance-none bg-transparent py-3 pl-6 text-sm font-semibold text-slate-700 focus:outline-none pr-8"
+                    >
+                      <option value="">Select an expert...</option>
+                      {SPEAKERS.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+
+                {/* Banner */}
+                <div>
+                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Banner Image</label>
+                  <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
+                  <button
+                    onClick={() => bannerRef.current?.click()}
+                    className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/40 rounded-xl py-4 flex flex-col items-center justify-center gap-1 overflow-hidden relative group transition-colors"
+                    style={{ minHeight: 80 }}
+                  >
+                    {bannerPreview ? (
+                      <>
+                        <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="material-symbols-outlined text-white text-2xl">cloud_upload</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-slate-300 text-2xl">cloud_upload</span>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Upload Banner (16:9)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Event Description</label>
+                <div className="border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-secondary/20">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-100 bg-surface-container-low">
+                    {[
+                      { icon: "format_bold", tag: "bold", title: "Bold" },
+                      { icon: "format_italic", tag: "italic", title: "Italic" },
+                      { icon: "format_list_bulleted", tag: "list", title: "List" },
+                      { icon: "link", tag: "link", title: "Link" },
+                    ].map(({ icon, tag, title }) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        title={title}
+                        onClick={() => applyFormat(tag)}
+                        className="p-1.5 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    id="event-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    placeholder="Craft a narrative that inspires participation..."
+                    className="w-full px-4 py-4 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none resize-none bg-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+
+          {/* Date & Time */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
+              <h3 className="text-base font-extrabold font-headline text-slate-900">Date & Time</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select Date</label>
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Start</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full bg-surface-container-low rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">End</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full bg-surface-container-low rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Time Zone</label>
+                <div className="relative">
+                  <select
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
+                  >
+                    {TIMEZONES.map((tz) => <option key={tz}>{tz}</option>)}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                <h3 className="text-base font-extrabold font-headline text-slate-900">Location</h3>
+              </div>
+              <div className="flex rounded-lg overflow-hidden border border-slate-200 text-[11px] font-bold">
+                {(["Physical", "Online"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setLocationType(t)}
+                    className={`px-3 py-1.5 transition-colors ${locationType === t ? "bg-secondary text-white" : "text-slate-500 hover:bg-slate-50"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {locationType === "Physical" ? (
+              <div className="space-y-4">
+                <input
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  placeholder="Enter venue address..."
+                  className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                />
+                <div className="w-full h-28 bg-surface-container-low rounded-xl flex flex-col items-center justify-center gap-1 border border-slate-100">
+                  <span className="material-symbols-outlined text-slate-300 text-3xl">map</span>
+                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Interactive Map Integration</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-primary-fixed/10 rounded-xl px-4 py-4">
+                <span className="material-symbols-outlined text-primary-fixed-dim text-2xl">videocam</span>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Online Event</p>
+                  <p className="text-xs text-slate-400 mt-0.5">A meeting link will be sent to registered attendees.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Registration */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
+              <h3 className="text-base font-extrabold font-headline text-slate-900">Registration</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Max Capacity</label>
+                <input
+                  type="number"
+                  value={capacity}
+                  onChange={(e) => setCapacity(Number(e.target.value))}
+                  min={1}
+                  className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Deadline</label>
+                <input
+                  type="date"
+                  value={regDeadline}
+                  onChange={(e) => setRegDeadline(e.target.value)}
+                  className="w-full bg-surface-container-low rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                />
+              </div>
+            </div>
+            <div className="bg-surface-container-low rounded-xl px-4 py-4 flex items-start gap-3">
+              <span className="material-symbols-outlined text-slate-300 text-[20px] mt-0.5">group</span>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Attendee List</p>
+                <p className="text-xs text-slate-400 italic">No participants registered yet. List will populate after publishing.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="flex items-center justify-between pt-4 pb-8 border-t border-slate-100">
+        <button
+          onClick={() => navigate("/dashboard/events")}
+          className="text-slate-500 font-bold text-sm hover:text-slate-700 transition-colors"
+        >
+          Cancel
+        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => saveEvent("draft")}
+            className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors"
+          >
+            Save as Draft
+          </button>
+          <button
+            onClick={() => saveEvent("open")}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-fixed text-on-primary-fixed font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+            Publish Event
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
