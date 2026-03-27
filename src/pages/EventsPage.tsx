@@ -244,56 +244,6 @@ export default function EventsPage() {
             </div>
           </div>
 
-          {/* Registration Velocity */}
-          <div className="bg-secondary p-6 rounded-xl text-white relative overflow-hidden">
-            <div className="absolute -top-8 -right-8 w-36 h-36 bg-white/10 rounded-full blur-3xl"></div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-secondary-container mb-3">
-              Registration Velocity
-            </p>
-            <p className="text-4xl font-extrabold font-headline mb-1">+24%</p>
-            <p className="text-sm text-secondary-container mb-5">New signups since last Monday</p>
-            <div className="flex gap-2 flex-wrap">
-              <span className="text-[10px] font-bold bg-white/15 px-3 py-1.5 rounded-full">
-                3 HIGH-INTENT
-              </span>
-              <span className="text-[10px] font-bold bg-white/15 px-3 py-1.5 rounded-full">
-                SUMMIT READY
-              </span>
-            </div>
-          </div>
-
-          {/* Next Milestone */}
-          <div className="bg-surface-container-lowest p-5 rounded-xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] border-l-4 border-primary-fixed">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Next Milestone
-            </p>
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-on-primary-fixed text-[18px]">event</span>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">Summit Preparation Sync</p>
-                <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px]">schedule</span>
-                  In 2 hours · Video Call
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Leadership Retreat CTA */}
-          <div className="bg-tertiary p-6 rounded-xl text-on-tertiary relative overflow-hidden">
-            <div className="absolute -bottom-8 -right-8 w-36 h-36 bg-black/10 rounded-full blur-3xl"></div>
-            <div className="relative z-10">
-              <p className="text-base font-bold font-headline mb-2">Leadership Retreat 2025</p>
-              <p className="text-sm text-on-tertiary/80 mb-5 leading-relaxed">
-                Planning begins next month. Download the preliminary logistics briefing.
-              </p>
-              <button className="w-full bg-white text-tertiary font-bold text-xs py-2.5 rounded-lg hover:bg-slate-100 transition-colors uppercase tracking-widest">
-                Download PDF
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

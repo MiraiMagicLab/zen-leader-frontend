@@ -107,7 +107,7 @@ export default function CreateEventPage() {
           Create New Event
         </h2>
         <p className="text-slate-500 mt-2 font-body">
-          Design a high-impact leadership gathering for the community.
+          Design a high-impact leadership gathering.
         </p>
       </section>
 

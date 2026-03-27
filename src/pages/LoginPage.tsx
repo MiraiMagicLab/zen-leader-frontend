@@ -1,7 +1,9 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Link, useNavigate } from "react-router-dom"
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
+import { authApi } from "@/lib/api"
+import { authStorage } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,16 +12,31 @@ import { Checkbox } from "@/components/ui/checkbox"
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("zenlender.online@gmail.com")
+  const [password, setPassword] = useState("zen@123")
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate login
-      setTimeout(() => {
+    setError(null)
+
+    try {
+      const resp = await authApi.login({ email, passwordHash: password })
+      if (resp.authenticated && resp.accessToken) {
+        authStorage.setToken(resp.accessToken)
+        navigate("/dashboard")
+      } else {
+        setError("Authentication failed. Please check your credentials.")
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Login failed. Please try again."
+      console.error("Login Error:", err)
+      setError(errorMessage)
+    } finally {
       setIsLoading(false)
-      navigate("/dashboard")
-    }, 1500)
+    }
   }
 
   return (
@@ -34,7 +51,7 @@ export default function LoginPage() {
           <div className="w-6 h-6 bg-[#1F3E72] rounded-md opacity-80" />
         </div>
         <h1 className="text-3xl font-bold text-white mb-1 tracking-tight">Zenleader</h1>
-        <p className="text-blue-100 text-sm opacity-90">Elevating Executive Communities</p>
+        <p className="text-blue-100 text-sm opacity-90">Elevating Executive Leadership</p>
       </motion.div>
 
       {/* Login Card */}
@@ -46,8 +63,19 @@ export default function LoginPage() {
       >
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome Back</h2>
-          <p className="text-slate-500 text-sm">Sign in to access your dashboard and community.</p>
+          <p className="text-slate-500 text-sm">Sign in to access your dashboard.</p>
         </div>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="mb-6 p-4 bg-error/10 border border-error/20 rounded-xl flex items-start gap-3 text-error"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <p className="text-sm font-semibold">{error}</p>
+          </motion.div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
@@ -57,7 +85,8 @@ export default function LoginPage() {
               <Input 
                 id="email" 
                 type="email" 
-                defaultValue="executive@zenleader.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="executive@zenleader.com" 
                 className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-[#1F3E72]/20"
                 required
@@ -77,7 +106,8 @@ export default function LoginPage() {
               <Input 
                 id="password" 
                 type={showPassword ? "text" : "password"} 
-                defaultValue="admin12345"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 h-11 bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-[#1F3E72]/20"
                 required
               />
@@ -108,7 +138,7 @@ export default function LoginPage() {
             className="w-full h-12 bg-[#87C744] hover:bg-[#76AE3B] text-slate-900 font-bold text-lg rounded-xl shadow-lg border-none active:scale-[0.98] transition-all"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
             ) : (
               "Login"
             )}

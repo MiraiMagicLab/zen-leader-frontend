@@ -3,27 +3,45 @@ import { DashboardLayout } from "./components/layout/DashboardLayout"
 import DashboardPage from "./pages/DashboardPage"
 import SettingsPage from "./pages/SettingsPage"
 import LoginPage from "./pages/LoginPage"
-import CommunityPage from "./pages/CommunityPage"
 import EventsPage from "./pages/EventsPage"
 import CreateEventPage from "./pages/CreateEventPage"
 import CourseManagementPage from "./pages/CourseManagementPage"
 import CreateCoursePage from "./pages/CreateCoursePage"
 import EditCoursePage from "./pages/EditCoursePage"
+import CourseDetailPage from "./pages/CourseDetailPage"
+import CourseRunDetailPage from "./pages/CourseRunDetailPage"
 import ProgramManagementPage from "./pages/ProgramManagementPage"
 import CreateProgramPage from "./pages/CreateProgramPage"
+import { authStorage } from "@/lib/storage"
+
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const token = authStorage.getToken()
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+  return <>{children}</>
+}
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/dashboard" element={<DashboardLayout />}>
+      <Route
+        path="/dashboard"
+        element={
+          <AuthGuard>
+            <DashboardLayout />
+          </AuthGuard>
+        }
+      >
         <Route index element={<DashboardPage />} />
-        <Route path="community" element={<CommunityPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/create" element={<CreateEventPage />} />
         <Route path="courses" element={<CourseManagementPage />} />
         <Route path="courses/create" element={<CreateCoursePage />} />
+        <Route path="courses/:id" element={<CourseDetailPage />} />
+        <Route path="runs/:runId" element={<CourseRunDetailPage />} />
         <Route path="courses/:id/edit" element={<EditCoursePage />} />
         <Route path="programs" element={<ProgramManagementPage />} />
         <Route path="programs/create" element={<CreateProgramPage />} />

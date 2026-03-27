@@ -30,12 +30,6 @@ export function DashboardLayout() {
               <span>Dashboard</span>
             </>)}
           </NavLink>
-          <NavLink to="/dashboard/community" className={navLinkClass}>
-            {({ isActive }) => (<>
-              <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>group</span>
-              <span>Community</span>
-            </>)}
-          </NavLink>
           <NavLink to="/dashboard/courses" className={navLinkClass}>
             {({ isActive }) => (<>
               <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>school</span>
@@ -88,18 +82,51 @@ export function DashboardLayout() {
                 <span className="material-symbols-outlined">menu</span>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
-                {/* Simplified Mobile Sidebar content */}
                 <div className="p-6 bg-white h-full flex flex-col">
                   <div className="mb-10">
                     <h1 className="text-xl font-bold text-slate-900 font-headline tracking-tight">Zenleader</h1>
+                    <p className="text-[10px] font-semibold text-secondary uppercase tracking-widest mt-1">Management Portal</p>
                   </div>
                   <nav className="flex-1 space-y-1">
-                    <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-900 font-bold border-r-4 border-primary-fixed bg-surface-container-low transition-all duration-200"><span className="material-symbols-outlined text-primary-fixed-dim" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span> <span className="font-label text-sm">Dashboard</span></Link>
-                    <Link to="/dashboard/community" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100"><span className="material-symbols-outlined">group</span> <span className="font-label text-sm">Community</span></Link>
+                    <NavLink to="/dashboard" end className={navLinkClass}>
+                      {({ isActive }) => (<>
+                        <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>dashboard</span>
+                        <span>Dashboard</span>
+                      </>)}
+                    </NavLink>
+                    <NavLink to="/dashboard/courses" className={navLinkClass}>
+                      {({ isActive }) => (<>
+                        <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>school</span>
+                        <span>Course Management</span>
+                      </>)}
+                    </NavLink>
+                    <NavLink to="/dashboard/programs" className={navLinkClass}>
+                      {({ isActive }) => (<>
+                        <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>folder_special</span>
+                        <span>Programs</span>
+                      </>)}
+                    </NavLink>
+                    <NavLink to="/dashboard/events" className={navLinkClass}>
+                      {({ isActive }) => (<>
+                        <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>event</span>
+                        <span>Events</span>
+                      </>)}
+                    </NavLink>
                   </nav>
-                  <div className="mt-auto border-t pt-6">
-                    <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100">
-                      <span className="material-symbols-outlined">logout</span> <span className="font-label text-sm">Log Out</span>
+                  <div className="mt-6">
+                    <button className="w-full flex items-center justify-center gap-2 bg-primary-fixed text-on-primary-fixed font-bold py-3 rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all">
+                      <span className="material-symbols-outlined text-lg">bolt</span>
+                      <span className="font-label text-sm">Quick Report</span>
+                    </button>
+                  </div>
+                  <div className="mt-auto border-t border-outline-variant/20 pt-6 space-y-1">
+                    <Link to="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
+                      <span className="material-symbols-outlined">help</span>
+                      <span className="font-label text-sm">Support</span>
+                    </Link>
+                    <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
+                      <span className="material-symbols-outlined">logout</span>
+                      <span className="font-label text-sm">Log Out</span>
                     </button>
                   </div>
                 </div>

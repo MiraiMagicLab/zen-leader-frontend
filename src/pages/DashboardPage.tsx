@@ -14,7 +14,7 @@ export default function DashboardPage() {
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">Executive Sanctuary</h2>
-          <p className="text-slate-500 mt-2 font-body">Welcome back, Leader. Here is your community's performance today.</p>
+          <p className="text-slate-500 mt-2 font-body">Welcome back, Leader. Here is the platform's performance overview today.</p>
         </div>
         <button className="flex items-center gap-2 bg-secondary text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all active:scale-95">
           <span className="material-symbols-outlined">download</span>
@@ -79,12 +79,12 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)]">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h4 className="text-xl font-bold text-slate-900 font-headline">Community Activity Overview</h4>
+              <h4 className="text-xl font-bold text-slate-900 font-headline">Platform Activity Overview</h4>
               <p className="text-sm text-slate-500">Real-time engagement trends and discussion metrics.</p>
             </div>
             <div className="flex gap-8">
               <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Forum Topics</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Discussion Topics</p>
                 <p className="text-lg font-bold text-secondary">342</p>
               </div>
               <div className="text-right">
