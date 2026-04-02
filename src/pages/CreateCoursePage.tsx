@@ -63,13 +63,17 @@ const initialCourseRuns: CourseRun[] = [
 // ─── Modal Backdrop ───────────────────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.2 }}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7"
+        onClick={(e) => e.stopPropagation()}
       >
         {children}
       </motion.div>
