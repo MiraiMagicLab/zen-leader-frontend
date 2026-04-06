@@ -12,8 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [email, setEmail] = useState("zenlender.online@gmail.com")
-  const [password, setPassword] = useState("zen@123")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 

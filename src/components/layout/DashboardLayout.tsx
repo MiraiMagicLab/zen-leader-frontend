@@ -1,4 +1,4 @@
-import { NavLink, Link, Outlet } from "react-router-dom"
+import { NavLink, Outlet } from "react-router-dom"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -50,20 +50,9 @@ export function DashboardLayout() {
           </NavLink>
         </nav>
         
-        {/* CTA Action */}
-        <div className="mt-6">
-          <button className="w-full flex items-center justify-center gap-2 bg-primary-fixed text-on-primary-fixed font-bold py-3 rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-lg">bolt</span>
-            <span className="font-label text-sm">Quick Report</span>
-          </button>
-        </div>
-        
+
         {/* Footer Navigation */}
         <div className="mt-auto border-t border-outline-variant/20 pt-6 space-y-1">
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
-            <span className="material-symbols-outlined">help</span>
-            <span className="font-label text-sm">Support</span>
-          </Link>
           <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
             <span className="material-symbols-outlined">logout</span>
             <span className="font-label text-sm">Log Out</span>
@@ -113,17 +102,8 @@ export function DashboardLayout() {
                       </>)}
                     </NavLink>
                   </nav>
-                  <div className="mt-6">
-                    <button className="w-full flex items-center justify-center gap-2 bg-primary-fixed text-on-primary-fixed font-bold py-3 rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all">
-                      <span className="material-symbols-outlined text-lg">bolt</span>
-                      <span className="font-label text-sm">Quick Report</span>
-                    </button>
-                  </div>
+
                   <div className="mt-auto border-t border-outline-variant/20 pt-6 space-y-1">
-                    <Link to="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
-                      <span className="material-symbols-outlined">help</span>
-                      <span className="font-label text-sm">Support</span>
-                    </Link>
                     <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
                       <span className="material-symbols-outlined">logout</span>
                       <span className="font-label text-sm">Log Out</span>
@@ -152,7 +132,7 @@ export function DashboardLayout() {
                 <span className="material-symbols-outlined">grid_view</span>
               </button>
             </div>
-            <div className="h-8 w-[1px] bg-outline-variant/30"></div>
+            <div className="h-8 w-px bg-outline-variant/30"></div>
             <div className="flex items-center gap-3 pl-2 cursor-pointer hover:bg-slate-50 rounded-lg p-1">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-on-surface leading-tight">Admin User</p>

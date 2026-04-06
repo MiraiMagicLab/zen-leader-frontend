@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { programApi, courseApi, courseRunApi, chapterApi, lessonApi, type ProgramResponse } from "@/lib/api"
+import MarkdownEditor from "@/components/MarkdownEditor"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "photo" | "document" | "text"
@@ -389,12 +392,17 @@ function ReviewRunRow({ run, idx }: { run: CourseRun; idx: number }) {
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set())
   const [previewLesson, setPreviewLesson] = useState<LessonItem | null>(null)
   const totalLessons = run.chapters.reduce((a, ch) => a + ch.lessons.length, 0)
-  const toggleChapter = (chId: number) =>
+  const toggleChapter = (chId: number) => {
     setExpandedChapters((prev) => {
       const next = new Set(prev)
-      next.has(chId) ? next.delete(chId) : next.add(chId)
+      if (next.has(chId)) {
+        next.delete(chId)
+      } else {
+        next.add(chId)
+      }
       return next
     })
+  }
   const formatDateTime = (val: string) => {
     if (!val) return "—"
     return new Date(val).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -755,12 +763,12 @@ export default function CreateCoursePage() {
               {/* Description */}
               <div className="bg-white rounded-2xl border border-slate-200 p-7 shadow-sm">
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-3">Course Description</label>
-                <textarea
-                  rows={5}
+                <MarkdownEditor
+                  id="course-desc-create"
                   value={courseDesc}
-                  onChange={(e) => setCourseDesc(e.target.value)}
-                  placeholder="Provide a compelling overview of what leaders will learn..."
-                  className="w-full border border-slate-200 rounded-xl px-5 py-4 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/25 resize-none"
+                  onChange={setCourseDesc}
+                  placeholder={"Provide a compelling overview of what leaders will learn...\n\n## Highlights\n- Point one\n- Point two"}
+                  rows={8}
                 />
               </div>
 
@@ -1015,7 +1023,9 @@ export default function CreateCoursePage() {
                     ))}
                   </div>
                   {courseDesc && (
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-4 border-t border-slate-50 pt-3">{courseDesc}</p>
+                    <div className="text-xs text-slate-500 leading-relaxed border-t border-slate-50 pt-3 prose prose-sm max-w-none prose-headings:text-slate-800 prose-headings:font-bold prose-ul:pl-4 prose-ul:list-disc prose-strong:text-slate-800">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{courseDesc}</ReactMarkdown>
+                    </div>
                   )}
                   <button
                     onClick={() => setStep(1)}

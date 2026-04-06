@@ -5,6 +5,7 @@ import SettingsPage from "./pages/SettingsPage"
 import LoginPage from "./pages/LoginPage"
 import EventsPage from "./pages/EventsPage"
 import CreateEventPage from "./pages/CreateEventPage"
+import EditEventPage from "./pages/EditEventPage"
 import CourseManagementPage from "./pages/CourseManagementPage"
 import CreateCoursePage from "./pages/CreateCoursePage"
 import EditCoursePage from "./pages/EditCoursePage"
@@ -38,6 +39,7 @@ function App() {
         <Route index element={<DashboardPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/create" element={<CreateEventPage />} />
+        <Route path="events/edit/:id" element={<EditEventPage />} />
         <Route path="courses" element={<CourseManagementPage />} />
         <Route path="courses/create" element={<CreateCoursePage />} />
         <Route path="courses/:id" element={<CourseDetailPage />} />

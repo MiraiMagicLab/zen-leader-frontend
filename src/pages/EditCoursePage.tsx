@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
+import MarkdownEditor from "@/components/MarkdownEditor"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "resource" | "live" | "document" | "text" | "photo"
@@ -558,12 +559,13 @@ export default function EditCoursePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Description</label>
-                  <textarea
-                    rows={4}
+                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Course Description</label>
+                  <MarkdownEditor
+                    id="course-desc-edit"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 resize-none bg-surface-container-low"
+                    onChange={setDescription}
+                    placeholder="Mô tả nội dung khóa học...&#10;&#10;## Highlights&#10;- Điểm nổi bật 1&#10;- Điểm nổi bật 2"
+                    rows={8}
                   />
                 </div>
                 <div>

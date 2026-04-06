@@ -1,10 +1,8 @@
 import { motion } from "framer-motion"
-import { useState, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useRef, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { eventApi } from "../lib/api"
 import MarkdownEditor from "../components/MarkdownEditor"
-
-
 
 const TIMEZONES = [
   "GMT-5 (Eastern Time)",
@@ -15,8 +13,12 @@ const TIMEZONES = [
   "GMT+7 (Indochina Time)",
 ]
 
-export default function CreateEventPage() {
+export default function EditEventPage() {
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Event Essentials
   const [eventName, setEventName] = useState("")
@@ -42,6 +44,77 @@ export default function CreateEventPage() {
   // Registration
   const [capacity, setCapacity] = useState(50)
 
+  useEffect(() => {
+    if (!id) return
+    const loadEvent = async () => {
+      try {
+        const ev = await eventApi.getById(id)
+        setEventName(ev.title)
+        setSummary(ev.description || "")
+        
+        // Ensure dates are parsed correctly
+        const startDt = new Date(ev.startTime)
+        const endDt = new Date(ev.endTime)
+
+        // yyyy-mm-dd
+        const pDate = startDt.toLocaleDateString('en-CA') // ensures standard format without tz-shifts
+        setEventDate(pDate)
+
+        // hh:mm
+        const pStart = startDt.toTimeString().slice(0, 5)
+        const pEnd = endDt.toTimeString().slice(0, 5)
+        setStartTime(pStart)
+        setEndTime(pEnd)
+
+        setBannerPreview(ev.thumbnailUrl)
+        
+        if (ev.content) {
+          setDescription(ev.content)
+        }
+
+        if (ev.metadata?.category) {
+          // It's saved as uppercase inside metadata, we can just Capitalize it or use as is
+          const c = String(ev.metadata.category)
+          setCategory(c.charAt(0).toUpperCase() + c.slice(1).toLowerCase())
+        } else if (ev.sessionType) {
+          const cap = ev.sessionType.charAt(0).toUpperCase() + ev.sessionType.slice(1).toLowerCase().replace(/_/g, ' ')
+          setCategory(cap)
+        }
+
+        if (ev.metadata?.speaker) {
+          setSpeaker(String(ev.metadata.speaker))
+        }
+
+        if (ev.metadata?.capacity) {
+          setCapacity(Number(ev.metadata.capacity))
+        }
+
+        if (ev.metadata?.locationType) {
+          setLocationType(String(ev.metadata.locationType) as "Physical" | "Online")
+        } else if (ev.liveLink) {
+          setLocationType("Online")
+        } else if (ev.roomCode) {
+          setLocationType("Physical")
+        }
+
+        if (ev.metadata?.venue) {
+          setVenue(String(ev.metadata.venue))
+        } else if (ev.liveLink) {
+          setVenue(ev.liveLink)
+        } else if (ev.roomCode) {
+          setVenue(ev.roomCode)
+        }
+      } catch (err) {
+        console.error(err)
+        alert("Failed to load event details")
+        navigate("/dashboard/events")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadEvent()
+  }, [id, navigate])
+
   const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -55,7 +128,6 @@ export default function CreateEventPage() {
   }
 
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const saveEvent = async (status: "open" | "draft") => {
     if (!eventName.trim() || !eventDate || !startTime || !endTime) {
@@ -63,6 +135,7 @@ export default function CreateEventPage() {
       return
     }
 
+    if (!id) return;
     setIsSubmitting(true)
     try {
       const startDt = new Date(`${eventDate}T${startTime}:00`)
@@ -85,14 +158,18 @@ export default function CreateEventPage() {
         thumbnailUrl: bannerPreview || undefined
       }
 
-      await eventApi.create(payload)
+      await eventApi.update(id, payload)
       navigate("/dashboard/events")
     } catch (err) {
       console.error(err)
-      alert("Failed to create event")
+      alert("Failed to update event")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-slate-400">Loading Configuration...</div>
   }
 
   return (
@@ -112,10 +189,10 @@ export default function CreateEventPage() {
           Back to Events
         </button>
         <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">
-          Create New Event
+          Edit Event
         </h2>
         <p className="text-slate-500 mt-2 font-body">
-          Design a high-impact leadership gathering.
+          Update the settings and details of your event.
         </p>
       </section>
 
@@ -324,23 +401,6 @@ export default function CreateEventPage() {
                     className="w-full bg-surface-container-low rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                   />
                 </div>
-                {venue.trim() ? (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl px-4 py-3 text-sm font-semibold text-blue-600 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">map</span>
-                    View on Google Maps
-                    <span className="material-symbols-outlined text-[14px] ml-auto">open_in_new</span>
-                  </a>
-                ) : (
-                  <div className="flex items-center gap-2 w-full bg-surface-container-low border border-dashed border-slate-200 rounded-xl px-4 py-3">
-                    <span className="material-symbols-outlined text-slate-300 text-[18px]">map</span>
-                    <span className="text-xs text-slate-300 font-medium">Type an address to preview on map</span>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex items-center gap-3 bg-primary-fixed/10 rounded-xl px-4 py-4">
@@ -392,9 +452,6 @@ export default function CreateEventPage() {
                   onChange={(e) => setCapacity(Number(e.target.value))}
                   className="w-full mt-2 accent-secondary"
                 />
-                <div className="flex justify-between text-[10px] text-slate-300 font-medium mt-0.5">
-                  <span>10</span><span>500</span><span>1000</span>
-                </div>
               </div>
             </div>
           </div>
@@ -422,8 +479,8 @@ export default function CreateEventPage() {
             disabled={isSubmitting}
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-fixed text-on-primary-fixed font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
-            {isSubmitting ? "Publishing..." : "Publish Event"}
+            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
+            {isSubmitting ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { authStorage } from "./storage"
 
 // ─── Base ─────────────────────────────────────────────────────────────────────
-const BASE = "/api/v1"
+const BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1"
 
 interface ApiResponse<T> {
   success: boolean
@@ -15,6 +15,15 @@ export interface PagingResponse<T> {
   totalPages: number
   totalElement: number
   data: T[]
+}
+
+export interface SpringPage<T> {
+  content: T[]
+  pageable: unknown
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -32,6 +41,18 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     ...init,
   })
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  const json: ApiResponse<T> = await res.json()
+  return json.data
+}
+
+// Public request — no Authorization header (for login, register, etc.)
+async function reqPublic<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...init?.headers as Record<string, string>,
+  }
+  const res = await fetch(`${BASE}${path}`, { headers, ...init })
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   const json: ApiResponse<T> = await res.json()
   return json.data
@@ -169,6 +190,36 @@ export interface LessonFileUploadResponse {
   size: number
 }
 
+export interface EventResponse {
+  id: string
+  title: string
+  description: string | null
+  content?: string
+  metadata?: Record<string, unknown>
+  thumbnailUrl: string | null
+  liveLink: string | null
+  startTime: string
+  endTime: string
+  status: string
+  roomCode: string | null
+  sessionType: string | null
+  isOngoing: boolean
+  author: {
+    id: string
+    name: string
+    avatarUrl: string | null
+  }
+  engagementStats: {
+    likes: number
+    interested: number
+  }
+  currentUser: {
+    isLiked: boolean
+    isInterested: boolean
+  } | null
+  createdAt: string
+}
+
 // ─── Request types (mirrors backend DTOs) ─────────────────────────────────────
 
 export interface AuthenticationRequest {
@@ -235,16 +286,31 @@ export interface LessonUpsertRequest {
   contentData?: Record<string, unknown>
 }
 
+export interface CreateEventRequest {
+  title: string
+  description?: string
+  content?: string
+  thumbnailUrl?: string
+  liveLink?: string
+  startTime: string
+  endTime: string
+  programId?: string
+  metadata?: Record<string, unknown>
+  publishImmediately?: boolean
+}
+
+export type UpdateEventRequest = CreateEventRequest;
+
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (data: AuthenticationRequest) =>
-    req<AuthenticationResponse>("/auth/token", { method: "POST", body: JSON.stringify(data) }),
+    reqPublic<AuthenticationResponse>("/auth/token", { method: "POST", body: JSON.stringify(data) }),
 
   introspect: (data: IntrospectRequest) =>
     req<IntrospectResponse>("/auth/introspect", { method: "POST", body: JSON.stringify(data) }),
 
   register: (data: RegisterRequest) =>
-    req<void>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    reqPublic<void>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
 }
 
 // ─── User API ──────────────────────────────────────────────────────────────────
@@ -353,4 +419,28 @@ export const lessonApi = {
     form.append("file", file)
     return reqForm<LessonFileUploadResponse>(`/lessons/${id}/files`, form)
   },
+}
+
+// ─── Event API ────────────────────────────────────────────────────────────────
+export const eventApi = {
+  getAll: (page = 0, size = 10) =>
+    req<SpringPage<EventResponse>>(`/events?page=${page}&size=${size}`),
+
+  getById: (id: string) =>
+    req<EventResponse>(`/events/${id}`),
+
+  create: (data: CreateEventRequest) =>
+    req<EventResponse>("/events", { method: "POST", body: JSON.stringify(data) }),
+
+  update: (id: string, data: UpdateEventRequest) =>
+    req<EventResponse>(`/events/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  remove: (id: string) =>
+    req<string>(`/events/${id}`, { method: "DELETE" }),
+
+  publish: (id: string) =>
+    req<EventResponse>(`/events/${id}/publish`, { method: "PATCH" }),
+
+  unpublish: (id: string) =>
+    req<EventResponse>(`/events/${id}/unpublish`, { method: "PATCH" }),
 }
