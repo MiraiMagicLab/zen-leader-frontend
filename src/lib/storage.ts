@@ -3,7 +3,17 @@ const KEYS = {
   courses: "zl_courses",
   programs: "zl_programs",
   token: "zl_token",
+  user: "zl_user",
 } as const
+
+export interface AuthUser {
+  id: string
+  email: string
+  displayName: string
+  avatarUrl: string | null
+  roles: string[]
+  appMetadata?: Record<string, unknown>
+}
 
 // ─── Curriculum types (embedded in StoredCourse for localStorage) ─────────
 // Maps to: LessonResponse
@@ -158,6 +168,17 @@ export const authStorage = {
   },
   setToken(token: string): void {
     localStorage.setItem(KEYS.token, token)
+  },
+  getUser(): AuthUser | null {
+    const raw = localStorage.getItem(KEYS.user)
+    return raw ? JSON.parse(raw) as AuthUser : null
+  },
+  setUser(user: AuthUser): void {
+    localStorage.setItem(KEYS.user, JSON.stringify(user))
+  },
+  clearAuth(): void {
+    localStorage.removeItem(KEYS.token)
+    localStorage.removeItem(KEYS.user)
   },
   clearToken(): void {
     localStorage.removeItem(KEYS.token)

@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom"
+import { NavLink, Outlet, useNavigate } from "react-router-dom"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { authStorage } from "@/lib/storage"
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-label text-sm ${
@@ -12,6 +13,21 @@ const navIconClass = (isActive: boolean) =>
   `material-symbols-outlined ${isActive ? "text-primary-fixed-dim" : ""}`
 
 export function DashboardLayout() {
+  const navigate = useNavigate()
+  const user = authStorage.getUser()
+  
+  const displayName = user?.displayName || "Zen User"
+  const avatarUrl = user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`
+  
+  const handleLogout = () => {
+    authStorage.clearAuth()
+    navigate("/login")
+  }
+
+  const roleLabel = user?.roles?.some(r => r.toUpperCase().includes("ADMIN")) 
+    ? "ADMINISTRATOR" 
+    : (user?.roles?.[0] || "USER")
+
   return (
     <div className="bg-surface text-on-surface font-body antialiased flex min-h-screen w-full">
       {/* Desktop Sidebar */}
@@ -42,7 +58,7 @@ export function DashboardLayout() {
               <span>Programs</span>
             </>)}
           </NavLink>
-<NavLink to="/dashboard/events" className={navLinkClass}>
+          <NavLink to="/dashboard/events" className={navLinkClass}>
             {({ isActive }) => (<>
               <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>event</span>
               <span>Events</span>
@@ -53,7 +69,7 @@ export function DashboardLayout() {
 
         {/* Footer Navigation */}
         <div className="mt-auto border-t border-outline-variant/20 pt-6 space-y-1">
-          <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
             <span className="material-symbols-outlined">logout</span>
             <span className="font-label text-sm">Log Out</span>
           </button>
@@ -104,7 +120,7 @@ export function DashboardLayout() {
                   </nav>
 
                   <div className="mt-auto border-t border-outline-variant/20 pt-6 space-y-1">
-                    <button onClick={() => {window.location.href = "/login"}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200">
                       <span className="material-symbols-outlined">logout</span>
                       <span className="font-label text-sm">Log Out</span>
                     </button>
@@ -133,12 +149,12 @@ export function DashboardLayout() {
               </button>
             </div>
             <div className="h-8 w-px bg-outline-variant/30"></div>
-            <div className="flex items-center gap-3 pl-2 cursor-pointer hover:bg-slate-50 rounded-lg p-1">
+            <div className="flex items-center gap-3 pl-2 cursor-pointer hover:bg-slate-50 rounded-lg p-1 transition-colors" onClick={() => navigate("/dashboard/profile")}>
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-on-surface leading-tight">Admin User</p>
-                <p className="text-[10px] font-semibold text-secondary-container bg-secondary/10 px-2 py-0.5 rounded mt-0.5">SUPER ADMIN</p>
+                <p className="text-xs font-bold text-on-surface leading-tight">{displayName}</p>
+                <p className="text-[10px] font-bold text-primary-fixed-dim bg-primary/5 px-2 py-0.5 rounded mt-0.5 uppercase tracking-wider">{roleLabel}</p>
               </div>
-              <img alt="User Profile" className="w-10 h-10 rounded-full object-cover border-2 border-primary-fixed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-yo0smkG5xSzvDGoYU4CKWViKI3L-uoweT9PN7u7vYMndKpGJ-O-6dNIlt5W7AK9KlvK9ibgvZo6RUrI75k1kdgB-nf3kMKmFzFQ5fKsCK8Isi1WzDeOq7dXUfjUzsx4gBU7Rxe8Z0c_KLG9e9HrU3_N_rs6N33aQhKAoaXLZbwAC70Ndm9qdLDK7ounRkLQiMkUuj-CznKtSdxf0tv-wGMNJhuKEXivaxD7QW36v9mbAZZIi3OWKo3_tiNSo67AdFCmxgyXqYr3N" />
+              <img alt="User Profile" className="w-10 h-10 rounded-full object-cover border-2 border-primary-fixed shadow-sm" src={avatarUrl} />
             </div>
           </div>
         </header>

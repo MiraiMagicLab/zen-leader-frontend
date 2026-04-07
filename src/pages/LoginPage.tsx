@@ -2,7 +2,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Link, useNavigate } from "react-router-dom"
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
-import { authApi } from "@/lib/api"
+import { authApi, userApi } from "@/lib/api"
 import { authStorage } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,15 @@ export default function LoginPage() {
       const resp = await authApi.login({ email, passwordHash: password })
       if (resp.authenticated && resp.accessToken) {
         authStorage.setToken(resp.accessToken)
+        
+        // Fetch user info to get roles/metadata
+        try {
+          const user = await userApi.getMe()
+          authStorage.setUser(user)
+        } catch (uErr) {
+          console.error("Failed to fetch user profile", uErr)
+        }
+
         navigate("/dashboard")
       } else {
         setError("Authentication failed. Please check your credentials.")

@@ -92,6 +92,7 @@ export interface UserResponse {
   lastSignInAt: string | null
   appMetadata: Record<string, unknown>
   userMetadata: Record<string, unknown>
+  roles: string[]
   createdAt: string
   updatedAt: string
 }
@@ -182,12 +183,9 @@ export interface ProgramResponse {
   updatedAt: string
 }
 
-export interface LessonFileUploadResponse {
-  id: string
-  fileName: string
-  fileUrl: string
-  mimeType: string
-  size: number
+export interface AssetResponse {
+  url: string
+  publicId: string
 }
 
 export interface EventResponse {
@@ -204,6 +202,7 @@ export interface EventResponse {
   roomCode: string | null
   sessionType: string | null
   isOngoing: boolean
+  isOfficial: boolean
   author: {
     id: string
     name: string
@@ -297,6 +296,7 @@ export interface CreateEventRequest {
   programId?: string
   metadata?: Record<string, unknown>
   publishImmediately?: boolean
+  isOfficial?: boolean
 }
 
 export type UpdateEventRequest = CreateEventRequest;
@@ -315,14 +315,12 @@ export const authApi = {
 
 // ─── User API ──────────────────────────────────────────────────────────────────
 export const userApi = {
-  getMe: () =>
-    req<UserResponse>("/users/me"),
-
+  getMe: () => req<UserResponse>("/users/me"),
   getAll: (page = 1, size = 10, field = "createdAt", direction = "DESC") =>
-    req<PagingResponse<UserResponse>>(`/users?page=${page}&size=${size}&field=${field}&direction=${direction}`),
-
-  getById: (id: string) =>
-    req<UserResponse>(`/users/${id}`),
+    req<PagingResponse<UserResponse>>(`/users?page=${page}&pageSize=${size}&field=${field}&direction=${direction}`),
+  getUsers: (paging: { page: number, pageSize: number }) => 
+    req<PagingResponse<UserResponse>>(`/users?page=${paging.page}&pageSize=${paging.pageSize}`),
+  getById: (id: string) => req<UserResponse>(`/users/${id}`),
 }
 
 // ─── Program API ───────────────────────────────────────────────────────────────
@@ -343,7 +341,7 @@ export const programApi = {
     req<string>(`/programs/${id}`, { method: "DELETE" }),
 }
 
-// ─── Course API ────────────────────────────────────────────────────────────────
+// ─── Course API (Management) ──────────────────────────────────────────────────
 export const courseApi = {
   getAll: (programId?: string) =>
     req<CourseResponse[]>(programId ? `/courses?programId=${encodeURIComponent(programId)}` : "/courses"),
@@ -423,8 +421,8 @@ export const lessonApi = {
 
 // ─── Event API ────────────────────────────────────────────────────────────────
 export const eventApi = {
-  getAll: (page = 0, size = 10) =>
-    req<SpringPage<EventResponse>>(`/events?page=${page}&size=${size}`),
+  getAll: (page = 0, size = 10, includeDrafts = true) =>
+    req<SpringPage<EventResponse>>(`/events?page=${page}&size=${size}&includeDrafts=${includeDrafts}`),
 
   getById: (id: string) =>
     req<EventResponse>(`/events/${id}`),
@@ -443,4 +441,13 @@ export const eventApi = {
 
   unpublish: (id: string) =>
     req<EventResponse>(`/events/${id}/unpublish`, { method: "PATCH" }),
+}
+
+// ─── Asset API ────────────────────────────────────────────────────────────────
+export const assetApi = {
+  upload: (file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return reqForm<AssetResponse>("/assets/upload", form)
+  }
 }
