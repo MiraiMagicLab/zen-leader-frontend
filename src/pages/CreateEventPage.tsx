@@ -1,7 +1,7 @@
 import { motion } from "framer-motion"
 import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { eventApi } from "../lib/api"
+import { eventApi, assetApi } from "../lib/api"
 import MarkdownEditor from "../components/MarkdownEditor"
 
 
@@ -27,6 +27,7 @@ export default function CreateEventPage() {
   const [speaker, setSpeaker] = useState("")
   const [description, setDescription] = useState("")
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
 
   // Date & Time
@@ -45,6 +46,7 @@ export default function CreateEventPage() {
   const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setBannerFile(file)
     const reader = new FileReader()
     reader.onload = (ev) => {
       if (ev.target?.result) {
@@ -65,6 +67,14 @@ export default function CreateEventPage() {
 
     setIsSubmitting(true)
     try {
+      let finalThumbnailUrl = bannerPreview || undefined
+
+      // If we have a new file, upload it first
+      if (bannerFile) {
+        const uploadRes = await assetApi.upload(bannerFile)
+        finalThumbnailUrl = uploadRes.url
+      }
+
       const startDt = new Date(`${eventDate}T${startTime}:00`)
       const endDt = new Date(`${eventDate}T${endTime}:00`)
 
@@ -82,7 +92,7 @@ export default function CreateEventPage() {
           speaker
         },
         publishImmediately: status === "open",
-        thumbnailUrl: bannerPreview || undefined
+        thumbnailUrl: finalThumbnailUrl
       }
 
       await eventApi.create(payload)
