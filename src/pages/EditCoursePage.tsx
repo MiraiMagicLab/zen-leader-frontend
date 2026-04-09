@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 
@@ -690,7 +692,11 @@ export default function EditCoursePage() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-slate-800 truncate">{lesson.title}</p>
-                                    {lesson.description && <p className="text-[11px] text-slate-400 mt-0.5">{lesson.description}</p>}
+                                    {lesson.description && (
+                                      <div className="text-[11px] text-slate-400 mt-0.5 prose prose-sm max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.description}</ReactMarkdown>
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-1 opacity-0 group-hover/lesson:opacity-100 transition-opacity">
                                     <button onClick={() => setEditingLesson({ runId: run.id, chapterId: ch.id, lesson })} className="p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors">
