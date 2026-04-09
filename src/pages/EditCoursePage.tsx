@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
+import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, assetApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ interface LessonItem {
   title: string
   description: string
   fileUrl?: string
+  fileName?: string
 }
 interface Chapter {
   id: number
@@ -97,6 +98,28 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
   const fileRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileUrl, setFileUrl] = useState<string>("")
+  const [isUploading, setIsUploading] = useState(false)
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
+    
+    setFile(selectedFile)
+    setIsUploading(true)
+    
+    try {
+      // Upload to Cloudinary via backend
+      const response = await assetApi.upload(selectedFile)
+      setFileUrl(response.url)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      // Fallback to blob URL if upload fails
+      setFileUrl(URL.createObjectURL(selectedFile))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+  
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -121,25 +144,31 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">File</label>
-          <input ref={fileRef} type="file" className="hidden" onChange={(e) => {
-            const selectedFile = e.target.files?.[0]
-            if (selectedFile) {
-              setFile(selectedFile)
-              setFileUrl(URL.createObjectURL(selectedFile))
-            }
-          }} />
-          <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 hover:border-primary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group">
-            <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-[24px]">upload_file</span>
+          <input ref={fileRef} type="file" className="hidden" onChange={handleFileSelect} />
+          <button onClick={() => fileRef.current?.click()} disabled={isUploading} className="w-full border-2 border-dashed border-slate-200 hover:border-primary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group disabled:opacity-50">
+            <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-[24px]">{isUploading ? "progress_activity" : "upload_file"}</span>
             <div className="text-left overflow-hidden">
-              <p className="text-sm text-slate-400 group-hover:text-primary truncate">{file ? file.name : "Click to upload file"}</p>
-              {file && <p className="text-[10px] text-slate-300">{(file.size / 1024 / 1024).toFixed(1)} MB</p>}
+              {isUploading ? (
+                <p className="text-sm text-slate-400">Uploading...</p>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-400 group-hover:text-primary truncate">{file ? file.name : "Click to upload file"}</p>
+                  {file && <p className="text-[10px] text-slate-300">{(file.size / 1024 / 1024).toFixed(1)} MB</p>}
+                </>
+              )}
             </div>
           </button>
+          {fileUrl && file && (
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2">
+              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+              View uploaded file
+            </a>
+          )}
         </div>
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; const sz = file ? ` • ${(file.size/1024/1024).toFixed(1)} MB` : ""; onAdd({ type: "resource", title: title.trim(), description: `${fileType}${sz}`, fileUrl }); onClose() }} className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90">Add Resource</button>
+        <button onClick={() => { if (!title.trim()) return; const sz = file ? ` • ${(file.size/1024/1024).toFixed(1)} MB` : ""; onAdd({ type: "resource", title: title.trim(), description: `${fileType}${sz}`, fileUrl, fileName: file?.name }); onClose() }} disabled={isUploading} className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50">Add Resource</button>
       </div>
     </ModalBackdrop>
   )
@@ -216,12 +245,34 @@ function AddTextModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit
   )
 }
 
-function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string, fileUrl?: string) => void }) {
+function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string, fileUrl?: string, fileName?: string) => void }) {
   const [title, setTitle] = useState(lesson.title)
   const [description, setDescription] = useState(lesson.description)
   const [fileUrl, setFileUrl] = useState(lesson.fileUrl || "")
+  const [displayFileName, setDisplayFileName] = useState(lesson.fileName || (lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : ""))
   const fileRef = useRef<HTMLInputElement>(null)
-  const [fileName, setFileName] = useState(lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : "")
+  const [isUploading, setIsUploading] = useState(false)
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setIsUploading(true)
+    setDisplayFileName(file.name)
+    
+    try {
+      // Upload to Cloudinary via backend
+      const response = await assetApi.upload(file)
+      setFileUrl(response.url)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      // Fallback to blob URL if upload fails
+      setFileUrl(URL.createObjectURL(file))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+  
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -240,27 +291,28 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
         {(lesson.type === "resource" || lesson.type === "document" || lesson.type === "photo" || lesson.type === "video") && (
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">File</label>
-            <input ref={fileRef} type="file" className="hidden" onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) {
-                const url = URL.createObjectURL(file)
-                setFileUrl(url)
-                setFileName(file.name)
-              }
-            }} />
+            <input ref={fileRef} type="file" className="hidden" onChange={handleFileSelect} />
             <div className="space-y-2">
-              {fileUrl && (
+              {fileUrl && displayFileName && (
                 <div className="flex items-center gap-2 p-3 bg-surface-container-low rounded-xl">
                   <span className="material-symbols-outlined text-primary text-[20px]">description</span>
-                  <span className="text-sm text-slate-700 flex-1 truncate">{fileName || "Uploaded file"}</span>
-                  <button onClick={() => { setFileUrl(""); setFileName(""); }} className="p-1 text-slate-400 hover:text-error">
+                  <a 
+                    href={fileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex-1 truncate"
+                    title={displayFileName}
+                  >
+                    {displayFileName}
+                  </a>
+                  <button onClick={() => { setFileUrl(""); setDisplayFileName(""); }} className="p-1 text-slate-400 hover:text-error">
                     <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 </div>
               )}
-              <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group">
-                <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[24px]">upload_file</span>
-                <span className="text-sm text-slate-400 group-hover:text-secondary">{fileUrl ? "Replace file" : "Click to upload file"}</span>
+              <button onClick={() => fileRef.current?.click()} disabled={isUploading} className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group disabled:opacity-50">
+                <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[24px]">{isUploading ? "progress_activity" : "upload_file"}</span>
+                <span className="text-sm text-slate-400 group-hover:text-secondary">{isUploading ? "Uploading..." : fileUrl ? "Replace file" : "Click to upload file"}</span>
               </button>
             </div>
             {fileUrl && (
@@ -274,7 +326,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { onSave(title.trim(), description.trim(), fileUrl); onClose() }} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90">Save Changes</button>
+        <button onClick={() => { onSave(title.trim(), description.trim(), fileUrl, displayFileName); onClose() }} disabled={isUploading} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50">Save Changes</button>
       </div>
     </ModalBackdrop>
   )
@@ -524,9 +576,9 @@ export default function EditCoursePage() {
     ))
   }, [])
 
-  const saveLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string) => {
+  const saveLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string, fileName?: string) => {
     setRuns((prev) => prev.map((r) => r.id === runId
-      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, fileUrl } : l) } : ch) }
+      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, fileUrl, fileName } : l) } : ch) }
       : r
     ))
   }
@@ -774,6 +826,21 @@ export default function EditCoursePage() {
                                         </button>
                                       </div>
                                     </div>
+                                    {/* Show file link if lesson has a file */}
+                                    {lesson.fileUrl && (
+                                      <div className="mt-1 ml-12">
+                                        <a 
+                                          href={lesson.fileUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">description</span>
+                                          {lesson.fileName || lesson.fileUrl.split('/').pop() || "View file"}
+                                        </a>
+                                      </div>
+                                    )}
                                     {isExpanded && hasDescription && (
                                       <div className="mt-2 ml-12 text-[11px] text-slate-400 prose prose-sm max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.description}</ReactMarkdown>
@@ -940,7 +1007,7 @@ export default function EditCoursePage() {
         {addModal?.type === "resource" && <AddResourceModal key="r" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "live" && <AddLiveModal key="l" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "text" && <AddTextModal key="t" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
-        {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d, url) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d, url)} />}
+        {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d, url, name) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d, url, name)} />}
       </AnimatePresence>
 
       <SaveToast show={saveState === "saved"} />
