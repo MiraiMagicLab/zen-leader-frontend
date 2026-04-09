@@ -317,6 +317,7 @@ export default function EditCoursePage() {
   const [editingChapterTitle, setEditingChapterTitle] = useState("")
   const [editingLesson, setEditingLesson] = useState<{ runId: number; chapterId: number; lesson: LessonItem } | null>(null)
   const [addModal, setAddModal] = useState<{ runId: number; chapterId: number; type: "video" | "resource" | "live" | "text" } | null>(null)
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
 
   // ── Save state ──
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle")
@@ -685,29 +686,57 @@ export default function EditCoursePage() {
                           </div>
                           {ch.lessons.length > 0 && (
                             <div className="divide-y divide-slate-50">
-                              {ch.lessons.map((lesson) => (
-                                <div key={lesson.id} className="flex items-center gap-4 px-5 py-3 group/lesson hover:bg-slate-50/60 transition-colors">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${lessonIconColor[lesson.type] ?? "bg-slate-100 text-slate-400"}`}>
-                                    <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>{lessonIcon[lesson.type] ?? "article"}</span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-slate-800 truncate">{lesson.title}</p>
-                                    {lesson.description && (
-                                      <div className="text-[11px] text-slate-400 mt-0.5 prose prose-sm max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0">
+                              {ch.lessons.map((lesson) => {
+                                const lessonKey = `${run.id}-${ch.id}-${lesson.id}`
+                                const isExpanded = expandedLessons.has(lessonKey)
+                                const hasDescription = lesson.description && lesson.description.trim().length > 0
+                                return (
+                                  <div key={lesson.id} className="px-5 py-3 group/lesson hover:bg-slate-50/60 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${lessonIconColor[lesson.type] ?? "bg-slate-100 text-slate-400"}`}>
+                                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>{lessonIcon[lesson.type] ?? "article"}</span>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <button
+                                          onClick={() => {
+                                            if (!hasDescription) return
+                                            setExpandedLessons(prev => {
+                                              const next = new Set(prev)
+                                              if (next.has(lessonKey)) {
+                                                next.delete(lessonKey)
+                                              } else {
+                                                next.add(lessonKey)
+                                              }
+                                              return next
+                                            })
+                                          }}
+                                          className={`flex items-center gap-2 text-sm font-semibold text-slate-800 ${hasDescription ? 'cursor-pointer hover:text-secondary' : 'cursor-default'}`}
+                                        >
+                                          {lesson.title}
+                                          {hasDescription && (
+                                            <span className="material-symbols-outlined text-[16px] text-slate-400 transition-transform" style={{ fontVariationSettings: "'FILL' 1", transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                              expand_more
+                                            </span>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover/lesson:opacity-100 transition-opacity">
+                                        <button onClick={() => setEditingLesson({ runId: run.id, chapterId: ch.id, lesson })} className="p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors">
+                                          <span className="material-symbols-outlined text-[15px]">edit</span>
+                                        </button>
+                                        <button onClick={() => deleteLesson(run.id, ch.id, lesson.id)} className="p-1.5 text-slate-400 hover:text-error hover:bg-error/10 rounded-lg transition-colors">
+                                          <span className="material-symbols-outlined text-[15px]">delete</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {isExpanded && hasDescription && (
+                                      <div className="mt-2 ml-12 text-[11px] text-slate-400 prose prose-sm max-w-none prose-p:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0">
                                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{lesson.description}</ReactMarkdown>
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-1 opacity-0 group-hover/lesson:opacity-100 transition-opacity">
-                                    <button onClick={() => setEditingLesson({ runId: run.id, chapterId: ch.id, lesson })} className="p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors">
-                                      <span className="material-symbols-outlined text-[15px]">edit</span>
-                                    </button>
-                                    <button onClick={() => deleteLesson(run.id, ch.id, lesson.id)} className="p-1.5 text-slate-400 hover:text-error hover:bg-error/10 rounded-lg transition-colors">
-                                      <span className="material-symbols-outlined text-[15px]">delete</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           )}
                           <div className="px-5 py-3 flex flex-wrap gap-2 bg-white border-t border-slate-50">
