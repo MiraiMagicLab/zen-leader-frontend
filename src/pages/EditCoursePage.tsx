@@ -163,13 +163,13 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Uploaded File</p>
               <div className="flex items-center gap-3">
                 <a 
-                  href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fileUrl)}`}
+                  href={fileUrl}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                 >
                   <span className="material-symbols-outlined text-[18px]">visibility</span>
-                  View PDF
+                  Open PDF
                 </a>
                 <a 
                   href={fileUrl}
@@ -342,13 +342,13 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
             {fileUrl && (
               <div className="flex items-center gap-3 mt-2">
                 <a 
-                  href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fileUrl)}`}
+                  href={fileUrl}
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="inline-flex items-center gap-1 text-xs text-secondary hover:underline"
                 >
                   <span className="material-symbols-outlined text-[14px]">visibility</span>
-                  View PDF
+                  Open PDF
                 </a>
                 <a 
                   href={fileUrl}
@@ -834,9 +834,9 @@ export default function EditCoursePage() {
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         {lesson.fileUrl ? (
-                                          // If lesson has a file, make title a clickable link
+                                          // If lesson has a file, make title a clickable link - open directly in browser
                                           <a
-                                            href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(lesson.fileUrl)}`}
+                                            href={lesson.fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-primary cursor-pointer"
@@ -884,14 +884,14 @@ export default function EditCoursePage() {
                                     {lesson.fileUrl && (
                                       <div className="mt-1 ml-12 flex items-center gap-3">
                                         <a 
-                                          href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(lesson.fileUrl)}`}
+                                          href={lesson.fileUrl}
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                          View PDF
+                                          Open PDF
                                         </a>
                                         <a 
                                           href={lesson.fileUrl}
