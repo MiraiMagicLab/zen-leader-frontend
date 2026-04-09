@@ -174,6 +174,38 @@ function AddLiveModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit
   )
 }
 
+function AddTextModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit<LessonItem, "id">) => void }) {
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState("")
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center">
+            <span className="material-symbols-outlined text-slate-600 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>article</span>
+          </div>
+          <h3 className="text-lg font-extrabold font-headline text-slate-900">Add Text Content</h3>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></button>
+      </div>
+      <div className="space-y-4">
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Title</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Module Introduction" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+        </div>
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Content</label>
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Enter text content here..." rows={5} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200 resize-none" />
+        </div>
+      </div>
+      <div className="flex gap-3 mt-6">
+        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+        <button onClick={() => { if (!title.trim()) return; onAdd({ type: "text", title: title.trim(), description: content.trim() || "Text content" }); onClose() }} className="flex-1 py-3 rounded-xl bg-slate-700 text-white text-sm font-bold hover:opacity-90">Add Text</button>
+      </div>
+    </ModalBackdrop>
+  )
+}
+
 function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string) => void }) {
   const [title, setTitle] = useState(lesson.title)
   const [description, setDescription] = useState(lesson.description)
@@ -282,7 +314,7 @@ export default function EditCoursePage() {
   const [editingChapterId, setEditingChapterId] = useState<number | null>(null)
   const [editingChapterTitle, setEditingChapterTitle] = useState("")
   const [editingLesson, setEditingLesson] = useState<{ runId: number; chapterId: number; lesson: LessonItem } | null>(null)
-  const [addModal, setAddModal] = useState<{ runId: number; chapterId: number; type: "video" | "resource" | "live" } | null>(null)
+  const [addModal, setAddModal] = useState<{ runId: number; chapterId: number; type: "video" | "resource" | "live" | "text" } | null>(null)
 
   // ── Save state ──
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle")
@@ -682,6 +714,9 @@ export default function EditCoursePage() {
                             <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "live" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-tertiary/50 hover:text-tertiary rounded-lg text-xs font-bold transition-colors">
                               <span className="material-symbols-outlined text-[14px]">add</span>Add Live
                             </button>
+                            <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "text" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors">
+                              <span className="material-symbols-outlined text-[14px]">add</span>Add Text
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -824,6 +859,7 @@ export default function EditCoursePage() {
         {addModal?.type === "video" && <AddVideoModal key="v" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "resource" && <AddResourceModal key="r" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "live" && <AddLiveModal key="l" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
+        {addModal?.type === "text" && <AddTextModal key="t" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d)} />}
       </AnimatePresence>
 
