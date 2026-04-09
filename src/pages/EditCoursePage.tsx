@@ -93,7 +93,6 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
 }
 
 function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit<LessonItem, "id">) => void }) {
-  const [title, setTitle] = useState("")
   const [fileType, setFileType] = useState("PDF Document")
   const fileRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -120,6 +119,11 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
     }
   }
   
+  // Get filename without extension for title
+  const getFileTitle = (filename: string) => {
+    return filename.replace(/\.[^/.]+$/, "") // Remove extension
+  }
+  
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -132,10 +136,6 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></button>
       </div>
       <div className="space-y-4">
-        <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Resource Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Executive Presence Framework" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Type</label>
           <select value={fileType} onChange={(e) => setFileType(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20">
@@ -159,16 +159,36 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
             </div>
           </button>
           {fileUrl && file && (
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2">
-              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-              View uploaded file
-            </a>
+            <div className="mt-2 p-3 bg-surface-container-low rounded-xl">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Uploaded File</p>
+              <a 
+                href={fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-[18px]">description</span>
+                {file.name}
+              </a>
+            </div>
           )}
         </div>
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; const sz = file ? ` • ${(file.size/1024/1024).toFixed(1)} MB` : ""; onAdd({ type: "resource", title: title.trim(), description: `${fileType}${sz}`, fileUrl, fileName: file?.name }); onClose() }} disabled={isUploading} className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50">Add Resource</button>
+        <button 
+          onClick={() => { 
+            if (!file) return
+            const title = getFileTitle(file.name)
+            const sz = ` • ${(file.size/1024/1024).toFixed(1)} MB`
+            onAdd({ type: "resource", title, description: `${fileType}${sz}`, fileUrl, fileName: file.name })
+            onClose() 
+          }} 
+          disabled={isUploading || !file} 
+          className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
+        >
+          Add Resource
+        </button>
       </div>
     </ModalBackdrop>
   )
@@ -794,28 +814,43 @@ export default function EditCoursePage() {
                                         <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>{lessonIcon[lesson.type] ?? "article"}</span>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <button
-                                          onClick={() => {
-                                            if (!hasDescription) return
-                                            setExpandedLessons(prev => {
-                                              const next = new Set(prev)
-                                              if (next.has(lessonKey)) {
-                                                next.delete(lessonKey)
-                                              } else {
-                                                next.add(lessonKey)
-                                              }
-                                              return next
-                                            })
-                                          }}
-                                          className={`flex items-center gap-2 text-sm font-semibold text-slate-800 ${hasDescription ? 'cursor-pointer hover:text-secondary' : 'cursor-default'}`}
-                                        >
-                                          {lesson.title}
-                                          {hasDescription && (
-                                            <span className="material-symbols-outlined text-[16px] text-slate-400 transition-transform" style={{ fontVariationSettings: "'FILL' 1", transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                              expand_more
-                                            </span>
-                                          )}
-                                        </button>
+                                        {lesson.fileUrl ? (
+                                          // If lesson has a file, make title a clickable link
+                                          <a
+                                            href={lesson.fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-primary cursor-pointer"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <span className="material-symbols-outlined text-[16px] text-primary">description</span>
+                                            {lesson.title}
+                                          </a>
+                                        ) : (
+                                          // Otherwise use the expand/collapse button
+                                          <button
+                                            onClick={() => {
+                                              if (!hasDescription) return
+                                              setExpandedLessons(prev => {
+                                                const next = new Set(prev)
+                                                if (next.has(lessonKey)) {
+                                                  next.delete(lessonKey)
+                                                } else {
+                                                  next.add(lessonKey)
+                                                }
+                                                return next
+                                              })
+                                            }}
+                                            className={`flex items-center gap-2 text-sm font-semibold text-slate-800 ${hasDescription ? 'cursor-pointer hover:text-secondary' : 'cursor-default'}`}
+                                          >
+                                            {lesson.title}
+                                            {hasDescription && (
+                                              <span className="material-symbols-outlined text-[16px] text-slate-400 transition-transform" style={{ fontVariationSettings: "'FILL' 1", transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                                expand_more
+                                              </span>
+                                            )}
+                                          </button>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-1 opacity-0 group-hover/lesson:opacity-100 transition-opacity">
                                         <button onClick={() => setEditingLesson({ runId: run.id, chapterId: ch.id, lesson })} className="p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors">
