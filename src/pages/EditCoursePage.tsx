@@ -161,15 +161,25 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
           {fileUrl && file && (
             <div className="mt-2 p-3 bg-surface-container-low rounded-xl">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Uploaded File</p>
-              <a 
-                href={fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <span className="material-symbols-outlined text-[18px]">description</span>
-                {file.name}
-              </a>
+              <div className="flex items-center gap-3">
+                <a 
+                  href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fileUrl)}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <span className="material-symbols-outlined text-[18px]">visibility</span>
+                  View PDF
+                </a>
+                <a 
+                  href={fileUrl}
+                  download={file.name}
+                  className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary hover:underline"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Download
+                </a>
+              </div>
             </div>
           )}
         </div>
@@ -316,15 +326,9 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
               {fileUrl && displayFileName && (
                 <div className="flex items-center gap-2 p-3 bg-surface-container-low rounded-xl">
                   <span className="material-symbols-outlined text-primary text-[20px]">description</span>
-                  <a 
-                    href={fileUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex-1 truncate"
-                    title={displayFileName}
-                  >
+                  <span className="text-sm text-slate-700 flex-1 truncate" title={displayFileName}>
                     {displayFileName}
-                  </a>
+                  </span>
                   <button onClick={() => { setFileUrl(""); setDisplayFileName(""); }} className="p-1 text-slate-400 hover:text-error">
                     <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
@@ -336,10 +340,25 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
               </button>
             </div>
             {fileUrl && (
-              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-secondary hover:underline mt-2">
-                <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                Open file
-              </a>
+              <div className="flex items-center gap-3 mt-2">
+                <a 
+                  href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fileUrl)}`}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center gap-1 text-xs text-secondary hover:underline"
+                >
+                  <span className="material-symbols-outlined text-[14px]">visibility</span>
+                  View PDF
+                </a>
+                <a 
+                  href={fileUrl}
+                  download={displayFileName}
+                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-secondary hover:underline"
+                >
+                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  Download
+                </a>
+              </div>
             )}
           </div>
         )}
@@ -817,7 +836,7 @@ export default function EditCoursePage() {
                                         {lesson.fileUrl ? (
                                           // If lesson has a file, make title a clickable link
                                           <a
-                                            href={lesson.fileUrl}
+                                            href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(lesson.fileUrl)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-primary cursor-pointer"
@@ -863,16 +882,25 @@ export default function EditCoursePage() {
                                     </div>
                                     {/* Show file link if lesson has a file */}
                                     {lesson.fileUrl && (
-                                      <div className="mt-1 ml-12">
+                                      <div className="mt-1 ml-12 flex items-center gap-3">
                                         <a 
-                                          href={lesson.fileUrl} 
+                                          href={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(lesson.fileUrl)}`}
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <span className="material-symbols-outlined text-[14px]">description</span>
-                                          {lesson.fileName || lesson.fileUrl.split('/').pop() || "View file"}
+                                          <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                          View PDF
+                                        </a>
+                                        <a 
+                                          href={lesson.fileUrl}
+                                          download={lesson.fileName || `${lesson.title}.pdf`}
+                                          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary hover:underline"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">download</span>
+                                          Download
                                         </a>
                                       </div>
                                     )}
