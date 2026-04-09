@@ -27,6 +27,7 @@ export default function EventsPage() {
   })
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedCategory, setSelectedCategory] = useState("ALL")
+  const [selectedStatus, setSelectedStatus] = useState("ALL")
   const [showMonthPicker, setShowMonthPicker] = useState(false)
 
   useEffect(() => {
@@ -72,6 +73,11 @@ export default function EventsPage() {
     if (selectedCategory !== "ALL") {
       const cat = String(ev.metadata?.category || "").toUpperCase()
       if (cat !== selectedCategory) return false
+    }
+
+    // 3. Status Filter
+    if (selectedStatus !== "ALL") {
+      if (ev.status !== selectedStatus) return false
     }
 
     return true
@@ -151,21 +157,40 @@ export default function EventsPage() {
                 {filteredEvents.length} EVENTS
               </span>
             </div>
-            {/* Category filter pills */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {(["ALL", "WORKSHOP", "SUMMIT", "TALK", "WEBINAR"] as const).map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded-full tracking-wider transition-all ${
-                    selectedCategory === cat
-                      ? "bg-secondary text-white shadow-sm"
-                      : "bg-surface-container text-slate-500 hover:bg-surface-container-high hover:text-slate-700"
-                  }`}
-                >
-                  {cat === "ALL" ? "All" : cat}
-                </button>
-              ))}
+            {/* Filters */}
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Category:</span>
+                {(["ALL", "WORKSHOP", "SUMMIT", "TALK", "WEBINAR"] as const).map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full tracking-wider transition-all ${
+                      selectedCategory === cat
+                        ? "bg-secondary text-white shadow-sm"
+                        : "bg-surface-container text-slate-500 hover:bg-surface-container-high hover:text-slate-700"
+                    }`}
+                  >
+                    {cat === "ALL" ? "All" : cat}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Status:</span>
+                {(["ALL", "PUBLISHED", "DRAFT", "COMPLETED"] as const).map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setSelectedStatus(st)}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full tracking-wider transition-all ${
+                      selectedStatus === st
+                        ? "bg-slate-800 text-white shadow-sm"
+                        : "bg-surface-container text-slate-500 hover:bg-surface-container-high hover:text-slate-700"
+                    }`}
+                  >
+                    {st === "ALL" ? "All" : st}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -175,6 +200,7 @@ export default function EventsPage() {
                 <tr>
                   <th className="px-8 py-4">Event Name</th>
                   <th className="px-4 py-4">Category</th>
+                  <th className="px-4 py-4">Status</th>
                   <th className="px-4 py-4">Date / Time</th>
                   <th className="px-4 py-4">Location</th>
                   <th className="px-6 py-4">Registration</th>
@@ -195,7 +221,8 @@ export default function EventsPage() {
                   const capacity = (ev.metadata?.capacity as number) || 100;
                   const pct = Math.round((registered / Math.max(capacity, 1)) * 100)
                   const isFull = pct >= 100
-                  const isClosed = ev.status === "closed"
+                  const isDraft = ev.status === "DRAFT"
+                  const isCompleted = ev.status === "COMPLETED"
                   const startDate = new Date(ev.startTime)
                   const dateStr = startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                   const timeStr = startDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
@@ -211,9 +238,17 @@ export default function EventsPage() {
                               <span className="material-symbols-outlined text-slate-300">event</span>
                             )}
                           </div>
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-secondary transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                            {ev.title}
-                          </p>
+                          <div className="flex flex-col">
+                            <p className="text-xs font-bold text-slate-900 group-hover:text-secondary transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                              {ev.title}
+                            </p>
+                            {ev.isOfficial && (
+                              <span className="flex items-center gap-1 text-[9px] font-bold text-primary-fixed bg-primary-fixed/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                <span className="material-symbols-outlined text-[10px]">verified</span>
+                                ZEN LEADER OFFICIAL
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
@@ -224,24 +259,33 @@ export default function EventsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          isDraft ? "text-slate-400 border-slate-200 bg-slate-50" :
+                          isCompleted ? "text-slate-500 border-slate-300 bg-slate-100" :
+                          "text-primary border-primary/30 bg-primary/5"
+                        }`}>
+                          {ev.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-5 whitespace-nowrap">
                         <p className="text-xs font-semibold text-slate-700">{dateStr}</p>
-                        <p className={`text-[10px] mt-0.5 ${isClosed ? "text-error font-bold" : "text-slate-400"}`}>
+                        <p className="text-[10px] mt-0.5 text-slate-400">
                           {timeStr}
                         </p>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 text-xs text-slate-600">
                           <span className="material-symbols-outlined text-[12px] text-slate-400">
-                            {ev.liveLink ? "videocam" : "location_on"}
+                            {ev.metadata?.locationType === "Online" || ev.liveLink ? "videocam" : "location_on"}
                           </span>
-                          {ev.liveLink ? "Online" : (ev.roomCode || "TBA")}
+                          {ev.metadata?.locationType === "Physical" ? (String(ev.metadata?.venue || ev.roomCode || "TBA")) : "Online"}
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3 min-w-[120px]">
                           <div className="flex-1 bg-surface-container h-1.5 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all ${isFull ? "bg-error" : isClosed ? "bg-slate-300" : "bg-primary-fixed"}`}
+                              className={`h-full rounded-full transition-all ${isFull ? "bg-error" : isCompleted ? "bg-slate-300" : "bg-primary-fixed"}`}
                               style={{ width: `${Math.min(pct, 100)}%` }}
                             />
                           </div>
@@ -252,6 +296,44 @@ export default function EventsPage() {
                       </td>
                       <td className="px-8 py-5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 text-slate-400">
+                          {isDraft ? (
+                            <button 
+                              onClick={async () => {
+                                if (window.confirm("Publish this event? It will become visible on the public feed.")) {
+                                  try {
+                                    await eventApi.publish(ev.id);
+                                    fetchEvents(currentPage);
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert("Failed to publish");
+                                  }
+                                }
+                              }}
+                              className="p-1.5 hover:text-primary hover:bg-primary-fixed/10 rounded-lg transition-colors" 
+                              title="Publish Event"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">publish</span>
+                            </button>
+                          ) : ev.status === "PUBLISHED" ? (
+                            <button 
+                               onClick={async () => {
+                                if (window.confirm("Unpublish this event? It will be hidden from the public feed.")) {
+                                  try {
+                                    await eventApi.unpublish(ev.id);
+                                    fetchEvents(currentPage);
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert("Failed to unpublish");
+                                  }
+                                }
+                              }}
+                              className="p-1.5 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+                              title="Unpublish (Return to Draft)"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">drafts</span>
+                            </button>
+                          ) : null}
+
                           <button onClick={() => navigate(`/dashboard/events/edit/${ev.id}`)} className="p-1.5 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors" title="Edit Event">
                             <span className="material-symbols-outlined text-[18px]">edit</span>
                           </button>

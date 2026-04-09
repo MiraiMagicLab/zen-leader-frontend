@@ -1,7 +1,7 @@
 import { motion } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { eventApi } from "../lib/api"
+import { eventApi, assetApi } from "../lib/api"
 import MarkdownEditor from "../components/MarkdownEditor"
 
 const TIMEZONES = [
@@ -29,6 +29,7 @@ export default function EditEventPage() {
   const [speaker, setSpeaker] = useState("")
   const [description, setDescription] = useState("")
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
 
   // Date & Time
@@ -76,9 +77,6 @@ export default function EditEventPage() {
           // It's saved as uppercase inside metadata, we can just Capitalize it or use as is
           const c = String(ev.metadata.category)
           setCategory(c.charAt(0).toUpperCase() + c.slice(1).toLowerCase())
-        } else if (ev.sessionType) {
-          const cap = ev.sessionType.charAt(0).toUpperCase() + ev.sessionType.slice(1).toLowerCase().replace(/_/g, ' ')
-          setCategory(cap)
         }
 
         if (ev.metadata?.speaker) {
@@ -91,18 +89,10 @@ export default function EditEventPage() {
 
         if (ev.metadata?.locationType) {
           setLocationType(String(ev.metadata.locationType) as "Physical" | "Online")
-        } else if (ev.liveLink) {
-          setLocationType("Online")
-        } else if (ev.roomCode) {
-          setLocationType("Physical")
         }
 
         if (ev.metadata?.venue) {
           setVenue(String(ev.metadata.venue))
-        } else if (ev.liveLink) {
-          setVenue(ev.liveLink)
-        } else if (ev.roomCode) {
-          setVenue(ev.roomCode)
         }
       } catch (err) {
         console.error(err)
@@ -118,6 +108,7 @@ export default function EditEventPage() {
   const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setBannerFile(file)
     const reader = new FileReader()
     reader.onload = (ev) => {
       if (ev.target?.result) {
@@ -138,6 +129,14 @@ export default function EditEventPage() {
     if (!id) return;
     setIsSubmitting(true)
     try {
+      let finalThumbnailUrl = bannerPreview || undefined
+
+      // If we have a new file, upload it first
+      if (bannerFile) {
+        const uploadRes = await assetApi.upload(bannerFile)
+        finalThumbnailUrl = uploadRes.url
+      }
+
       const startDt = new Date(`${eventDate}T${startTime}:00`)
       const endDt = new Date(`${eventDate}T${endTime}:00`)
 
@@ -155,7 +154,7 @@ export default function EditEventPage() {
           speaker
         },
         publishImmediately: status === "open",
-        thumbnailUrl: bannerPreview || undefined
+        thumbnailUrl: finalThumbnailUrl
       }
 
       await eventApi.update(id, payload)
