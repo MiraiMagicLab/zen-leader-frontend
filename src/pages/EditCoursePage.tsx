@@ -13,6 +13,7 @@ interface LessonItem {
   type: LessonType
   title: string
   description: string
+  fileUrl?: string
 }
 interface Chapter {
   id: number
@@ -95,6 +96,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
   const [fileType, setFileType] = useState("PDF Document")
   const fileRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [fileUrl, setFileUrl] = useState<string>("")
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -119,7 +121,13 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">File</label>
-          <input ref={fileRef} type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <input ref={fileRef} type="file" className="hidden" onChange={(e) => {
+            const selectedFile = e.target.files?.[0]
+            if (selectedFile) {
+              setFile(selectedFile)
+              setFileUrl(URL.createObjectURL(selectedFile))
+            }
+          }} />
           <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 hover:border-primary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group">
             <span className="material-symbols-outlined text-slate-300 group-hover:text-primary text-[24px]">upload_file</span>
             <div className="text-left overflow-hidden">
@@ -131,7 +139,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; const sz = file ? ` • ${(file.size/1024/1024).toFixed(1)} MB` : ""; onAdd({ type: "resource", title: title.trim(), description: `${fileType}${sz}` }); onClose() }} className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90">Add Resource</button>
+        <button onClick={() => { if (!title.trim()) return; const sz = file ? ` • ${(file.size/1024/1024).toFixed(1)} MB` : ""; onAdd({ type: "resource", title: title.trim(), description: `${fileType}${sz}`, fileUrl }); onClose() }} className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90">Add Resource</button>
       </div>
     </ModalBackdrop>
   )
@@ -208,9 +216,12 @@ function AddTextModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit
   )
 }
 
-function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string) => void }) {
+function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string, fileUrl?: string) => void }) {
   const [title, setTitle] = useState(lesson.title)
   const [description, setDescription] = useState(lesson.description)
+  const [fileUrl, setFileUrl] = useState(lesson.fileUrl || "")
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [fileName, setFileName] = useState(lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : "")
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -226,10 +237,44 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
           <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
         </div>
+        {(lesson.type === "resource" || lesson.type === "document" || lesson.type === "photo" || lesson.type === "video") && (
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">File</label>
+            <input ref={fileRef} type="file" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                const url = URL.createObjectURL(file)
+                setFileUrl(url)
+                setFileName(file.name)
+              }
+            }} />
+            <div className="space-y-2">
+              {fileUrl && (
+                <div className="flex items-center gap-2 p-3 bg-surface-container-low rounded-xl">
+                  <span className="material-symbols-outlined text-primary text-[20px]">description</span>
+                  <span className="text-sm text-slate-700 flex-1 truncate">{fileName || "Uploaded file"}</span>
+                  <button onClick={() => { setFileUrl(""); setFileName(""); }} className="p-1 text-slate-400 hover:text-error">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+              )}
+              <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group">
+                <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[24px]">upload_file</span>
+                <span className="text-sm text-slate-400 group-hover:text-secondary">{fileUrl ? "Replace file" : "Click to upload file"}</span>
+              </button>
+            </div>
+            {fileUrl && (
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-secondary hover:underline mt-2">
+                <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                Open file
+              </a>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { onSave(title.trim(), description.trim()); onClose() }} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90">Save Changes</button>
+        <button onClick={() => { onSave(title.trim(), description.trim(), fileUrl); onClose() }} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90">Save Changes</button>
       </div>
     </ModalBackdrop>
   )
@@ -479,9 +524,9 @@ export default function EditCoursePage() {
     ))
   }, [])
 
-  const saveLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string) => {
+  const saveLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string) => {
     setRuns((prev) => prev.map((r) => r.id === runId
-      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description } : l) } : ch) }
+      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, fileUrl } : l) } : ch) }
       : r
     ))
   }
@@ -895,7 +940,7 @@ export default function EditCoursePage() {
         {addModal?.type === "resource" && <AddResourceModal key="r" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "live" && <AddLiveModal key="l" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
         {addModal?.type === "text" && <AddTextModal key="t" onClose={() => setAddModal(null)} onAdd={(l) => addLesson(addModal.runId, addModal.chapterId, l)} />}
-        {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d)} />}
+        {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d, url) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d, url)} />}
       </AnimatePresence>
 
       <SaveToast show={saveState === "saved"} />
