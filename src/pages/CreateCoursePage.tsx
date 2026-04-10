@@ -6,6 +6,7 @@ import MarkdownEditor from "@/components/MarkdownEditor"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import FileActionLinks from "@/components/FileActionLinks"
+import { buildLessonContentData } from "@/lib/lessonContent"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "photo" | "document" | "text"
@@ -624,7 +625,9 @@ export default function CreateCoursePage() {
               orderIndex: li,
               isHidden: false,
               isOptional: false,
-              contentData: {},
+              contentData: buildLessonContentData({
+                fileUrl: l.fileUrl,
+              }) ?? {},
             })
           }
         }

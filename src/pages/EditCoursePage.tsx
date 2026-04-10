@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, assetApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 import FileActionLinks from "@/components/FileActionLinks"
+import { buildLessonContentData, getLessonAsset } from "@/lib/lessonContent"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "resource" | "live" | "document" | "text" | "photo"
@@ -16,6 +17,7 @@ interface LessonItem {
   description: string
   fileUrl?: string
   fileName?: string
+  contentData?: Record<string, unknown>
 }
 interface Chapter {
   id: number
@@ -32,6 +34,8 @@ interface Run {
   timezone: string
   chapters: Chapter[]
 }
+
+type SaveState = "idle" | "saving" | "saved" | "error"
 
 // ─── Modal backdrop ───────────────────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
@@ -409,18 +413,25 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
-function SaveToast({ show }: { show: boolean }) {
+function SaveToast({ state, message }: { state: SaveState; message: string }) {
   return (
     <AnimatePresence>
-      {show && (
+      {state !== "idle" && (
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold"
+          className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold ${
+            state === "error" ? "bg-error text-white" : "bg-slate-900 text-white"
+          }`}
         >
-          <span className="material-symbols-outlined text-primary-fixed text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-          Changes saved successfully!
+          <span
+            className={`material-symbols-outlined text-[20px] ${state === "saving" ? "animate-spin" : ""} ${state === "error" ? "text-white" : "text-primary-fixed"}`}
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            {state === "saving" ? "autorenew" : state === "error" ? "error" : "check_circle"}
+          </span>
+          {message}
         </motion.div>
       )}
     </AnimatePresence>
@@ -493,7 +504,8 @@ export default function EditCoursePage() {
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
 
   // ── Save state ──
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle")
+  const [saveState, setSaveState] = useState<SaveState>("idle")
+  const [saveMessage, setSaveMessage] = useState("")
 
   // Populate form when API data arrives
   useEffect(() => {
@@ -520,12 +532,18 @@ export default function EditCoursePage() {
         chapters: r.chapters.map((ch) => ({
           id: idCounter++,
           title: ch.title,
-          lessons: ch.lessons.map((l) => ({
-            id: idCounter++,
-            type: (l.type as LessonType) ?? "resource",
-            title: l.title,
-            description: l.description ?? "",
-          })),
+          lessons: ch.lessons.map((l) => {
+            const asset = getLessonAsset(l.contentData)
+            return {
+              id: idCounter++,
+              type: (l.type as LessonType) ?? "resource",
+              title: l.title,
+              description: l.description ?? "",
+              fileUrl: asset.url,
+              fileName: asset.fileName,
+              contentData: l.contentData ?? undefined,
+            }
+          }),
         })),
       }))
       setRuns(initialRuns)
@@ -533,8 +551,9 @@ export default function EditCoursePage() {
   }, [apiCourse])
 
   const handleSave = useCallback(async () => {
-    if (saveState !== "idle" || !apiCourse) return
+    if (saveState === "saving" || !apiCourse) return
     setSaveState("saving")
+    setSaveMessage("Saving changes...")
     const now = new Date().toISOString()
     try {
       // 1. Update course metadata
@@ -551,8 +570,7 @@ export default function EditCoursePage() {
       })
 
       // 2. Save each run with its chapters and lessons
-      for (let ri = 0; ri < runs.length; ri++) {
-        const run = runs[ri]
+      const savedRuns = await Promise.all(runs.map(async (run, ri) => {
         let runId = run.apiId
         if (!runId) {
           const newRun = await courseRunApi.create({
@@ -577,40 +595,50 @@ export default function EditCoursePage() {
           })
         }
 
-        // Delete existing chapters then recreate
         const existingChapters = await chapterApi.getAll(runId)
-        for (const ch of existingChapters) {
-          await chapterApi.remove(ch.id)
-        }
-        for (let ci = 0; ci < run.chapters.length; ci++) {
-          const ch = run.chapters[ci]
-          const created = await chapterApi.create({
+        await Promise.all(existingChapters.map((chapter) => chapterApi.remove(chapter.id)))
+
+        await Promise.all(run.chapters.map(async (chapter, ci) => {
+          const createdChapter = await chapterApi.create({
             courseRunId: runId,
-            title: ch.title,
+            title: chapter.title,
             description: null,
             orderIndex: ci,
           })
-          for (let li = 0; li < ch.lessons.length; li++) {
-            const l = ch.lessons[li]
-            await lessonApi.create({
-              chapterId: created.id,
-              type: l.type,
-              title: l.title,
-              description: l.description || null,
-              orderIndex: li,
-              isHidden: false,
-              isOptional: false,
-              contentData: {},
-            })
-          }
-        }
-      }
 
+          await Promise.all(chapter.lessons.map((lesson, li) => lessonApi.create({
+            chapterId: createdChapter.id,
+            type: lesson.type,
+            title: lesson.title,
+            description: lesson.description || null,
+            orderIndex: li,
+            isHidden: false,
+            isOptional: false,
+            contentData: lesson.contentData ?? buildLessonContentData({
+              fileUrl: lesson.fileUrl,
+              fileName: lesson.fileName,
+            }) ?? {},
+          })))
+        }))
+
+        return { id: run.id, apiId: runId }
+      }))
+
+      const savedRunMap = new Map(savedRuns.map((run) => [run.id, run.apiId]))
+      setRuns((prev) => prev.map((run) => (
+        savedRunMap.has(run.id)
+          ? { ...run, apiId: savedRunMap.get(run.id) ?? run.apiId }
+          : run
+      )))
+
+      setSaveMessage("Changes saved successfully!")
       setSaveState("saved")
       setTimeout(() => setSaveState("idle"), 2000)
     } catch (e) {
       console.error("Failed to save:", e)
-      setSaveState("idle")
+      setSaveMessage(e instanceof Error ? e.message : "Failed to save changes.")
+      setSaveState("error")
+      setTimeout(() => setSaveState("idle"), 3000)
     }
   }, [saveState, apiCourse, courseId, courseCode, title, description, level, thumbnailPreview, category, selectedProgramId, orderIndex, tags, runs])
 
@@ -647,14 +675,47 @@ export default function EditCoursePage() {
 
   const addLesson = useCallback((runId: number, chapterId: number, lesson: Omit<LessonItem, "id">) => {
     setRuns((prev) => prev.map((r) => r.id === runId
-      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: [...ch.lessons, { ...lesson, id: nextLessonId.current++ }] } : ch) }
+      ? {
+        ...r,
+        chapters: r.chapters.map((ch) => ch.id === chapterId ? {
+          ...ch,
+          lessons: [
+            ...ch.lessons,
+            {
+              ...lesson,
+              id: nextLessonId.current++,
+              contentData: lesson.contentData ?? buildLessonContentData({
+                fileUrl: lesson.fileUrl,
+                fileName: lesson.fileName,
+              }),
+            },
+          ],
+        } : ch),
+      }
       : r
     ))
   }, [])
 
   const saveLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string, fileName?: string) => {
     setRuns((prev) => prev.map((r) => r.id === runId
-      ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, fileUrl, fileName } : l) } : ch) }
+      ? {
+        ...r,
+        chapters: r.chapters.map((ch) => ch.id === chapterId ? {
+          ...ch,
+          lessons: ch.lessons.map((l) => l.id === lessonId ? {
+            ...l,
+            title,
+            description,
+            fileUrl,
+            fileName,
+            contentData: buildLessonContentData({
+              fileUrl,
+              fileName,
+              existingContentData: l.contentData,
+            }),
+          } : l),
+        } : ch),
+      }
       : r
     ))
   }
@@ -715,19 +776,21 @@ export default function EditCoursePage() {
             </button>
             <button
               onClick={handleSave}
-              disabled={saveState !== "idle"}
+              disabled={saveState === "saving"}
               className={`px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
                 saveState === "saved"
                   ? "bg-secondary text-white"
+                  : saveState === "error"
+                  ? "bg-error text-white"
                   : saveState === "saving"
                   ? "bg-primary-fixed/70 text-on-primary-fixed cursor-wait"
                   : "bg-primary-fixed text-on-primary-fixed hover:shadow-lg active:scale-95"
               }`}
             >
               <span className={`material-symbols-outlined text-[18px] ${saveState === "saving" ? "animate-spin" : ""}`}>
-                {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : "save"}
+                {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : saveState === "error" ? "error" : "save"}
               </span>
-              {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : "Save Changes"}
+              {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : saveState === "error" ? "Retry Save" : "Save Changes"}
             </button>
           </div>
         </section>
@@ -1076,15 +1139,19 @@ export default function EditCoursePage() {
             {/* Save */}
             <button
               onClick={handleSave}
-              disabled={saveState !== "idle"}
+              disabled={saveState === "saving"}
               className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md ${
-                saveState === "saved" ? "bg-secondary text-white" : "bg-primary-fixed text-on-primary-fixed hover:shadow-lg"
+                saveState === "saved"
+                  ? "bg-secondary text-white"
+                  : saveState === "error"
+                  ? "bg-error text-white"
+                  : "bg-primary-fixed text-on-primary-fixed hover:shadow-lg"
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : "save"}
+              <span className={`material-symbols-outlined text-[18px] ${saveState === "saving" ? "animate-spin" : ""}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : saveState === "error" ? "error" : "save"}
               </span>
-              {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : "Save Changes"}
+              {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : saveState === "error" ? "Retry Save" : "Save Changes"}
             </button>
           </div>
         </div>
@@ -1099,7 +1166,7 @@ export default function EditCoursePage() {
         {editingLesson && <EditLessonModal key="el" lesson={editingLesson.lesson} onClose={() => setEditingLesson(null)} onSave={(t, d, url, name) => saveLesson(editingLesson.runId, editingLesson.chapterId, editingLesson.lesson.id, t, d, url, name)} />}
       </AnimatePresence>
 
-      <SaveToast show={saveState === "saved"} />
+      <SaveToast state={saveState} message={saveMessage} />
     </>
   )
 }

@@ -3,9 +3,13 @@ import { useState, useEffect } from "react"
 import { useNavigate, useParams, Link } from "react-router-dom"
 import { courseRunApi, courseApi, type CourseRunResponse, type CourseResponse, type LessonResponse } from "@/lib/api"
 import FileActionLinks from "@/components/FileActionLinks"
+import { getLessonAsset } from "@/lib/lessonContent"
 
 function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: () => void }) {
-  const fileUrl = lesson.contentData?.fileUrl as string | undefined
+  const asset = getLessonAsset(lesson.contentData)
+  const fileUrl = asset.url
+  const fileName = asset.fileName || lesson.title
+  const openLabel = lesson.type === "video" ? "Open Video" : lesson.type === "photo" ? "Open Image" : "Open File"
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
       <motion.div
@@ -43,10 +47,10 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: ()
                 <div className="flex items-center gap-3">
                   <FileActionLinks
                     url={fileUrl}
-                    fileName={`${lesson.title}.pdf`}
+                    fileName={fileName}
                     openClassName="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
                     downloadClassName="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
-                    openLabel="Open PDF"
+                    openLabel={openLabel}
                     downloadLabel="Download"
                   />
                 </div>
@@ -68,12 +72,16 @@ const iconMap: Record<string, string> = {
   video: "play_circle",
   photo: "image",
   document: "description",
+  resource: "description",
+  live: "podcasts",
   text: "article",
 }
 const colorMap: Record<string, string> = {
   video: "text-secondary bg-secondary/10",
   photo: "text-primary bg-primary/10",
   document: "text-tertiary bg-tertiary/10",
+  resource: "text-primary bg-primary/10",
+  live: "text-tertiary bg-tertiary/10",
   text: "text-slate-500 bg-slate-100",
 }
 
@@ -294,33 +302,52 @@ export default function CourseRunDetailPage() {
                             lessons
                               .slice()
                               .sort((a, b) => a.orderIndex - b.orderIndex)
-                              .map((lesson) => (
-                                <div key={lesson.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/50 transition-colors group">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${colorMap[lesson.type] ?? "text-slate-400 bg-slate-100"}`}>
-                                    <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                      {iconMap[lesson.type] ?? "article"}
+                              .map((lesson) => {
+                                const asset = getLessonAsset(lesson.contentData)
+                                const hasFile = Boolean(asset.url)
+                                return (
+                                  <div key={lesson.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/50 transition-colors group">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${colorMap[lesson.type] ?? "text-slate-400 bg-slate-100"}`}>
+                                      <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                        {iconMap[lesson.type] ?? "article"}
+                                      </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      {hasFile ? (
+                                        <a
+                                          href={asset.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-primary min-w-0"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <span className="material-symbols-outlined text-[16px] text-primary shrink-0">
+                                            {lesson.type === "video" ? "play_circle" : lesson.type === "photo" ? "image" : "description"}
+                                          </span>
+                                          <span className="truncate">{lesson.title}</span>
+                                        </a>
+                                      ) : (
+                                        <p className="text-sm font-semibold text-slate-800 truncate">{lesson.title}</p>
+                                      )}
+                                      {lesson.description && (
+                                        <p className="text-[11px] text-slate-400">{lesson.description}</p>
+                                      )}
+                                    </div>
+                                    {hasFile && (
+                                      <button
+                                        onClick={() => setPreviewLesson(lesson)}
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-all shrink-0"
+                                        title="Preview"
+                                      >
+                                        <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                                      </button>
+                                    )}
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide shrink-0">
+                                      {lesson.type}
                                     </span>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-slate-800 truncate">{lesson.title}</p>
-                                    {lesson.description && (
-                                      <p className="text-[11px] text-slate-400">{lesson.description}</p>
-                                    )}
-                                  </div>
-                                  {lesson.type !== "text" && (
-                                    <button
-                                      onClick={() => setPreviewLesson(lesson)}
-                                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-all shrink-0"
-                                      title="Preview"
-                                    >
-                                      <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-                                    </button>
-                                  )}
-                                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide shrink-0">
-                                    {lesson.type}
-                                  </span>
-                                </div>
-                              ))
+                                )
+                              })
                           )}
                         </div>
                       </motion.div>
