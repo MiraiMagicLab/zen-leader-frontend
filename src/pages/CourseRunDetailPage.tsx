@@ -318,8 +318,9 @@ export default function CourseRunDetailPage() {
                                           href={asset.url}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-primary min-w-0"
+                                          className="inline-flex max-w-full items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 underline underline-offset-4 decoration-primary/40 min-w-0"
                                           onClick={(e) => e.stopPropagation()}
+                                          title={lesson.type === "video" ? "Open video in new tab" : "Open file in new tab"}
                                         >
                                           <span className="material-symbols-outlined text-[16px] text-primary shrink-0">
                                             {lesson.type === "video" ? "play_circle" : lesson.type === "photo" ? "image" : "description"}
@@ -333,18 +334,21 @@ export default function CourseRunDetailPage() {
                                         <p className="text-[11px] text-slate-400">{lesson.description}</p>
                                       )}
                                     </div>
-                                    {hasFile && (
-                                      <button
-                                        onClick={() => setPreviewLesson(lesson)}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-all shrink-0"
-                                        title="Preview"
-                                      >
-                                        <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-                                      </button>
-                                    )}
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide shrink-0">
-                                      {lesson.type}
-                                    </span>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                      {hasFile && (
+                                        <button
+                                          onClick={() => setPreviewLesson(lesson)}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-secondary border border-secondary/20 bg-secondary/5 hover:bg-secondary/10 rounded-lg transition-colors shrink-0"
+                                          title="Preview"
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                          Preview
+                                        </button>
+                                      )}
+                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide shrink-0">
+                                        {lesson.type}
+                                      </span>
+                                    </div>
                                   </div>
                                 )
                               })
