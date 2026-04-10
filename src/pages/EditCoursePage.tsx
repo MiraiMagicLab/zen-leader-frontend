@@ -55,7 +55,30 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
   const [title, setTitle] = useState("")
   const [duration, setDuration] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
-  const [fileName, setFileName] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [fileUrl, setFileUrl] = useState<string>("")
+  const [isUploading, setIsUploading] = useState(false)
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
+    
+    setFile(selectedFile)
+    setIsUploading(true)
+    
+    try {
+      // Upload to Cloudinary via backend
+      const response = await assetApi.upload(selectedFile)
+      setFileUrl(response.url)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      // Fallback to blob URL if upload fails
+      setFileUrl(URL.createObjectURL(selectedFile))
+    } finally {
+      setIsUploading(false)
+    }
+  }
+  
   return (
     <ModalBackdrop onClose={onClose}>
       <div className="flex items-center justify-between mb-6">
@@ -78,16 +101,50 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Video File</label>
-          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")} />
-          <button onClick={() => fileRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group">
-            <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[24px]">upload_file</span>
-            <span className="text-sm text-slate-400 group-hover:text-secondary truncate">{fileName || "Click to upload video"}</span>
+          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
+          <button onClick={() => fileRef.current?.click()} disabled={isUploading} className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/50 rounded-xl px-4 py-4 flex items-center gap-3 transition-colors group disabled:opacity-50">
+            <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[24px]">{isUploading ? "progress_activity" : "upload_file"}</span>
+            <div className="text-left overflow-hidden">
+              {isUploading ? (
+                <p className="text-sm text-slate-400">Uploading...</p>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-400 group-hover:text-secondary truncate">{file ? file.name : "Click to upload video"}</p>
+                  {file && <p className="text-[10px] text-slate-300">{(file.size / 1024 / 1024).toFixed(1)} MB</p>}
+                </>
+              )}
+            </div>
           </button>
+          {fileUrl && file && (
+            <div className="mt-2 p-3 bg-surface-container-low rounded-xl">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Uploaded File</p>
+              <div className="flex items-center gap-3">
+                <FileActionLinks
+                  url={fileUrl}
+                  fileName={file.name}
+                  openLabel="Open Video"
+                  openClassName="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                  downloadClassName="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary hover:underline"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; onAdd({ type: "video", title: title.trim(), description: duration ? `Video Lesson • ${duration} mins` : "Video Lesson" }); onClose() }} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90">Add Lesson</button>
+        <button 
+          onClick={() => { 
+            if (!title.trim()) return
+            const durationText = duration ? `Video Lesson • ${duration} mins` : "Video Lesson"
+            onAdd({ type: "video", title: title.trim(), description: durationText, fileUrl, fileName: file?.name })
+            onClose() 
+          }} 
+          disabled={isUploading || !title.trim()} 
+          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
+        >
+          Add Lesson
+        </button>
       </div>
     </ModalBackdrop>
   )
@@ -334,6 +391,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
                 <FileActionLinks
                   url={fileUrl}
                   fileName={displayFileName}
+                  openLabel={lesson.type === "video" ? "Open Video" : lesson.type === "photo" ? "Open Image" : "Open PDF"}
                   openClassName="inline-flex items-center gap-1 text-xs text-secondary hover:underline"
                   downloadClassName="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-secondary hover:underline"
                 />
@@ -865,6 +923,7 @@ export default function EditCoursePage() {
                                         <FileActionLinks
                                           url={lesson.fileUrl}
                                           fileName={lesson.fileName || `${lesson.title}.pdf`}
+                                          openLabel={lesson.type === "video" ? "Open Video" : lesson.type === "photo" ? "Open Image" : "Open PDF"}
                                           openClassName="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                                           downloadClassName="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary hover:underline"
                                           onClick={(e) => e.stopPropagation()}
