@@ -5,6 +5,7 @@ import { programApi, courseApi, courseRunApi, chapterApi, lessonApi, type Progra
 import MarkdownEditor from "@/components/MarkdownEditor"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import FileActionLinks from "@/components/FileActionLinks"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "photo" | "document" | "text"
@@ -368,9 +369,16 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonItem; onClose: () => 
               <div className="flex flex-col items-center gap-4 py-8">
                 <span className="material-symbols-outlined text-slate-300 text-6xl">description</span>
                 <p className="text-sm text-slate-500">{lesson.description}</p>
-                <a href={lesson.fileUrl} download className="px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
-                  Download File
-                </a>
+                <div className="flex items-center gap-3">
+                  <FileActionLinks
+                    url={lesson.fileUrl}
+                    fileName={`${lesson.title}.pdf`}
+                    openClassName="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+                    downloadClassName="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                    openLabel="Open PDF"
+                    downloadLabel="Download"
+                  />
+                </div>
               </div>
             )
           ) : (

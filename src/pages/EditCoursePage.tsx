@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, assetApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
+import FileActionLinks from "@/components/FileActionLinks"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LessonType = "video" | "resource" | "live" | "document" | "text" | "photo"
@@ -162,23 +163,12 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
             <div className="mt-2 p-3 bg-surface-container-low rounded-xl">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Uploaded File</p>
               <div className="flex items-center gap-3">
-                <a 
-                  href={fileUrl}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <span className="material-symbols-outlined text-[18px]">visibility</span>
-                  Open PDF
-                </a>
-                <a 
-                  href={fileUrl}
-                  download={file.name}
-                  className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary hover:underline"
-                >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                  Download
-                </a>
+                <FileActionLinks
+                  url={fileUrl}
+                  fileName={file.name}
+                  openClassName="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                  downloadClassName="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary hover:underline"
+                />
               </div>
             </div>
           )}
@@ -341,23 +331,12 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
             </div>
             {fileUrl && (
               <div className="flex items-center gap-3 mt-2">
-                <a 
-                  href={fileUrl}
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="inline-flex items-center gap-1 text-xs text-secondary hover:underline"
-                >
-                  <span className="material-symbols-outlined text-[14px]">visibility</span>
-                  Open PDF
-                </a>
-                <a 
-                  href={fileUrl}
-                  download={displayFileName}
-                  className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-secondary hover:underline"
-                >
-                  <span className="material-symbols-outlined text-[14px]">download</span>
-                  Download
-                </a>
+                <FileActionLinks
+                  url={fileUrl}
+                  fileName={displayFileName}
+                  openClassName="inline-flex items-center gap-1 text-xs text-secondary hover:underline"
+                  downloadClassName="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-secondary hover:underline"
+                />
               </div>
             )}
           </div>
@@ -883,25 +862,13 @@ export default function EditCoursePage() {
                                     {/* Show file link if lesson has a file */}
                                     {lesson.fileUrl && (
                                       <div className="mt-1 ml-12 flex items-center gap-3">
-                                        <a 
-                                          href={lesson.fileUrl}
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                        <FileActionLinks
+                                          url={lesson.fileUrl}
+                                          fileName={lesson.fileName || `${lesson.title}.pdf`}
+                                          openClassName="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                          downloadClassName="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary hover:underline"
                                           onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                          Open PDF
-                                        </a>
-                                        <a 
-                                          href={lesson.fileUrl}
-                                          download={lesson.fileName || `${lesson.title}.pdf`}
-                                          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary hover:underline"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <span className="material-symbols-outlined text-[14px]">download</span>
-                                          Download
-                                        </a>
+                                        />
                                       </div>
                                     )}
                                     {isExpanded && hasDescription && (

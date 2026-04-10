@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useNavigate, useParams, Link } from "react-router-dom"
 import { courseRunApi, courseApi, type CourseRunResponse, type CourseResponse, type LessonResponse } from "@/lib/api"
+import FileActionLinks from "@/components/FileActionLinks"
 
 function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: () => void }) {
   const fileUrl = lesson.contentData?.fileUrl as string | undefined
@@ -39,9 +40,16 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: ()
               <div className="flex flex-col items-center gap-4 py-8">
                 <span className="material-symbols-outlined text-slate-300 text-6xl">description</span>
                 <p className="text-sm text-slate-500">{lesson.description}</p>
-                <a href={fileUrl} download className="px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
-                  Download File
-                </a>
+                <div className="flex items-center gap-3">
+                  <FileActionLinks
+                    url={fileUrl}
+                    fileName={`${lesson.title}.pdf`}
+                    openClassName="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+                    downloadClassName="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                    openLabel="Open PDF"
+                    downloadLabel="Download"
+                  />
+                </div>
               </div>
             )
           ) : (
