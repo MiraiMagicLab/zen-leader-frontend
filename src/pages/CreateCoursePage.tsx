@@ -148,7 +148,7 @@ function AddContentModal({
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert("File upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       clearSelectedFile()
     } finally {
       setIsUploading(false)
@@ -318,7 +318,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert("File upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setFileUrl(lesson.fileUrl)
       setFileName(lesson.fileName ?? null)
       setImagePreview(lesson.type === "photo" ? (lesson.fileUrl ?? null) : null)
@@ -812,7 +812,7 @@ export default function CreateCoursePage() {
       setBannerPreview(response.url)
     } catch (error) {
       console.error("Thumbnail upload failed:", error)
-      alert("Thumbnail upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
       if (bannerInputRef.current) {
         bannerInputRef.current.value = ""
       }

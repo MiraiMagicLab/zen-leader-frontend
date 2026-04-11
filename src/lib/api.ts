@@ -9,6 +9,14 @@ interface ApiResponse<T> {
   message?: string
 }
 
+function buildHttpErrorMessage(res: Response): string {
+  if (res.status === 413) {
+    return "Uploaded file is too large for the server limit."
+  }
+
+  return `HTTP ${res.status}: ${res.statusText}`
+}
+
 export interface PagingResponse<T> {
   currentPage: number
   pageSize: number
@@ -41,7 +49,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     ...init,
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  if (!res.ok) throw new Error(buildHttpErrorMessage(res))
   const json: ApiResponse<T> = await res.json()
   return json.data
 }
@@ -53,7 +61,7 @@ async function reqPublic<T>(path: string, init?: RequestInit): Promise<T> {
     ...init?.headers as Record<string, string>,
   }
   const res = await fetch(`${BASE}${path}`, { headers, ...init })
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  if (!res.ok) throw new Error(buildHttpErrorMessage(res))
   const json: ApiResponse<T> = await res.json()
   return json.data
 }
@@ -63,7 +71,7 @@ async function reqForm<T>(path: string, formData: FormData): Promise<T> {
   const headers: Record<string, string> = {}
   if (token) headers["Authorization"] = `Bearer ${token}`
   const res = await fetch(`${BASE}${path}`, { method: "POST", body: formData, headers })
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  if (!res.ok) throw new Error(buildHttpErrorMessage(res))
   const json: ApiResponse<T> = await res.json()
   return json.data
 }

@@ -76,7 +76,7 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert("Video upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "Video upload failed. Please check your connection and try again.")
       setFile(null)
       setFileUrl("")
       // Reset the file input
@@ -182,7 +182,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert("File upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setFile(null)
       setFileUrl("")
       // Reset the file input
@@ -363,7 +363,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert("File upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setDisplayFileName(lesson.fileName || (lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : ""))
       // Reset the file input
       if (fileRef.current) {
@@ -581,7 +581,7 @@ export default function EditCoursePage() {
       setThumbnailPreview(response.url)
     } catch (error) {
       console.error("Thumbnail upload failed:", error)
-      alert("Thumbnail upload failed. Please check your connection and try again.")
+      alert(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
       if (thumbnailInputRef.current) {
         thumbnailInputRef.current.value = ""
       }
