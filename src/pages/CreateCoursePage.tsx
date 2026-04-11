@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, Link, useSearchParams } from "react-router-dom"
-import { programApi, courseApi, courseRunApi, chapterApi, lessonApi, type ProgramResponse } from "@/lib/api"
+import { programApi, courseApi, courseRunApi, chapterApi, lessonApi, assetApi, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -17,6 +17,7 @@ interface LessonItem {
   title: string
   description: string
   fileUrl?: string
+  fileName?: string
 }
 
 interface Chapter {
@@ -103,6 +104,7 @@ function AddContentModal({
   const [fileUrl, setFileUrl] = useState<string | undefined>(undefined)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   const config = {
     video: { icon: "play_circle", color: "text-secondary bg-secondary/10", label: "Upload Video", placeholder: "e.g. Defining Leadership in 2024", accept: "video/*" },
@@ -114,14 +116,43 @@ function AddContentModal({
   const formatSize = (bytes: number) =>
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
-  const handleFile = (picked: File) => {
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
+
+  const clearSelectedFile = () => {
+    setFile(null)
+    setFileUrl(undefined)
+    setImagePreview(null)
+    if (fileRef.current) {
+      fileRef.current.value = ""
+    }
+  }
+
+  const handleFile = async (picked: File) => {
     setFile(picked)
     if (!title.trim()) setTitle(picked.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "))
     const ext = picked.name.split(".").pop()?.toUpperCase() ?? ""
     setDescription(`${ext} • ${formatSize(picked.size)}`)
-    const url = URL.createObjectURL(picked)
-    setFileUrl(url)
-    if (type === "photo") setImagePreview(url)
+    if (type === "photo") {
+      setImagePreview(URL.createObjectURL(picked))
+    }
+
+    setIsUploading(true)
+    try {
+      const response = await assetApi.upload(picked)
+      setFileUrl(response.url)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      alert("File upload failed. Please check your connection and try again.")
+      clearSelectedFile()
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -154,7 +185,7 @@ function AddContentModal({
             {type === "photo" && imagePreview ? (
               <div className="relative rounded-xl overflow-hidden border border-slate-200">
                 <img src={imagePreview} alt="preview" className="w-full h-36 object-cover" />
-                <button onClick={() => { setFile(null); setImagePreview(null) }}
+                <button onClick={clearSelectedFile}
                   className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center hover:bg-black/70 transition-colors">
                   <span className="material-symbols-outlined text-white text-[16px]">close</span>
                 </button>
@@ -174,9 +205,9 @@ function AddContentModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-700 truncate">{file.name}</p>
-                      <p className="text-[11px] text-slate-400">{formatSize(file.size)}</p>
+                      <p className="text-[11px] text-slate-400">{isUploading ? "Uploading..." : formatSize(file.size)}</p>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setFile(null) }}
+                    <button onClick={(e) => { e.stopPropagation(); clearSelectedFile() }}
                       className="p-1 text-slate-400 hover:text-error hover:bg-error/10 rounded-lg transition-colors">
                       <span className="material-symbols-outlined text-[16px]">close</span>
                     </button>
@@ -223,8 +254,16 @@ function AddContentModal({
           Cancel
         </button>
         <button
-          onClick={() => { if (!title.trim()) return; onAdd({ type, title: title.trim(), description, fileUrl }) }}
-          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity"
+          onClick={() => {
+            if (!title.trim()) return
+            if (type !== "text" && !fileUrl) {
+              alert("Please upload a file first.")
+              return
+            }
+            onAdd({ type, title: title.trim(), description, fileUrl, fileName: file?.name })
+          }}
+          disabled={isUploading || !title.trim() || (type !== "text" && !fileUrl)}
+          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           Add Lesson
         </button>
@@ -234,26 +273,61 @@ function AddContentModal({
 }
 
 // ─── Edit Lesson Modal ────────────────────────────────────────────────────────
-function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string, fileUrl?: string) => void }) {
+function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onClose: () => void; onSave: (title: string, description: string, fileUrl?: string, fileName?: string) => void }) {
   const [title, setTitle] = useState(lesson.title)
   const [description, setDescription] = useState(lesson.description)
   const [fileUrl, setFileUrl] = useState<string | undefined>(lesson.fileUrl)
   const [imagePreview, setImagePreview] = useState<string | null>(lesson.type === "photo" ? (lesson.fileUrl ?? null) : null)
-  const [fileName, setFileName] = useState<string | null>(null)
+  const [fileName, setFileName] = useState<string | null>(lesson.fileName ?? null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const icons: Record<string, string> = { video: "play_circle", photo: "image", document: "description", text: "article" }
   const acceptMap: Record<string, string> = { video: "video/*", photo: "image/*", document: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" }
   const formatSize = (bytes: number) =>
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
-  const handleFile = (file: File) => {
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
+
+  const clearSelectedFile = () => {
+    setFileUrl(undefined)
+    setFileName(null)
+    setImagePreview(null)
+    if (fileRef.current) {
+      fileRef.current.value = ""
+    }
+  }
+
+  const handleFile = async (file: File) => {
     const ext = file.name.split(".").pop()?.toUpperCase() ?? ""
     setDescription(`${ext} • ${formatSize(file.size)}`)
     setFileName(file.name)
-    const url = URL.createObjectURL(file)
-    setFileUrl(url)
-    if (lesson.type === "photo") setImagePreview(url)
+    if (lesson.type === "photo") {
+      setImagePreview(URL.createObjectURL(file))
+    }
+
+    setIsUploading(true)
+    try {
+      const response = await assetApi.upload(file)
+      setFileUrl(response.url)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      alert("File upload failed. Please check your connection and try again.")
+      setFileUrl(lesson.fileUrl)
+      setFileName(lesson.fileName ?? null)
+      setImagePreview(lesson.type === "photo" ? (lesson.fileUrl ?? null) : null)
+      if (fileRef.current) {
+        fileRef.current.value = ""
+      }
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const hasFileUpload = lesson.type !== "text"
@@ -288,7 +362,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
             {lesson.type === "photo" && imagePreview ? (
               <div className="relative rounded-xl overflow-hidden border border-slate-200">
                 <img src={imagePreview} alt="preview" className="w-full h-32 object-cover" />
-                <button onClick={() => { setImagePreview(null); setFileName(null) }}
+                <button onClick={clearSelectedFile}
                   className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center hover:bg-black/70 transition-colors">
                   <span className="material-symbols-outlined text-white text-[16px]">close</span>
                 </button>
@@ -297,15 +371,15 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-secondary/30 bg-secondary/5">
                 <span className="material-symbols-outlined text-secondary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>{icons[lesson.type]}</span>
                 <p className="text-sm font-semibold text-slate-700 truncate flex-1">{fileName}</p>
-                <button onClick={() => setFileName(null)} className="text-slate-400 hover:text-error transition-colors">
+                <button onClick={clearSelectedFile} className="text-slate-400 hover:text-error transition-colors">
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
             ) : (
-              <button onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-secondary/40 hover:bg-secondary/5 transition-all text-slate-400 hover:text-secondary">
-                <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                <span className="text-sm font-semibold">Click to upload new file</span>
+              <button onClick={() => fileRef.current?.click()} disabled={isUploading}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-secondary/40 hover:bg-secondary/5 transition-all text-slate-400 hover:text-secondary disabled:opacity-50">
+                <span className="material-symbols-outlined text-[20px]">{isUploading ? "progress_activity" : "upload_file"}</span>
+                <span className="text-sm font-semibold">{isUploading ? "Uploading..." : "Click to upload new file"}</span>
               </button>
             )}
           </div>
@@ -319,8 +393,21 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       </div>
       <div className="flex gap-3 mt-6">
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; onSave(title.trim(), description, fileUrl); onClose() }}
-          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity">Save</button>
+        <button
+          onClick={() => {
+            if (!title.trim()) return
+            if (hasFileUpload && !fileUrl) {
+              alert("Please upload a file first.")
+              return
+            }
+            onSave(title.trim(), description, fileUrl, fileName ?? undefined)
+            onClose()
+          }}
+          disabled={isUploading || !title.trim() || (hasFileUpload && !fileUrl)}
+          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          Save
+        </button>
       </div>
     </ModalBackdrop>
   )
@@ -373,7 +460,7 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonItem; onClose: () => 
                 <div className="flex items-center gap-3">
                   <FileActionLinks
                     url={lesson.fileUrl}
-                    fileName={`${lesson.title}.pdf`}
+                    fileName={lesson.fileName || `${lesson.title}.pdf`}
                     openClassName="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
                     downloadClassName="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
                     openLabel="Open PDF"
@@ -557,6 +644,7 @@ export default function CreateCoursePage() {
   )
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [isBannerUploading, setIsBannerUploading] = useState(false)
 
   // ── Step 2 state ──
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>(initialCourseRuns)
@@ -572,6 +660,10 @@ export default function CreateCoursePage() {
   // ── Save via API cascade ──
   const saveCourse = useCallback(async () => {
     if (saving) return
+    if (isBannerUploading) {
+      alert("Please wait for the thumbnail upload to finish.")
+      return
+    }
     const targetProgramId = selectedProgramId ?? programIdParam
     if (!targetProgramId) {
       alert("Please select a program before saving.")
@@ -627,6 +719,7 @@ export default function CreateCoursePage() {
               isOptional: false,
               contentData: buildLessonContentData({
                 fileUrl: l.fileUrl,
+                fileName: l.fileName,
               }) ?? {},
             })
           }
@@ -641,7 +734,7 @@ export default function CreateCoursePage() {
       setSaving(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saving, selectedProgramId, programIdParam, courseCode, courseTitle, courseDesc, courseLevel, bannerPreview, courseCategory, orderIndex, courseTags, courseRuns, navigate])
+  }, [saving, isBannerUploading, selectedProgramId, programIdParam, courseCode, courseTitle, courseDesc, courseLevel, bannerPreview, courseCategory, orderIndex, courseTags, courseRuns, navigate])
 
   // ── CourseRun helpers ──
   const addRun = () => {
@@ -695,11 +788,11 @@ export default function CreateCoursePage() {
     )
   }
 
-  const updateLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string) => {
+  const updateLesson = (runId: number, chapterId: number, lessonId: number, title: string, description: string, fileUrl?: string, fileName?: string) => {
     setCourseRuns((prev) =>
       prev.map((r) =>
         r.id === runId
-          ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, ...(fileUrl !== undefined ? { fileUrl } : {}) } : l) } : ch) }
+          ? { ...r, chapters: r.chapters.map((ch) => ch.id === chapterId ? { ...ch, lessons: ch.lessons.map((l) => l.id === lessonId ? { ...l, title, description, ...(fileUrl !== undefined ? { fileUrl } : {}), ...(fileName !== undefined ? { fileName } : {}) } : l) } : ch) }
           : r
       )
     )
@@ -710,10 +803,22 @@ export default function CreateCoursePage() {
   const totalLessons = courseRuns.reduce((a, r) => a + r.chapters.reduce((b, ch) => b + ch.lessons.length, 0), 0)
 
   // ── Banner upload ──
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setBannerPreview(URL.createObjectURL(file))
+    setIsBannerUploading(true)
+    try {
+      const response = await assetApi.upload(file)
+      setBannerPreview(response.url)
+    } catch (error) {
+      console.error("Thumbnail upload failed:", error)
+      alert("Thumbnail upload failed. Please check your connection and try again.")
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = ""
+      }
+    } finally {
+      setIsBannerUploading(false)
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -789,15 +894,16 @@ export default function CreateCoursePage() {
                 <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
                 <button
                   onClick={() => bannerInputRef.current?.click()}
-                  className="w-full h-48 rounded-xl border-2 border-dashed border-slate-200 hover:border-secondary/40 transition-colors flex flex-col items-center justify-center gap-3 group overflow-hidden relative"
+                  disabled={isBannerUploading}
+                  className="w-full h-48 rounded-xl border-2 border-dashed border-slate-200 hover:border-secondary/40 transition-colors flex flex-col items-center justify-center gap-3 group overflow-hidden relative disabled:opacity-60"
                 >
                   {bannerPreview ? (
                     <img src={bannerPreview} alt="Banner preview" className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-5xl transition-colors" style={{ fontVariationSettings: "'FILL' 1" }}>add_photo_alternate</span>
+                      <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-5xl transition-colors" style={{ fontVariationSettings: "'FILL' 1" }}>{isBannerUploading ? "progress_activity" : "add_photo_alternate"}</span>
                       <div className="text-center">
-                        <p className="text-sm font-bold text-slate-500 group-hover:text-secondary transition-colors">Upload thumbnail</p>
+                        <p className="text-sm font-bold text-slate-500 group-hover:text-secondary transition-colors">{isBannerUploading ? "Uploading thumbnail..." : "Upload thumbnail"}</p>
                         <p className="text-xs text-slate-400 mt-1">Recommended: 1200 × 800px (JPG, PNG)</p>
                       </div>
                     </>
@@ -1409,7 +1515,7 @@ export default function CreateCoursePage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => saveCourse()}
-            disabled={saving}
+            disabled={saving || isBannerUploading}
             className="text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-60 disabled:pointer-events-none"
           >
             Save as Draft
@@ -1443,8 +1549,8 @@ export default function CreateCoursePage() {
           <EditLessonModal
             lesson={editLessonModal.lesson}
             onClose={() => setEditLessonModal(null)}
-            onSave={(title, description, fileUrl) => {
-              updateLesson(editLessonModal.runId, editLessonModal.chapterId, editLessonModal.lesson.id, title, description, fileUrl)
+            onSave={(title, description, fileUrl, fileName) => {
+              updateLesson(editLessonModal.runId, editLessonModal.chapterId, editLessonModal.lesson.id, title, description, fileUrl, fileName)
               setEditLessonModal(null)
             }}
           />

@@ -22,12 +22,25 @@ function getNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined
 }
 
+function isBlobObjectUrl(value: string): boolean {
+  return value.startsWith("blob:")
+}
+
+export function sanitizeStoredFileUrl(value: unknown): string | undefined {
+  const url = getString(value)
+  if (!url || isBlobObjectUrl(url)) {
+    return undefined
+  }
+
+  return url
+}
+
 export function getLessonAsset(contentData?: UnknownRecord | null): LessonAsset {
   const safeContentData = isRecord(contentData) ? contentData : {}
   const fileAttachment = isRecord(safeContentData.fileAttachment) ? safeContentData.fileAttachment : {}
 
   return {
-    url: getString(fileAttachment.url) ?? getString(safeContentData.fileUrl),
+    url: sanitizeStoredFileUrl(fileAttachment.url) ?? sanitizeStoredFileUrl(safeContentData.fileUrl),
     fileName: getString(fileAttachment.fileName) ?? getString(safeContentData.fileName),
     mimeType: getString(fileAttachment.mimeType),
     size: getNumber(fileAttachment.size),
@@ -47,8 +60,9 @@ export function buildLessonContentData({
   existingContentData?: UnknownRecord | null
 }): UnknownRecord | undefined {
   const nextContentData = isRecord(existingContentData) ? { ...existingContentData } : {}
+  const persistedFileUrl = sanitizeStoredFileUrl(fileUrl)
 
-  if (!fileUrl) {
+  if (!persistedFileUrl) {
     delete nextContentData.fileUrl
     delete nextContentData.fileName
     delete nextContentData.fileAttachment
@@ -56,9 +70,9 @@ export function buildLessonContentData({
   }
 
   const nextAttachment = isRecord(nextContentData.fileAttachment) ? { ...nextContentData.fileAttachment } : {}
-  nextAttachment.url = fileUrl
+  nextAttachment.url = persistedFileUrl
 
-  nextContentData.fileUrl = fileUrl
+  nextContentData.fileUrl = persistedFileUrl
 
   if (fileName?.trim()) {
     nextAttachment.fileName = fileName.trim()

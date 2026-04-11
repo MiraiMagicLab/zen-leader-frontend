@@ -76,8 +76,13 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      // Fallback to blob URL if upload fails
-      setFileUrl(URL.createObjectURL(selectedFile))
+      alert("Video upload failed. Please check your connection and try again.")
+      setFile(null)
+      setFileUrl("")
+      // Reset the file input
+      if (fileRef.current) {
+        fileRef.current.value = ""
+      }
     } finally {
       setIsUploading(false)
     }
@@ -139,12 +144,15 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
         <button 
           onClick={() => { 
-            if (!title.trim()) return
+            if (!title.trim() || !fileUrl) {
+              if (!fileUrl) alert("Please upload a video file first.")
+              return
+            }
             const durationText = duration ? `Video Lesson • ${duration} mins` : "Video Lesson"
             onAdd({ type: "video", title: title.trim(), description: durationText, fileUrl, fileName: file?.name })
             onClose() 
           }} 
-          disabled={isUploading || !title.trim()} 
+          disabled={isUploading || !title.trim() || !fileUrl}
           className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
         >
           Add Lesson
@@ -174,8 +182,13 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      // Fallback to blob URL if upload fails
-      setFileUrl(URL.createObjectURL(selectedFile))
+      alert("File upload failed. Please check your connection and try again.")
+      setFile(null)
+      setFileUrl("")
+      // Reset the file input
+      if (fileRef.current) {
+        fileRef.current.value = ""
+      }
     } finally {
       setIsUploading(false)
     }
@@ -239,13 +252,16 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
         <button 
           onClick={() => { 
-            if (!file) return
+            if (!file || !fileUrl) {
+              if (!fileUrl) alert("Please upload a file first.")
+              return
+            }
             const title = getFileTitle(file.name)
             const sz = ` • ${(file.size/1024/1024).toFixed(1)} MB`
             onAdd({ type: "resource", title, description: `${fileType}${sz}`, fileUrl, fileName: file.name })
             onClose() 
           }} 
-          disabled={isUploading || !file} 
+          disabled={isUploading || !file || !fileUrl}
           className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
         >
           Add Resource
@@ -347,8 +363,12 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      // Fallback to blob URL if upload fails
-      setFileUrl(URL.createObjectURL(file))
+      alert("File upload failed. Please check your connection and try again.")
+      setDisplayFileName(lesson.fileName || (lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : ""))
+      // Reset the file input
+      if (fileRef.current) {
+        fileRef.current.value = ""
+      }
     } finally {
       setIsUploading(false)
     }
@@ -490,6 +510,7 @@ export default function EditCoursePage() {
   // ── Thumbnail ──
   const thumbnailInputRef = useRef<HTMLInputElement>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false)
 
   // ── Runs → Chapters → Lessons ──
   const [runs, setRuns] = useState<Run[]>([])
@@ -550,8 +571,31 @@ export default function EditCoursePage() {
     }
   }, [apiCourse])
 
+  const handleThumbnailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsThumbnailUploading(true)
+    try {
+      const response = await assetApi.upload(file)
+      setThumbnailPreview(response.url)
+    } catch (error) {
+      console.error("Thumbnail upload failed:", error)
+      alert("Thumbnail upload failed. Please check your connection and try again.")
+      if (thumbnailInputRef.current) {
+        thumbnailInputRef.current.value = ""
+      }
+    } finally {
+      setIsThumbnailUploading(false)
+    }
+  }
+
   const handleSave = useCallback(async () => {
     if (saveState === "saving" || !apiCourse) return
+    if (isThumbnailUploading) {
+      alert("Please wait for the thumbnail upload to finish.")
+      return
+    }
     setSaveState("saving")
     setSaveMessage("Saving changes...")
     const now = new Date().toISOString()
@@ -640,7 +684,7 @@ export default function EditCoursePage() {
       setSaveState("error")
       setTimeout(() => setSaveState("idle"), 3000)
     }
-  }, [saveState, apiCourse, courseId, courseCode, title, description, level, thumbnailPreview, category, selectedProgramId, orderIndex, tags, runs])
+  }, [saveState, isThumbnailUploading, apiCourse, courseId, courseCode, title, description, level, thumbnailPreview, category, selectedProgramId, orderIndex, tags, runs])
 
   // ── Run / Chapter / Lesson helpers ──
   const updateRuns = (fn: (prev: Run[]) => Run[]) => setRuns(fn)
@@ -776,7 +820,7 @@ export default function EditCoursePage() {
             </button>
             <button
               onClick={handleSave}
-              disabled={saveState === "saving"}
+              disabled={saveState === "saving" || isThumbnailUploading}
               className={`px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
                 saveState === "saved"
                   ? "bg-secondary text-white"
@@ -1042,23 +1086,20 @@ export default function EditCoursePage() {
             {/* Thumbnail */}
             <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
               <h3 className="text-sm font-extrabold font-headline text-slate-900 mb-4">Thumbnail</h3>
-              <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) setThumbnailPreview(URL.createObjectURL(f))
-              }} />
-              <button onClick={() => thumbnailInputRef.current?.click()} className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 overflow-hidden hover:border-secondary/40 transition-colors relative group">
+              <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+              <button onClick={() => thumbnailInputRef.current?.click()} disabled={isThumbnailUploading} className="w-full aspect-video rounded-xl border-2 border-dashed border-slate-200 overflow-hidden hover:border-secondary/40 transition-colors relative group disabled:opacity-60">
                 {thumbnailPreview ? (
                   <>
                     <img src={thumbnailPreview} alt="Thumbnail" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                      <span className="material-symbols-outlined text-white text-2xl">cloud_upload</span>
-                      <span className="text-[11px] font-bold text-white uppercase tracking-widest">Change Image</span>
+                      <span className="material-symbols-outlined text-white text-2xl">{isThumbnailUploading ? "progress_activity" : "cloud_upload"}</span>
+                      <span className="text-[11px] font-bold text-white uppercase tracking-widest">{isThumbnailUploading ? "Uploading..." : "Change Image"}</span>
                     </div>
                   </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-secondary text-3xl">cloud_upload</span>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Upload Image</span>
+                    <span className="material-symbols-outlined text-secondary text-3xl">{isThumbnailUploading ? "progress_activity" : "cloud_upload"}</span>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{isThumbnailUploading ? "Uploading..." : "Upload Image"}</span>
                   </div>
                 )}
               </button>
@@ -1139,7 +1180,7 @@ export default function EditCoursePage() {
             {/* Save */}
             <button
               onClick={handleSave}
-              disabled={saveState === "saving"}
+              disabled={saveState === "saving" || isThumbnailUploading}
               className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md ${
                 saveState === "saved"
                   ? "bg-secondary text-white"
