@@ -457,5 +457,10 @@ export const assetApi = {
     const form = new FormData()
     form.append("file", file)
     return reqForm<AssetResponse>("/assets/upload", form)
+  },
+  uploadLessonAsset: (file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return reqForm<AssetResponse>("/assets/r2/upload", form)
   }
 }

@@ -71,8 +71,7 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
     setIsUploading(true)
     
     try {
-      // Upload to Cloudinary via backend
-      const response = await assetApi.upload(selectedFile)
+      const response = await assetApi.uploadLessonAsset(selectedFile)
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
@@ -177,8 +176,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
     setIsUploading(true)
     
     try {
-      // Upload to Cloudinary via backend
-      const response = await assetApi.upload(selectedFile)
+      const response = await assetApi.uploadLessonAsset(selectedFile)
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
@@ -358,8 +356,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
     setDisplayFileName(file.name)
     
     try {
-      // Upload to Cloudinary via backend
-      const response = await assetApi.upload(file)
+      const response = await assetApi.uploadLessonAsset(file)
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)

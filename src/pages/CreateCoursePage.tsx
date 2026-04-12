@@ -144,7 +144,7 @@ function AddContentModal({
 
     setIsUploading(true)
     try {
-      const response = await assetApi.upload(picked)
+      const response = await assetApi.uploadLessonAsset(picked)
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
@@ -314,7 +314,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
 
     setIsUploading(true)
     try {
-      const response = await assetApi.upload(file)
+      const response = await assetApi.uploadLessonAsset(file)
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
