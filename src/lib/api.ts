@@ -76,6 +76,20 @@ async function reqForm<T>(path: string, formData: FormData): Promise<T> {
   return json.data
 }
 
+async function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string): Promise<void> {
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: {
+      "Content-Type": contentType,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error(buildHttpErrorMessage(res))
+  }
+}
+
 // ─── Response types (mirrors backend DTOs) ────────────────────────────────────
 
 export interface AuthenticationResponse {
@@ -193,6 +207,12 @@ export interface ProgramResponse {
 
 export interface AssetResponse {
   url: string
+  publicId: string
+}
+
+export interface PresignedUploadResponse {
+  uploadUrl: string
+  downloadUrl: string
   publicId: string
 }
 
@@ -458,9 +478,16 @@ export const assetApi = {
     form.append("file", file)
     return reqForm<AssetResponse>("/assets/upload", form)
   },
-  uploadLessonAsset: (file: File) => {
-    const form = new FormData()
-    form.append("file", file)
-    return reqForm<AssetResponse>("/assets/r2/upload", form)
+  uploadLessonAsset: async (file: File) => {
+    const fileName = encodeURIComponent(file.name)
+    const contentType = encodeURIComponent(file.type || "application/octet-stream")
+    const presigned = await req<PresignedUploadResponse>(`/assets/r2/presigned-upload?fileName=${fileName}&contentType=${contentType}`)
+
+    await uploadToPresignedUrl(presigned.uploadUrl, file, file.type || "application/octet-stream")
+
+    return {
+      url: presigned.downloadUrl,
+      publicId: presigned.publicId,
+    } satisfies AssetResponse
   }
 }
