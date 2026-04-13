@@ -175,6 +175,24 @@ export interface CourseRunResponse {
   updatedAt: string
 }
 
+export interface EnrollmentResponse {
+  id: string
+  userId: string
+  userDisplayName: string | null
+  userEmail: string | null
+  userAvatarUrl: string | null
+  courseRunId: string
+  courseRunCode: string | null
+  status: string
+  role: string | null
+  enrolmentMethod: string | null
+  lastAccessedAt: string | null
+  enrolledAt: string | null
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CourseResponse {
   id: string
   code: string
@@ -295,6 +313,11 @@ export interface CourseRunUpsertRequest {
   metadata?: Record<string, unknown>
 }
 
+export interface ManualEnrollmentRequest {
+  userId: string
+  courseRunId: string
+}
+
 export interface ChapterUpsertRequest {
   courseRunId: string
   title: string
@@ -403,6 +426,14 @@ export const courseRunApi = {
 
   remove: (id: string) =>
     req<string>(`/course-runs/${id}`, { method: "DELETE" }),
+}
+
+export const enrollmentApi = {
+  getByCourseRun: (courseRunId: string) =>
+    req<EnrollmentResponse[]>(`/enrollments/by-course-run/${encodeURIComponent(courseRunId)}`),
+
+  manualEnroll: (data: ManualEnrollmentRequest) =>
+    req<EnrollmentResponse>("/enrollments/manual", { method: "POST", body: JSON.stringify(data) }),
 }
 
 // ─── Chapter API ───────────────────────────────────────────────────────────────

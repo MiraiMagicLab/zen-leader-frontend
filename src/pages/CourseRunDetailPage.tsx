@@ -1,7 +1,17 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useNavigate, useParams, Link } from "react-router-dom"
-import { courseRunApi, courseApi, type CourseRunResponse, type CourseResponse, type LessonResponse } from "@/lib/api"
+import {
+  courseRunApi,
+  courseApi,
+  enrollmentApi,
+  userApi,
+  type CourseRunResponse,
+  type CourseResponse,
+  type LessonResponse,
+  type EnrollmentResponse,
+  type UserResponse,
+} from "@/lib/api"
 import FileActionLinks from "@/components/FileActionLinks"
 import { getLessonAsset } from "@/lib/lessonContent"
 
@@ -94,6 +104,13 @@ export default function CourseRunDetailPage() {
 
   const [run, setRun] = useState<CourseRunResponse | null>(null)
   const [course, setCourse] = useState<CourseResponse | null>(null)
+  const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
+  const [users, setUsers] = useState<UserResponse[]>([])
+  const [openEnrollmentDialog, setOpenEnrollmentDialog] = useState(false)
+  const [enrollmentUserQuery, setEnrollmentUserQuery] = useState("")
+  const [selectedUserId, setSelectedUserId] = useState("")
+  const [addingEnrollment, setAddingEnrollment] = useState(false)
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -112,6 +129,40 @@ export default function CourseRunDetailPage() {
       .catch(() => setRun(null))
       .finally(() => setLoading(false))
   }, [runId])
+
+  const loadEnrollments = async (id: string) => {
+    setLoadingEnrollments(true)
+    try {
+      const rows = await enrollmentApi.getByCourseRun(id)
+      setEnrollments(rows)
+    } finally {
+      setLoadingEnrollments(false)
+    }
+  }
+
+  const loadUsers = async () => {
+    const page = await userApi.getUsers({ page: 1, pageSize: 200 })
+    setUsers(page.data)
+  }
+
+  const openManageEnrollments = async () => {
+    if (!runId) return
+    setOpenEnrollmentDialog(true)
+    await Promise.all([loadEnrollments(runId), loadUsers()])
+  }
+
+  const handleManualEnroll = async () => {
+    if (!runId || !selectedUserId || addingEnrollment) return
+    setAddingEnrollment(true)
+    try {
+      await enrollmentApi.manualEnroll({ userId: selectedUserId, courseRunId: runId })
+      await loadEnrollments(runId)
+      setSelectedUserId("")
+      setEnrollmentUserQuery("")
+    } finally {
+      setAddingEnrollment(false)
+    }
+  }
 
   const toggleChapter = (chId: string) => {
     setExpandedChapters((prev) => {
@@ -171,6 +222,14 @@ export default function CourseRunDetailPage() {
 
   const chapters = run.chapters ?? []
   const totalLessons = chapters.reduce((a, ch) => a + (ch.lessons?.length ?? 0), 0)
+  const enrollmentUserOptions = users.filter((u) => {
+    if (!enrollmentUserQuery.trim()) return true
+    const q = enrollmentUserQuery.trim().toLowerCase()
+    return (
+      u.displayName.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <>
@@ -226,6 +285,15 @@ export default function CourseRunDetailPage() {
         >
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Back
+        </button>
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={openManageEnrollments}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <span className="material-symbols-outlined text-[18px]">group_add</span>
+          Manage Enrollments
         </button>
       </div>
 
@@ -366,6 +434,101 @@ export default function CourseRunDetailPage() {
 
     <AnimatePresence>
       {previewLesson && <PreviewModal lesson={previewLesson} onClose={() => setPreviewLesson(null)} />}
+    </AnimatePresence>
+    <AnimatePresence>
+      {openEnrollmentDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setOpenEnrollmentDialog(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.18 }}
+            className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-lg font-bold text-slate-900">Manual Enrollment</p>
+                <p className="text-xs text-slate-500">Assign web-paid users to this course run for mobile access.</p>
+              </div>
+              <button onClick={() => setOpenEnrollmentDialog(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                <span className="material-symbols-outlined text-slate-500">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  className="md:col-span-1 h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  placeholder="Search users by name/email"
+                  value={enrollmentUserQuery}
+                  onChange={(e) => setEnrollmentUserQuery(e.target.value)}
+                />
+                <select
+                  className="md:col-span-2 h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  <option value="">Select user to enroll</option>
+                  {enrollmentUserOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.displayName} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  disabled={!selectedUserId || addingEnrollment}
+                  onClick={handleManualEnroll}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">person_add</span>
+                  {addingEnrollment ? "Adding..." : "Add Enrollment"}
+                </button>
+              </div>
+
+              <div className="border border-slate-100 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 text-sm font-semibold text-slate-700">
+                  Enrolled Users ({enrollments.length})
+                </div>
+                {loadingEnrollments ? (
+                  <div className="p-6 text-sm text-slate-500">Loading enrollments...</div>
+                ) : enrollments.length === 0 ? (
+                  <div className="p-6 text-sm text-slate-500">No enrolled users yet.</div>
+                ) : (
+                  <div className="max-h-72 overflow-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2">User</th>
+                          <th className="px-4 py-2">Email</th>
+                          <th className="px-4 py-2">Status</th>
+                          <th className="px-4 py-2">Method</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {enrollments.map((row) => (
+                          <tr key={row.id} className="border-t border-slate-100">
+                            <td className="px-4 py-2">{row.userDisplayName ?? row.userId}</td>
+                            <td className="px-4 py-2">{row.userEmail ?? "—"}</td>
+                            <td className="px-4 py-2">{row.status}</td>
+                            <td className="px-4 py-2">{row.enrolmentMethod ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
     </>
   )
