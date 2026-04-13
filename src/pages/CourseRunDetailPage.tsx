@@ -108,9 +108,11 @@ export default function CourseRunDetailPage() {
   const [users, setUsers] = useState<UserResponse[]>([])
   const [openEnrollmentDialog, setOpenEnrollmentDialog] = useState(false)
   const [enrollmentUserQuery, setEnrollmentUserQuery] = useState("")
+  const [directEmail, setDirectEmail] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
   const [addingEnrollment, setAddingEnrollment] = useState(false)
   const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+  const [enrollmentError, setEnrollmentError] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export default function CourseRunDetailPage() {
   }
 
   const loadUsers = async () => {
-    const page = await userApi.getUsers({ page: 1, pageSize: 200 })
+    const page = await userApi.getUsers({ page: 1, size: 200 })
     setUsers(page.data)
   }
 
@@ -152,13 +154,29 @@ export default function CourseRunDetailPage() {
   }
 
   const handleManualEnroll = async () => {
-    if (!runId || !selectedUserId || addingEnrollment) return
+    if (!runId || addingEnrollment) return
+    let targetUserId = selectedUserId
+    const normalizedEmail = directEmail.trim().toLowerCase()
+    if (!targetUserId && normalizedEmail) {
+      const matchedUser = users.find((u) => u.email.toLowerCase() === normalizedEmail)
+      if (!matchedUser) {
+        setEnrollmentError("Email không khớp user nào trong hệ thống.")
+        return
+      }
+      targetUserId = matchedUser.id
+    }
+    if (!targetUserId) {
+      setEnrollmentError("Vui lòng chọn user hoặc nhập email hợp lệ.")
+      return
+    }
     setAddingEnrollment(true)
+    setEnrollmentError("")
     try {
-      await enrollmentApi.manualEnroll({ userId: selectedUserId, courseRunId: runId })
+      await enrollmentApi.manualEnroll({ userId: targetUserId, courseRunId: runId })
       await loadEnrollments(runId)
       setSelectedUserId("")
       setEnrollmentUserQuery("")
+      setDirectEmail("")
     } finally {
       setAddingEnrollment(false)
     }
@@ -470,7 +488,10 @@ export default function CourseRunDetailPage() {
                 <select
                   className="md:col-span-2 h-10 rounded-lg border border-slate-200 px-3 text-sm"
                   value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedUserId(e.target.value)
+                    setEnrollmentError("")
+                  }}
                 >
                   <option value="">Select user to enroll</option>
                   {enrollmentUserOptions.map((u) => (
@@ -479,11 +500,28 @@ export default function CourseRunDetailPage() {
                     </option>
                   ))}
                 </select>
+                <input
+                  className="md:col-span-2 h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  placeholder="Hoặc nhập thẳng email (exact match)"
+                  value={directEmail}
+                  onChange={(e) => {
+                    setDirectEmail(e.target.value)
+                    setEnrollmentError("")
+                  }}
+                />
+                <div className="md:col-span-1 text-xs text-slate-500 flex items-center">
+                  Gợi ý: paste email từ Excel rồi bấm Add
+                </div>
               </div>
+              {enrollmentError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {enrollmentError}
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <button
-                  disabled={!selectedUserId || addingEnrollment}
+                  disabled={addingEnrollment}
                   onClick={handleManualEnroll}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
                 >

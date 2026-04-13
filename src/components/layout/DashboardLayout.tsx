@@ -64,6 +64,12 @@ export function DashboardLayout() {
               <span>Events</span>
             </>)}
           </NavLink>
+          <NavLink to="/dashboard/users" className={navLinkClass}>
+            {({ isActive }) => (<>
+              <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>group</span>
+              <span>Users</span>
+            </>)}
+          </NavLink>
         </nav>
         
 
@@ -115,6 +121,12 @@ export function DashboardLayout() {
                       {({ isActive }) => (<>
                         <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>event</span>
                         <span>Events</span>
+                      </>)}
+                    </NavLink>
+                    <NavLink to="/dashboard/users" className={navLinkClass}>
+                      {({ isActive }) => (<>
+                        <span className={navIconClass(isActive)} style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>group</span>
+                        <span>Users</span>
                       </>)}
                     </NavLink>
                   </nav>

@@ -368,9 +368,24 @@ export const authApi = {
 export const userApi = {
   getMe: () => req<UserResponse>("/users/me"),
   getAll: (page = 1, size = 10, field = "createdAt", direction = "DESC") =>
-    req<PagingResponse<UserResponse>>(`/users?page=${page}&pageSize=${size}&field=${field}&direction=${direction}`),
-  getUsers: (paging: { page: number, pageSize: number }) => 
-    req<PagingResponse<UserResponse>>(`/users?page=${paging.page}&pageSize=${paging.pageSize}`),
+    req<PagingResponse<UserResponse>>(`/users?page=${page}&size=${size}&field=${field}&direction=${direction}`),
+  getUsers: (paging: {
+    page: number
+    pageSize?: number
+    size?: number
+    field?: string
+    direction?: string
+    keyword?: string
+  }) => {
+    const params = new URLSearchParams()
+    params.set("page", String(paging.page))
+    // Backend uses "size" instead of "pageSize".
+    params.set("size", String(paging.size ?? paging.pageSize ?? 10))
+    if (paging.field) params.set("field", paging.field)
+    if (paging.direction) params.set("direction", paging.direction)
+    if (paging.keyword) params.set("keyword", paging.keyword)
+    return req<PagingResponse<UserResponse>>(`/users?${params.toString()}`)
+  },
   getById: (id: string) => req<UserResponse>(`/users/${id}`),
 }
 

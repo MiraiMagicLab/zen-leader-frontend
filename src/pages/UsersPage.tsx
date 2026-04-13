@@ -46,14 +46,35 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await userApi.getUsers({ page: 1, pageSize: 50 })
-      setUsers(response.data)
+      const pageSize = 100
+      const firstPage = await userApi.getUsers({ page: 1, size: pageSize, direction: "DESC", field: "createdAt" })
+      const allUsers = [...firstPage.data]
+
+      if (firstPage.totalPages > 1) {
+        const restPages = await Promise.all(
+          Array.from({ length: firstPage.totalPages - 1 }, (_, i) =>
+            userApi.getUsers({
+              page: i + 2,
+              size: pageSize,
+              direction: "DESC",
+              field: "createdAt",
+            }),
+          ),
+        )
+        restPages.forEach((page) => allUsers.push(...page.data))
+      }
+
+      setUsers(allUsers)
     } catch (error) {
       console.error("Failed to fetch users", error)
     } finally {
       setLoading(false)
     }
   }
+
+  const isVerifiedUser = (user: UserResponse) =>
+    Boolean((user as unknown as { isVerified?: boolean; verified?: boolean }).isVerified
+      ?? (user as unknown as { isVerified?: boolean; verified?: boolean }).verified)
 
   const filteredUsers = users.filter(user => 
     user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,8 +123,8 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Users", value: users.length, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Active Admins", value: users.filter((u: UserResponse) => u.roles.some((r: string) => r.includes("ADMIN"))).length, icon: Shield, color: "text-purple-600", bg: "bg-purple-50" },
-          { label: "Verified", value: users.filter((u: UserResponse) => u.isVerified).length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Active Admins", value: users.filter((u: UserResponse) => u.roles.some((r: string) => r.toUpperCase().includes("ADMIN"))).length, icon: Shield, color: "text-purple-600", bg: "bg-purple-50" },
+          { label: "Verified", value: users.filter((u: UserResponse) => isVerifiedUser(u)).length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
           { label: "Newly Joined", value: users.filter((u: UserResponse) => new Date(u.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, icon: Calendar, color: "text-orange-600", bg: "bg-orange-50" },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
@@ -202,7 +223,7 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {user.isVerified ? (
+                        {isVerifiedUser(user) ? (
                           <div className="flex items-center gap-1.5 text-green-600">
                             <CheckCircle2 className="w-4 h-4" />
                             <span className="text-xs font-semibold">Verified</span>
