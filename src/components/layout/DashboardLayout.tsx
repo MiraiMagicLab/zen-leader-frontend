@@ -18,7 +18,6 @@ import { authStorage } from "@/lib/storage"
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: "dashboard", end: true },
   { to: "/dashboard/programs", label: "Programs", icon: "folder_special", end: false },
-  { to: "/dashboard/courses", label: "Course Management", icon: "school", end: false },
   { to: "/dashboard/events", label: "Events", icon: "event", end: false },
   { to: "/dashboard/users", label: "Users", icon: "group", end: false },
 ] as const
@@ -41,10 +40,21 @@ export function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <Sidebar className="border-r border-sidebar-border bg-sidebar">
+      <Sidebar
+        variant="inset"
+        collapsible="icon"
+        className="border-sidebar-border bg-sidebar text-sidebar-foreground"
+      >
         <SidebarHeader className="px-3 py-5">
-          <h1 className="font-headline text-xl font-bold text-foreground tracking-tight">Zenleader</h1>
-          <p className="text-[10px] font-semibold text-secondary uppercase tracking-widest">Management Portal</p>
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary/10 text-secondary">
+              <span className="material-symbols-outlined text-[20px] leading-none">school</span>
+            </span>
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <h1 className="font-headline text-xl font-bold text-foreground tracking-tight">Zenleader</h1>
+              <p className="text-[10px] font-semibold text-secondary uppercase tracking-widest">Management Portal</p>
+            </div>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -52,14 +62,18 @@ export function DashboardLayout() {
               <SidebarMenuItem key={item.to}>
                 <NavLink to={item.to} end={item.end}>
                   {({ isActive }) => (
-                    <SidebarMenuButton isActive={isActive} className="font-label text-sm">
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      tooltip={item.label}
+                      className="font-label text-sm group-data-[collapsible=icon]:justify-center"
+                    >
                       <span
-                        className="material-symbols-outlined"
+                        className="material-symbols-outlined shrink-0 text-[20px] leading-none"
                         style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
                       >
                         {item.icon}
                       </span>
-                      <span>{item.label}</span>
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </SidebarMenuButton>
                   )}
                 </NavLink>
@@ -69,15 +83,21 @@ export function DashboardLayout() {
         </SidebarContent>
         <SidebarFooter className="px-3 pb-4">
           <Separator />
-          <Button onClick={handleLogout} variant="ghost" className="justify-start gap-2 text-sm">
-            <span className="material-symbols-outlined">logout</span>
-            <span>Log Out</span>
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            className="justify-start gap-2 text-sm group-data-[collapsible=icon]:justify-center"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center">
+              <span className="material-symbols-outlined text-[20px] leading-none">logout</span>
+            </span>
+            <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
           </Button>
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-h-screen bg-surface">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/80 px-4 py-3 backdrop-blur-[20px] lg:px-8">
+      <SidebarInset className="min-h-screen bg-background">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur-[20px] lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <p className="text-sm font-medium text-muted-foreground hidden sm:block">LMS Admin Dashboard</p>
@@ -94,7 +114,7 @@ export function DashboardLayout() {
           </button>
         </header>
 
-        <div className="flex-1 w-full p-6 lg:p-10">
+        <div className="flex-1 w-full p-4 sm:p-6 lg:p-10">
           <Outlet />
         </div>
       </SidebarInset>

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  ArrowRight,
-  BookCopy,
   CalendarRange,
   FolderKanban,
   Layers3,
@@ -24,7 +22,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
   SheetContent,
@@ -34,7 +31,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -46,6 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   courseApi,
+  assetApi,
   programApi,
   type CourseResponse,
   type ProgramResponse,
@@ -62,6 +59,7 @@ type ProgramFormState = {
   title: string
   description: string
   thumbnailUrl: string
+  thumbnailFile: File | null
   isPublished: boolean
 }
 
@@ -70,6 +68,7 @@ const EMPTY_PROGRAM_FORM: ProgramFormState = {
   title: "",
   description: "",
   thumbnailUrl: "",
+  thumbnailFile: null,
   isPublished: false,
 }
 
@@ -84,6 +83,7 @@ function toProgramFormState(program: Program): ProgramFormState {
     title: program.title,
     description: program.description ?? "",
     thumbnailUrl: program.thumbnailUrl ?? "",
+    thumbnailFile: null,
     isPublished: program.isPublished,
   }
 }
@@ -111,16 +111,28 @@ function ProgramForm({
   submitLabel: string
 }) {
   const isInvalid = !form.code.trim() || !form.title.trim()
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!form.thumbnailFile) {
+      setThumbnailPreview(null)
+      return
+    }
+
+    const url = URL.createObjectURL(form.thumbnailFile)
+    setThumbnailPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [form.thumbnailFile])
 
   return (
     <form
-      className="flex h-full flex-col"
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault()
         if (!isInvalid) onSubmit()
       }}
     >
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4">
         <div className="space-y-2">
           <Label htmlFor="program-code">Program code</Label>
           <Input
@@ -142,13 +154,46 @@ function ProgramForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="program-thumbnail">Thumbnail URL</Label>
-          <Input
-            id="program-thumbnail"
-            value={form.thumbnailUrl}
-            onChange={(event) => onChange({ ...form, thumbnailUrl: event.target.value })}
-            placeholder="https://..."
-          />
+          <Label htmlFor="program-thumbnail">Thumbnail</Label>
+          <div className="space-y-3">
+            {(thumbnailPreview || form.thumbnailUrl) ? (
+              <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
+                <img
+                  alt="Program thumbnail preview"
+                  src={thumbnailPreview ?? form.thumbnailUrl}
+                  className="aspect-[16/9] w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex aspect-[16/9] w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+                Chua co thumbnail
+              </div>
+            )}
+
+            <Input
+              id="program-thumbnail"
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null
+                onChange({ ...form, thumbnailFile: file })
+              }}
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onChange({ ...form, thumbnailFile: null, thumbnailUrl: "" })}
+              >
+                Clear
+              </Button>
+              <p className="text-xs text-muted-foreground self-center">
+                Upload 1 anh. Neu khong upload, se giu thumbnail hien tai (khi edit).
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -196,12 +241,11 @@ export default function ProgramManagementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [selectedId, setSelectedId] = useState("")
+  const [expandedProgramId, setExpandedProgramId] = useState("")
   const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
 
   const [filterSearch, setFilterSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<ProgramFilterStatus>("ALL")
-  const [filterMinCourses, setFilterMinCourses] = useState("")
   const [courseSearch, setCourseSearch] = useState("")
 
   const [programForm, setProgramForm] = useState<ProgramFormState>(EMPTY_PROGRAM_FORM)
@@ -214,7 +258,7 @@ export default function ProgramManagementPage() {
       const [programList, courseList] = await Promise.all([programApi.getAll(), courseApi.getAll()])
       setPrograms(programList)
       setAllCourses(courseList)
-      setSelectedId((current) => current || programList[0]?.id || "")
+      setExpandedProgramId((current) => current || programList[0]?.id || "")
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load LMS program flow.")
     } finally {
@@ -239,22 +283,19 @@ export default function ProgramManagementPage() {
         filterStatus === "ALL" ||
         (filterStatus === "PUBLISHED" ? program.isPublished : !program.isPublished)
 
-      const matchesMinCourses =
-        !filterMinCourses.trim() || program.courses.length >= Number(filterMinCourses)
-
-      return matchesSearch && matchesStatus && matchesMinCourses
+      return matchesSearch && matchesStatus
     })
-  }, [filterMinCourses, filterSearch, filterStatus, programs])
+  }, [filterSearch, filterStatus, programs])
 
-  const selectedProgram = useMemo(
-    () => filteredPrograms.find((program) => program.id === selectedId) ?? programs.find((program) => program.id === selectedId) ?? null,
-    [filteredPrograms, programs, selectedId],
+  const expandedProgram = useMemo(
+    () => filteredPrograms.find((program) => program.id === expandedProgramId) ?? programs.find((program) => program.id === expandedProgramId) ?? null,
+    [expandedProgramId, filteredPrograms, programs],
   )
 
   const availableCourses = useMemo(() => {
-    if (!selectedProgram) return []
+    if (!expandedProgram) return []
 
-    const existingIds = new Set(selectedProgram.courses.map((course) => course.id))
+    const existingIds = new Set(expandedProgram.courses.map((course) => course.id))
     const search = courseSearch.trim().toLowerCase()
 
     return allCourses.filter((course) => {
@@ -267,32 +308,43 @@ export default function ProgramManagementPage() {
         (course.category ?? "").toLowerCase().includes(search)
       )
     })
-  }, [allCourses, courseSearch, selectedProgram])
+  }, [allCourses, courseSearch, expandedProgram])
 
   useEffect(() => {
-    if (!selectedId && filteredPrograms[0]) {
-      setSelectedId(filteredPrograms[0].id)
+    if (!expandedProgramId && filteredPrograms[0]) {
+      setExpandedProgramId(filteredPrograms[0].id)
     }
-  }, [filteredPrograms, selectedId])
+  }, [expandedProgramId, filteredPrograms])
 
   const totalCourses = programs.reduce((total, program) => total + program.courses.length, 0)
   const totalCourseRuns = programs.reduce((total, program) => total + countCourseRuns(program), 0)
   const publishedPrograms = programs.filter((program) => program.isPublished).length
 
+  async function resolveProgramThumbnailUrl(): Promise<string | null> {
+    if (programForm.thumbnailFile) {
+      const uploaded = await assetApi.upload(programForm.thumbnailFile)
+      return uploaded.url
+    }
+
+    return programForm.thumbnailUrl.trim() || null
+  }
+
   async function handleCreateProgram() {
-    const created = await programApi.create(toProgramPayload(programForm))
+    const thumbnailUrl = await resolveProgramThumbnailUrl()
+    const created = await programApi.create(toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }))
     setPrograms((current) => [created, ...current])
-    setSelectedId(created.id)
+    setExpandedProgramId(created.id)
     setProgramForm(EMPTY_PROGRAM_FORM)
     setSheetMode(null)
   }
 
   async function handleSaveProgramSettings() {
-    if (!selectedProgram) return
+    if (!expandedProgram) return
 
+    const thumbnailUrl = await resolveProgramThumbnailUrl()
     const updated = await programApi.update(
-      selectedProgram.id,
-      toProgramPayload(programForm, selectedProgram.publishedAt),
+      expandedProgram.id,
+      toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }, expandedProgram.publishedAt),
     )
 
     setPrograms((current) => current.map((program) => (program.id === updated.id ? updated : program)))
@@ -303,8 +355,8 @@ export default function ProgramManagementPage() {
     await programApi.remove(programId)
     setPrograms((current) => {
       const next = current.filter((program) => program.id !== programId)
-      if (selectedId === programId) {
-        setSelectedId(next[0]?.id ?? "")
+      if (expandedProgramId === programId) {
+        setExpandedProgramId(next[0]?.id ?? "")
       }
       return next
     })
@@ -324,9 +376,9 @@ export default function ProgramManagementPage() {
   }
 
   async function handleAddCourse(course: Course) {
-    if (!selectedProgram) return
+    if (!expandedProgram) return
 
-    const nextOrderIndex = selectedProgram.courses.length
+    const nextOrderIndex = expandedProgram.courses.length
     await courseApi.update(course.id, {
       code: course.code,
       title: course.title,
@@ -334,7 +386,7 @@ export default function ProgramManagementPage() {
       level: course.level,
       thumbnailUrl: course.thumbnailUrl,
       category: course.category,
-      programId: selectedProgram.id,
+      programId: expandedProgram.id,
       orderIndex: nextOrderIndex,
       tags: course.tags,
     })
@@ -347,12 +399,6 @@ export default function ProgramManagementPage() {
   function openCreateSheet() {
     setProgramForm(EMPTY_PROGRAM_FORM)
     setSheetMode("create")
-  }
-
-  function openSettingsSheet() {
-    if (!selectedProgram) return
-    setProgramForm(toProgramFormState(selectedProgram))
-    setSheetMode("settings")
   }
 
   async function runAsyncAction(action: () => Promise<void>) {
@@ -391,17 +437,13 @@ export default function ProgramManagementPage() {
                   Program → Course → Course Run
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                  Backend đang trả đúng hierarchy cho LMS. Trang này bây giờ render lại flow đó theo dạng
-                  quản trị: bảng program ở bên trái, drill-down course và course run ở bên phải.
+                  Danh sach program theo dang bang. Mo tung program de xem course ben trong, sau do di tiep vao
+                  chi tiet course va course run.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
-                <BookCopy />
-                Manage Courses
-              </Button>
               <Button onClick={openCreateSheet}>
                 <Plus />
                 New Program
@@ -446,18 +488,18 @@ export default function ProgramManagementPage() {
           </Card>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)]">
+        <div className="space-y-6">
           <Card className="border-border/80">
             <CardHeader className="gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle>Programs</CardTitle>
-                  <CardDescription>List view for program containers in the LMS.</CardDescription>
+                  <CardDescription>Program list table. Click a row to expand course list.</CardDescription>
                 </div>
                 <Badge variant="outline">{publishedPrograms} published</Badge>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_140px]">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="relative">
                   <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -476,21 +518,13 @@ export default function ProgramManagementPage() {
                   <option value="PUBLISHED">Published</option>
                   <option value="DRAFT">Draft</option>
                 </Select>
-
-                <Input
-                  type="number"
-                  min="0"
-                  value={filterMinCourses}
-                  onChange={(event) => setFilterMinCourses(event.target.value)}
-                  placeholder="Min courses"
-                />
               </div>
             </CardHeader>
 
             <CardContent className="pt-0">
               <div className="overflow-hidden rounded-xl border border-border/70">
                 <div className="overflow-x-auto">
-                  <Table className="min-w-[680px] text-left text-sm">
+                  <Table className="min-w-[560px] sm:min-w-[640px] lg:min-w-[680px] text-left text-sm">
                     <TableHeader className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                       <TableRow>
                         <TableHead className="px-4 py-3 font-medium">Program</TableHead>
@@ -509,88 +543,162 @@ export default function ProgramManagementPage() {
                         </TableRow>
                       ) : (
                         filteredPrograms.map((program) => {
+                          const isExpanded = expandedProgramId === program.id
+                          const courseRows = program.courses ?? []
                           return (
-                            <TableRow
-                              key={program.id}
-                              className="cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40"
-                              onClick={() => setSelectedId(program.id)}
-                            >
-                              <TableCell className="px-4 py-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
-                                    <FolderKanban className="size-5" />
-                                  </div>
-                                  <div className="min-w-0 space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <p className="truncate font-medium text-foreground">{program.title}</p>
-                                      {selectedProgram?.id === program.id ? <Badge variant="secondary">Selected</Badge> : null}
+                            <>
+                              <TableRow
+                                key={program.id}
+                                className="cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40"
+                                onClick={() => setExpandedProgramId((current) => (current === program.id ? "" : program.id))}
+                              >
+                                <TableCell className="px-4 py-4">
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
+                                      <FolderKanban className="size-5" />
                                     </div>
-                                    <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
-                                    {program.description ? (
-                                      <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                                        {program.description}
-                                      </p>
-                                    ) : null}
+                                    <div className="min-w-0 space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="truncate font-medium text-foreground">{program.title}</p>
+                                        {isExpanded ? <Badge variant="secondary">Expanded</Badge> : null}
+                                      </div>
+                                      <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
+                                      {program.description ? (
+                                        <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                                          {program.description}
+                                        </p>
+                                      ) : null}
+                                    </div>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-4 py-4 font-medium text-foreground">{program.courses.length}</TableCell>
-                              <TableCell className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</TableCell>
-                              <TableCell className="px-4 py-4">
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    void runAsyncAction(async () => {
-                                      await handleTogglePublished(program)
-                                    })
-                                  }}
-                                >
-                                  <Badge variant={program.isPublished ? "secondary" : "outline"}>
-                                    {program.isPublished ? "Published" : "Draft"}
-                                  </Badge>
-                                </button>
-                              </TableCell>
-                              <TableCell className="px-4 py-4">
-                                <div className="flex justify-end gap-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      navigate(`/dashboard/courses?programId=${encodeURIComponent(program.id)}`)
-                                    }}
-                                  >
-                                    Manage
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      setSelectedId(program.id)
-                                      setProgramForm(toProgramFormState(program))
-                                      setSheetMode("settings")
-                                    }}
-                                  >
-                                    <Settings2 />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                </TableCell>
+                                <TableCell className="px-4 py-4 font-medium text-foreground">{program.courses.length}</TableCell>
+                                <TableCell className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</TableCell>
+                                <TableCell className="px-4 py-4">
+                                  <button
+                                    type="button"
                                     onClick={(event) => {
                                       event.stopPropagation()
                                       void runAsyncAction(async () => {
-                                        await handleDeleteProgram(program.id)
+                                        await handleTogglePublished(program)
                                       })
                                     }}
                                   >
-                                    <Trash2 />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                                    <Badge variant={program.isPublished ? "secondary" : "outline"}>
+                                      {program.isPublished ? "Published" : "Draft"}
+                                    </Badge>
+                                  </button>
+                                </TableCell>
+                                <TableCell className="px-4 py-4">
+                                  <div className="flex justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        setExpandedProgramId(program.id)
+                                        setProgramForm(toProgramFormState(program))
+                                        setSheetMode("settings")
+                                      }}
+                                    >
+                                      <Settings2 />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        void runAsyncAction(async () => {
+                                          await handleDeleteProgram(program.id)
+                                        })
+                                      }}
+                                    >
+                                      <Trash2 />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+
+                              {isExpanded ? (
+                                <TableRow key={`${program.id}-courses`} className="bg-muted/20">
+                                  <TableCell colSpan={5} className="px-4 py-4">
+                                    <div className="space-y-3">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div>
+                                          <p className="text-sm font-medium text-foreground">Courses</p>
+                                          <p className="text-xs text-muted-foreground">Chon course de vao course detail va course runs.</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={(event) => {
+                                              event.stopPropagation()
+                                              setExpandedProgramId(program.id)
+                                              setProgramForm(toProgramFormState(program))
+                                              setSheetMode("add-course")
+                                            }}
+                                          >
+                                            <Plus className="size-4" />
+                                            Add Course
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {courseRows.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed border-border bg-background/60 p-6 text-sm text-muted-foreground">
+                                          Program nay chua co course.
+                                        </div>
+                                      ) : (
+                                        <div className="overflow-hidden rounded-xl border border-border bg-background">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead>Course</TableHead>
+                                                <TableHead className="w-[120px]">Runs</TableHead>
+                                                <TableHead className="w-[140px] text-right">Action</TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {courseRows.map((course) => (
+                                                <TableRow
+                                                  key={course.id}
+                                                  className="cursor-pointer hover:bg-muted/30"
+                                                  onClick={(event) => {
+                                                    event.stopPropagation()
+                                                    navigate(`/dashboard/courses/${course.id}`)
+                                                  }}
+                                                >
+                                                  <TableCell>
+                                                    <div className="space-y-0.5">
+                                                      <p className="font-medium text-foreground">{course.title}</p>
+                                                      <p className="text-xs text-muted-foreground font-mono">{course.code}</p>
+                                                    </div>
+                                                  </TableCell>
+                                                  <TableCell className="font-medium text-foreground">{course.courseRuns.length}</TableCell>
+                                                  <TableCell className="text-right">
+                                                    <Button
+                                                      variant="outline"
+                                                      size="sm"
+                                                      onClick={(event) => {
+                                                        event.stopPropagation()
+                                                        navigate(`/dashboard/courses/${course.id}`)
+                                                      }}
+                                                    >
+                                                      Open
+                                                    </Button>
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ) : null}
+                            </>
                           )
                         })
                       )}
@@ -598,136 +706,6 @@ export default function ProgramManagementPage() {
                   </Table>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/80">
-            <CardHeader className="gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Program Navigation</CardTitle>
-                  <CardDescription>
-                    From program list, click Manage to open filtered course list. From course list, open runs.
-                  </CardDescription>
-                </div>
-                {selectedProgram ? (
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={openSettingsSheet}>
-                      <Settings2 />
-                      Settings
-                    </Button>
-                    <Button onClick={() => setSheetMode("add-course")}>
-                      <Plus />
-                      Add Course
-                    </Button>
-                    <Button onClick={() => navigate(`/dashboard/courses?programId=${encodeURIComponent(selectedProgram.id)}`)}>
-                      Manage
-                      <ArrowRight />
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-0">
-              {!selectedProgram ? (
-                <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
-                  Select one program then click Manage to continue to course list.
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-2xl border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_14%,white),color-mix(in_srgb,var(--color-secondary-container)_52%,white))] p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="bg-background/80">
-                            {selectedProgram.code}
-                          </Badge>
-                          <Badge variant={selectedProgram.isPublished ? "secondary" : "outline"}>
-                            {selectedProgram.isPublished ? "Published" : "Draft"}
-                          </Badge>
-                        </div>
-                        <div>
-                          <h2 className="font-headline text-2xl font-semibold text-foreground">
-                            {selectedProgram.title}
-                          </h2>
-                          <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/75">
-                            {selectedProgram.description || "No description yet for this program."}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Button variant="ghost" onClick={() => navigate(`/dashboard/courses?programId=${encodeURIComponent(selectedProgram.id)}`)}>
-                        Open Course List
-                        <ArrowRight />
-                      </Button>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
-                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Courses</p>
-                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                          {selectedProgram.courses.length}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
-                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Course runs</p>
-                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                          {countCourseRuns(selectedProgram)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
-                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Published at</p>
-                        <p className="mt-2 text-base font-medium text-foreground">
-                          {selectedProgram.publishedAt
-                            ? new Intl.DateTimeFormat("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              }).format(new Date(selectedProgram.publishedAt))
-                            : "Not published"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Tabs defaultValue="structure" className="gap-4">
-                    <TabsList variant="line">
-                      <TabsTrigger value="structure">Structure Notes</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="structure">
-                      <Card className="border-border/80 bg-muted/10">
-                        <CardContent className="space-y-4 py-1">
-                          <div>
-                            <p className="font-medium text-foreground">Confirmed backend flow</p>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                              `ProgramResponse` contains `courses[]`, each `CourseResponse` contains `courseRuns[]`,
-                              and each `CourseRunResponse` contains `chapters[]`. This is the real LMS hierarchy from
-                              `zenleader-backend`.
-                            </p>
-                          </div>
-                          <Separator />
-                          <div>
-                            <p className="font-medium text-foreground">Content ownership</p>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                              Chapters and lessons are tied to `courseRun`, not directly to `course`. So two different
-                              runs of the same course can have different structure and schedule.
-                            </p>
-                          </div>
-                          <Separator />
-                          <div>
-                            <p className="font-medium text-foreground">UI implication</p>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                              Navigate by steps: Program list {"->"} Manage {"->"} Course list {"->"} Course Run detail.
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                  </Tabs>
-                </>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -754,7 +732,7 @@ export default function ProgramManagementPage() {
             </>
           ) : null}
 
-          {sheetMode === "settings" && selectedProgram ? (
+          {sheetMode === "settings" && expandedProgram ? (
             <>
               <SheetHeader>
                 <SheetTitle>Edit Program</SheetTitle>
@@ -773,17 +751,17 @@ export default function ProgramManagementPage() {
             </>
           ) : null}
 
-          {sheetMode === "add-course" && selectedProgram ? (
+          {sheetMode === "add-course" && expandedProgram ? (
             <>
               <SheetHeader>
                 <SheetTitle>Add Course To Program</SheetTitle>
                 <SheetDescription>
-                  Reassign a course into <span className="font-medium text-foreground">{selectedProgram.title}</span>.
+                  Reassign a course into <span className="font-medium text-foreground">{expandedProgram.title}</span>.
                   Each selected course keeps its existing course runs.
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="flex h-full flex-col">
+              <div className="flex min-h-0 flex-1 flex-col">
                 <div className="space-y-4 px-4 pb-4">
                   <div className="relative">
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -795,7 +773,7 @@ export default function ProgramManagementPage() {
                     />
                   </div>
 
-                  <div className="space-y-2 overflow-y-auto">
+                  <div className="min-h-0 space-y-2 overflow-y-auto">
                     {availableCourses.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
                         No available course matches this search.
