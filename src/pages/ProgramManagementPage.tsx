@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookCopy,
   CalendarRange,
-  ChevronRight,
   FolderKanban,
   Layers3,
   Plus,
@@ -36,6 +35,14 @@ import {
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import {
   courseApi,
@@ -44,7 +51,6 @@ import {
   type ProgramResponse,
   type ProgramUpsertRequest,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
 
 type Program = ProgramResponse
 type Course = CourseResponse
@@ -67,34 +73,10 @@ const EMPTY_PROGRAM_FORM: ProgramFormState = {
   isPublished: false,
 }
 
-function sortCourses(courses: Course[]) {
-  return [...courses].sort((a, b) => a.orderIndex - b.orderIndex)
-}
-
 function countCourseRuns(program: Program) {
   return program.courses.reduce((total, course) => total + course.courseRuns.length, 0)
 }
 
-function countLessons(course: Course) {
-  return course.courseRuns.reduce(
-    (total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0),
-    0,
-  )
-}
-
-function formatDateRange(startsAt: string | null, endsAt: string | null) {
-  if (!startsAt && !endsAt) return "Schedule not set"
-
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-
-  const startText = startsAt ? formatter.format(new Date(startsAt)) : "TBD"
-  const endText = endsAt ? formatter.format(new Date(endsAt)) : "TBD"
-  return `${startText} - ${endText}`
-}
 
 function toProgramFormState(program: Program): ProgramFormState {
   return {
@@ -114,19 +96,6 @@ function toProgramPayload(form: ProgramFormState, publishedAt?: string | null): 
     thumbnailUrl: form.thumbnailUrl.trim() || null,
     isPublished: form.isPublished,
     publishedAt: form.isPublished ? publishedAt ?? new Date().toISOString() : null,
-  }
-}
-
-function getRunBadgeVariant(status: string) {
-  switch (status.toUpperCase()) {
-    case "PUBLISHED":
-    case "ACTIVE":
-    case "OPEN":
-      return "secondary" as const
-    case "DRAFT":
-      return "outline" as const
-    default:
-      return "outline" as const
   }
 }
 
@@ -521,37 +490,32 @@ export default function ProgramManagementPage() {
             <CardContent className="pt-0">
               <div className="overflow-hidden rounded-xl border border-border/70">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-left text-sm">
-                    <thead className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Program</th>
-                        <th className="px-4 py-3 font-medium">Courses</th>
-                        <th className="px-4 py-3 font-medium">Course runs</th>
-                        <th className="px-4 py-3 font-medium">Status</th>
-                        <th className="px-4 py-3 font-medium text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="min-w-[680px] text-left text-sm">
+                    <TableHeader className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      <TableRow>
+                        <TableHead className="px-4 py-3 font-medium">Program</TableHead>
+                        <TableHead className="px-4 py-3 font-medium">Courses</TableHead>
+                        <TableHead className="px-4 py-3 font-medium">Course runs</TableHead>
+                        <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+                        <TableHead className="px-4 py-3 font-medium text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredPrograms.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                        <TableRow>
+                          <TableCell colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
                             No program matches the current LMS filters.
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ) : (
                         filteredPrograms.map((program) => {
-                          const isSelected = selectedProgram?.id === program.id
-
                           return (
-                            <tr
+                            <TableRow
                               key={program.id}
-                              className={cn(
-                                "cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40",
-                                isSelected && "bg-secondary/10",
-                              )}
+                              className="cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40"
                               onClick={() => setSelectedId(program.id)}
                             >
-                              <td className="px-4 py-4">
+                              <TableCell className="px-4 py-4">
                                 <div className="flex items-start gap-3">
                                   <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
                                     <FolderKanban className="size-5" />
@@ -559,7 +523,7 @@ export default function ProgramManagementPage() {
                                   <div className="min-w-0 space-y-1">
                                     <div className="flex items-center gap-2">
                                       <p className="truncate font-medium text-foreground">{program.title}</p>
-                                      {isSelected ? <Badge variant="secondary">Selected</Badge> : null}
+                                      {selectedProgram?.id === program.id ? <Badge variant="secondary">Selected</Badge> : null}
                                     </div>
                                     <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
                                     {program.description ? (
@@ -569,10 +533,10 @@ export default function ProgramManagementPage() {
                                     ) : null}
                                   </div>
                                 </div>
-                              </td>
-                              <td className="px-4 py-4 font-medium text-foreground">{program.courses.length}</td>
-                              <td className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</td>
-                              <td className="px-4 py-4">
+                              </TableCell>
+                              <TableCell className="px-4 py-4 font-medium text-foreground">{program.courses.length}</TableCell>
+                              <TableCell className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</TableCell>
+                              <TableCell className="px-4 py-4">
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -586,9 +550,19 @@ export default function ProgramManagementPage() {
                                     {program.isPublished ? "Published" : "Draft"}
                                   </Badge>
                                 </button>
-                              </td>
-                              <td className="px-4 py-4">
+                              </TableCell>
+                              <TableCell className="px-4 py-4">
                                 <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      navigate(`/dashboard/courses?programId=${encodeURIComponent(program.id)}`)
+                                    }}
+                                  >
+                                    Manage
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"
@@ -615,13 +589,13 @@ export default function ProgramManagementPage() {
                                     <Trash2 />
                                   </Button>
                                 </div>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           )
                         })
                       )}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </CardContent>
@@ -631,9 +605,9 @@ export default function ProgramManagementPage() {
             <CardHeader className="gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <CardTitle>Program Detail Flow</CardTitle>
+                  <CardTitle>Program Navigation</CardTitle>
                   <CardDescription>
-                    Click one program to inspect its courses and the course runs inside each course.
+                    From program list, click Manage to open filtered course list. From course list, open runs.
                   </CardDescription>
                 </div>
                 {selectedProgram ? (
@@ -646,6 +620,10 @@ export default function ProgramManagementPage() {
                       <Plus />
                       Add Course
                     </Button>
+                    <Button onClick={() => navigate(`/dashboard/courses?programId=${encodeURIComponent(selectedProgram.id)}`)}>
+                      Manage
+                      <ArrowRight />
+                    </Button>
                   </div>
                 ) : null}
               </div>
@@ -654,7 +632,7 @@ export default function ProgramManagementPage() {
             <CardContent className="space-y-4 pt-0">
               {!selectedProgram ? (
                 <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
-                  Select a program from the table to inspect its LMS hierarchy.
+                  Select one program then click Manage to continue to course list.
                 </div>
               ) : (
                 <>
@@ -679,8 +657,8 @@ export default function ProgramManagementPage() {
                         </div>
                       </div>
 
-                      <Button variant="ghost" onClick={() => navigate("/dashboard/courses")}>
-                        Open Course Library
+                      <Button variant="ghost" onClick={() => navigate(`/dashboard/courses?programId=${encodeURIComponent(selectedProgram.id)}`)}>
+                        Open Course List
                         <ArrowRight />
                       </Button>
                     </div>
@@ -713,130 +691,10 @@ export default function ProgramManagementPage() {
                     </div>
                   </div>
 
-                  <Tabs defaultValue="courses" className="gap-4">
+                  <Tabs defaultValue="structure" className="gap-4">
                     <TabsList variant="line">
-                      <TabsTrigger value="courses">Courses</TabsTrigger>
                       <TabsTrigger value="structure">Structure Notes</TabsTrigger>
                     </TabsList>
-
-                    <TabsContent value="courses" className="space-y-4">
-                      {selectedProgram.courses.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
-                          This program has no courses yet. Add a course, then each course can own multiple course runs.
-                        </div>
-                      ) : (
-                        sortCourses(selectedProgram.courses).map((course, index) => (
-                          <Card key={course.id} className="border-border/80">
-                            <CardHeader>
-                              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Badge variant="outline">Course {index + 1}</Badge>
-                                    <Badge variant="outline">{course.code}</Badge>
-                                    {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
-                                    {course.level ? <Badge variant="outline">{course.level}</Badge> : null}
-                                  </div>
-                                  <div>
-                                    <CardTitle>{course.title}</CardTitle>
-                                    <CardDescription className="mt-1">
-                                      {course.description || "No course description."}
-                                    </CardDescription>
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="secondary">{course.courseRuns.length} runs</Badge>
-                                  <Badge variant="outline">{countLessons(course)} lessons</Badge>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => navigate(`/dashboard/courses/${course.id}`)}
-                                  >
-                                    Course Detail
-                                    <ChevronRight />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardHeader>
-
-                            <CardContent className="space-y-4">
-                              <div className="grid gap-3 md:grid-cols-3">
-                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Order index</p>
-                                  <p className="mt-2 font-medium text-foreground">{course.orderIndex}</p>
-                                </div>
-                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Tags</p>
-                                  <p className="mt-2 font-medium text-foreground">
-                                    {course.tags.length ? course.tags.join(", ") : "No tags"}
-                                  </p>
-                                </div>
-                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Course runs</p>
-                                  <p className="mt-2 font-medium text-foreground">{course.courseRuns.length}</p>
-                                </div>
-                              </div>
-
-                              <Separator />
-
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-sm font-medium text-foreground">Course run list</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Course owns many runs. Chapters and lessons live under each run.
-                                  </p>
-                                </div>
-
-                                {course.courseRuns.length === 0 ? (
-                                  <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                                    No course runs yet for this course.
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {course.courseRuns.map((run) => {
-                                      const lessonCount = run.chapters.reduce(
-                                        (total, chapter) => total + chapter.lessons.length,
-                                        0,
-                                      )
-
-                                      return (
-                                        <button
-                                          key={run.id}
-                                          type="button"
-                                          onClick={() => navigate(`/dashboard/runs/${run.id}`)}
-                                          className="flex w-full items-center justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
-                                        >
-                                          <div className="min-w-0 space-y-1">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                              <p className="font-medium text-foreground">{run.code}</p>
-                                              <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                              {formatDateRange(run.startsAt, run.endsAt)}
-                                            </p>
-                                          </div>
-
-                                          <div className="flex items-center gap-4">
-                                            <div className="hidden text-right md:block">
-                                              <p className="text-xs text-muted-foreground">Chapters</p>
-                                              <p className="font-medium text-foreground">{run.chapters.length}</p>
-                                            </div>
-                                            <div className="hidden text-right md:block">
-                                              <p className="text-xs text-muted-foreground">Lessons</p>
-                                              <p className="font-medium text-foreground">{lessonCount}</p>
-                                            </div>
-                                            <ChevronRight className="size-4 text-muted-foreground" />
-                                          </div>
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
-                    </TabsContent>
 
                     <TabsContent value="structure">
                       <Card className="border-border/80 bg-muted/10">
@@ -861,8 +719,7 @@ export default function ProgramManagementPage() {
                           <div>
                             <p className="font-medium text-foreground">UI implication</p>
                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                              The admin flow should always start with selecting a program, then drill into its courses,
-                              then inspect or manage runs inside each course. This page now follows that order.
+                              Navigate by steps: Program list {"->"} Manage {"->"} Course list {"->"} Course Run detail.
                             </p>
                           </div>
                         </CardContent>

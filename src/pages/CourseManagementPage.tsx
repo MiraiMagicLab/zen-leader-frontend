@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   BookCopy,
   CalendarRange,
@@ -71,6 +71,7 @@ function getLevelVariant(level: string | null) {
 
 export default function CourseManagementPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [courses, setCourses] = useState<CourseResponse[]>([])
   const [programs, setPrograms] = useState<ProgramResponse[]>([])
@@ -93,6 +94,13 @@ export default function CourseManagementPage() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const programIdParam = searchParams.get("programId")
+    if (programIdParam) {
+      setProgramFilter(programIdParam)
+    }
+  }, [searchParams])
 
   const categories = useMemo(() => {
     return Array.from(new Set(courses.map((course) => course.category).filter(Boolean))) as string[]

@@ -6,6 +6,10 @@ import MarkdownEditor from "@/components/MarkdownEditor"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import FileActionLinks from "@/components/FileActionLinks"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
 import { buildLessonContentData } from "@/lib/lessonContent"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,21 +73,22 @@ const initialCourseRuns: CourseRun[] = [
 // ─── Modal Backdrop ───────────────────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-      onClick={onClose}
-    >
-      <motion.div
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="w-full max-w-md rounded-2xl border-0 bg-white p-0 shadow-2xl sm:rounded-2xl"
+      >
+        <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7"
-        onClick={(e) => e.stopPropagation()}
+        className="p-7"
       >
         {children}
-      </motion.div>
-    </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -230,17 +235,17 @@ function AddContentModal({
 
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Title</label>
-          <input
+          <Input
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={config.placeholder}
-            className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+            className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
           />
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
-          <input
+          <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. 12:45 • High Definition"
@@ -250,10 +255,10 @@ function AddContentModal({
       </div>
 
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => {
             if (!title.trim()) return
             if (type !== "text" && !fileUrl) {
@@ -263,10 +268,12 @@ function AddContentModal({
             onAdd({ type, title: title.trim(), description, fileUrl, fileName: file?.name })
           }}
           disabled={isUploading || !title.trim() || (type !== "text" && !fileUrl)}
-          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+          variant="secondary"
+          size="lg"
+          className="h-12 flex-1 rounded-xl text-sm font-bold"
         >
           Add Lesson
-        </button>
+        </Button>
       </div>
     </ModalBackdrop>
   )
@@ -348,8 +355,8 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Title</label>
-          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)}
+            className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
 
         {hasFileUpload && (
@@ -387,13 +394,13 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
 
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)}
-            className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input value={description} onChange={(e) => setDescription(e.target.value)}
+            className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-        <button
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button
           onClick={() => {
             if (!title.trim()) return
             if (hasFileUpload && !fileUrl) {
@@ -404,10 +411,12 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
             onClose()
           }}
           disabled={isUploading || !title.trim() || (hasFileUpload && !fileUrl)}
-          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+          variant="secondary"
+          size="lg"
+          className="h-12 flex-1 rounded-xl text-sm font-bold"
         >
           Save
-        </button>
+        </Button>
       </div>
     </ModalBackdrop>
   )
@@ -424,14 +433,17 @@ const contentConfig: Record<LessonType, { icon: string; color: string }> = {
 // ─── Preview Modal ────────────────────────────────────────────────────────────
 function PreviewModal({ lesson, onClose }: { lesson: LessonItem; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl sm:rounded-2xl"
+      >
+        <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        className="overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
@@ -477,8 +489,9 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonItem; onClose: () => 
             </div>
           )}
         </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -853,12 +866,12 @@ export default function CreateCoursePage() {
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">
                     Course Code <span className="text-error">*</span>
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={courseCode}
                     onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
                     placeholder="e.g. STRAT-001"
-                    className="w-full border border-slate-200 rounded-xl px-5 py-3 text-sm font-mono text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/25"
+                    className="h-12 rounded-xl border-slate-200 bg-background px-5 text-sm font-mono text-slate-700 placeholder:text-slate-300 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">Unique identifier — must be unique across all courses.</p>
                 </div>
@@ -866,12 +879,12 @@ export default function CreateCoursePage() {
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">
                     Course Title <span className="text-error">*</span>
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={courseTitle}
                     onChange={(e) => setCourseTitle(e.target.value)}
                     placeholder="e.g. Strategic Leadership for the AI Era"
-                    className="w-full border border-slate-200 rounded-xl px-5 py-4 text-base text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/25 transition-colors"
+                    className="h-14 rounded-xl border-slate-200 bg-background px-5 text-base text-slate-700 placeholder:text-slate-300 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
                 </div>
               </div>
@@ -922,17 +935,17 @@ export default function CreateCoursePage() {
                     Level <span className="text-slate-400 font-normal normal-case tracking-normal">· CourseResponse.level</span>
                   </label>
                   <div className="relative">
-                    <select
+                    <Select
                       value={courseLevel}
                       onChange={(e) => setCourseLevel(e.target.value)}
-                      className="w-full appearance-none border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/25 bg-white pr-10"
+                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     >
                       <option value="">— Select Level —</option>
                       <option value="Beginner">Beginner</option>
                       <option value="Intermediate">Intermediate</option>
                       <option value="Advanced">Advanced</option>
                       <option value="Expert">Expert</option>
-                    </select>
+                    </Select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                   </div>
                 </div>
@@ -943,16 +956,16 @@ export default function CreateCoursePage() {
                     Category <span className="text-slate-400 font-normal normal-case tracking-normal">· CourseResponse.category</span>
                   </label>
                   <div className="relative">
-                    <select
+                    <Select
                       value={courseCategory}
                       onChange={(e) => setCourseCategory(e.target.value)}
-                      className="w-full appearance-none border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/25 bg-white pr-10"
+                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     >
                       <option value="">— Select Category —</option>
                       <option value="STRATEGIC MASTERY">Strategic Mastery</option>
                       <option value="HUMAN CENTRICITY">Human Centricity</option>
                       <option value="FINANCE & OPS">Finance &amp; Ops</option>
-                    </select>
+                    </Select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                   </div>
                 </div>
@@ -961,16 +974,16 @@ export default function CreateCoursePage() {
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Program</label>
                   <div className="relative">
-                    <select
+                    <Select
                       value={selectedProgramId ?? ""}
                       onChange={(e) => setSelectedProgramId(e.target.value || null)}
-                      className="w-full appearance-none border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/25 bg-white pr-10"
+                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     >
                       <option value="">— No Program —</option>
                       {allPrograms.map((p) => (
                         <option key={p.id} value={p.id}>{p.title} ({p.code})</option>
                       ))}
-                    </select>
+                    </Select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                   </div>
                 </div>
@@ -978,12 +991,12 @@ export default function CreateCoursePage() {
                 {/* Order Index */}
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Order Index</label>
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     value={orderIndex}
                     onChange={(e) => setOrderIndex(Number(e.target.value))}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/25"
+                    className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">Position of this course within the program.</p>
                 </div>
@@ -994,7 +1007,7 @@ export default function CreateCoursePage() {
                     Tags <span className="text-slate-400 font-normal normal-case tracking-normal">· CourseResponse.tags</span>
                   </label>
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -1006,19 +1019,21 @@ export default function CreateCoursePage() {
                         }
                       }}
                       placeholder="Type & press Enter"
-                      className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/25"
+                      className="h-11 flex-1 rounded-xl border-slate-200 bg-background px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() => {
                         const tag = tagInput.trim().toLowerCase()
                         if (tag && !courseTags.includes(tag)) setCourseTags((prev) => [...prev, tag])
                         setTagInput("")
                       }}
-                      className="px-3 py-2.5 rounded-xl bg-secondary/10 text-secondary text-sm font-bold hover:bg-secondary/20 transition-colors"
+                      variant="secondary"
+                      size="lg"
+                      className="h-11 rounded-xl bg-secondary/10 px-3 text-secondary hover:bg-secondary/20"
                     >
                       <span className="material-symbols-outlined text-[18px]">add</span>
-                    </button>
+                    </Button>
                   </div>
                   {courseTags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -1049,19 +1064,23 @@ export default function CreateCoursePage() {
 
         {/* Sticky Footer */}
         <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between z-30">
-          <button
+          <Button
             onClick={() => navigate(programIdParam ? "/dashboard/programs" : "/dashboard/courses")}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-700"
           >
             Discard Changes
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setStep(2)}
-            className="flex items-center gap-1.5 bg-primary-fixed text-on-primary-fixed px-4 py-2 rounded-lg font-bold text-xs shadow-md hover:shadow-lg transition-all active:scale-95"
+            variant="default"
+            size="sm"
+            className="h-9 gap-1.5 bg-primary-fixed px-4 text-xs font-bold text-on-primary-fixed shadow-md hover:shadow-lg"
           >
             Save &amp; Continue to Curriculum
             <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-          </button>
+          </Button>
         </div>
       </>
     )
@@ -1144,13 +1163,15 @@ export default function CreateCoursePage() {
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{courseDesc}</ReactMarkdown>
                     </div>
                   )}
-                  <button
+                  <Button
                     onClick={() => setStep(1)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                    variant="outline"
+                    size="lg"
+                    className="h-11 w-full gap-2 rounded-xl border-2 border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
                     <span className="material-symbols-outlined text-[16px]">edit</span>
                     Edit Basic Info
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -1178,10 +1199,15 @@ export default function CreateCoursePage() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-5 flex items-center justify-between border-b border-slate-100">
                   <h3 className="text-xl font-extrabold font-headline text-slate-900">Curriculum Structure</h3>
-                  <button onClick={() => setStep(2)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-secondary transition-colors">
+                  <Button
+                    onClick={() => setStep(2)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs font-bold text-slate-500 hover:text-secondary"
+                  >
                     <span className="material-symbols-outlined text-[16px]">list</span>
                     Reorganize
-                  </button>
+                  </Button>
                 </div>
                 <div className="divide-y divide-slate-50">
                   {courseRuns.map((run, idx) => (
@@ -1215,21 +1241,25 @@ export default function CreateCoursePage() {
 
         {/* Sticky Footer */}
         <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between z-30">
-          <button
+          <Button
             onClick={() => setStep(2)}
-            className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Back to Curriculum
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => saveCourse()}
             disabled={saving}
-            className="flex items-center gap-2 bg-slate-900 text-white px-7 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
+            variant="default"
+            size="lg"
+            className="h-11 gap-2 rounded-xl bg-slate-900 px-7 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
           >
             Save Course
             <span className="material-symbols-outlined text-[18px]">save</span>
-          </button>
+          </Button>
         </div>
       </>
     )
@@ -1276,13 +1306,15 @@ export default function CreateCoursePage() {
               ))}
             </div>
           </div>
-          <button
+          <Button
             onClick={addRun}
-            className="flex items-center gap-2 bg-primary-fixed text-on-primary-fixed px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
+            variant="default"
+            size="lg"
+            className="h-11 shrink-0 gap-2 rounded-xl bg-primary-fixed px-5 text-sm font-bold text-on-primary-fixed shadow-md hover:shadow-lg"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
             Add Course Run
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-4">
@@ -1318,43 +1350,45 @@ export default function CreateCoursePage() {
                         <div className="flex-1 space-y-4">
                           <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Run Code</label>
-                            <input
+                            <Input
                               value={run.code}
                               onChange={(e) => updateRun(run.id, { code: e.target.value })}
-                              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                              className="h-11 rounded-xl border-slate-200 bg-background px-3 text-sm font-mono font-bold text-slate-800 focus-visible:border-secondary focus-visible:ring-secondary/20"
                             />
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Status</label>
                             <div className="flex gap-2">
                               {(["DRAFT", "PUBLISHED"] as const).map((s) => (
-                                <button
+                                <Button
                                   key={s}
                                   onClick={() => updateRun(run.id, { status: s })}
-                                  className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${run.status === s ? (s === "PUBLISHED" ? "bg-secondary border-secondary text-white shadow-sm" : "bg-slate-200 border-slate-300 text-slate-700") : "border-slate-200 text-slate-400 hover:border-slate-300"}`}
+                                  variant={run.status === s ? (s === "PUBLISHED" ? "secondary" : "outline") : "outline"}
+                                  size="lg"
+                                  className={`h-10 rounded-xl px-4 text-xs font-bold ${run.status === s ? (s === "PUBLISHED" ? "border-secondary text-white shadow-sm" : "border-slate-300 bg-slate-200 text-slate-700") : "border-slate-200 text-slate-400 hover:border-slate-300"}`}
                                 >
                                   {s}
-                                </button>
+                                </Button>
                               ))}
                             </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Starts At</label>
-                              <input
+                              <Input
                                 type="datetime-local"
                                 value={run.startsAt}
                                 onChange={(e) => updateRun(run.id, { startsAt: e.target.value })}
-                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                                className="h-11 rounded-xl border-slate-200 bg-background px-3 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                               />
                             </div>
                             <div>
                               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Ends At</label>
-                              <input
+                              <Input
                                 type="datetime-local"
                                 value={run.endsAt}
                                 onChange={(e) => updateRun(run.id, { endsAt: e.target.value })}
-                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                                className="h-11 rounded-xl border-slate-200 bg-background px-3 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                               />
                             </div>
                           </div>
@@ -1380,7 +1414,7 @@ export default function CreateCoursePage() {
                               <span className="w-7 h-7 rounded-lg bg-secondary text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
                                 {runIdx + 1}.{chIdx + 1}
                               </span>
-                              <input
+                              <Input
                                 value={chapter.title}
                                 onChange={(e) => {
                                   setCourseRuns((prev) =>
@@ -1391,12 +1425,12 @@ export default function CreateCoursePage() {
                                     )
                                   )
                                 }}
-                                className="bg-transparent text-sm font-bold text-slate-800 focus:outline-none border-b border-transparent focus:border-secondary/50 pb-0.5 transition-colors w-64"
+                                className="h-10 w-64 rounded-lg border-transparent bg-transparent px-2 text-sm font-bold text-slate-800 shadow-none focus-visible:border-secondary/30 focus-visible:bg-white focus-visible:ring-secondary/20"
                               />
                             </div>
                             {/* Add Lesson dropdown */}
                             <div className="relative">
-                              <button
+                              <Button
                                 onClick={() =>
                                   setLessonDropdown(
                                     lessonDropdown?.runId === run.id && lessonDropdown?.chapterId === chapter.id
@@ -1404,11 +1438,13 @@ export default function CreateCoursePage() {
                                       : { runId: run.id, chapterId: chapter.id }
                                   )
                                 }
-                                className="text-secondary text-xs font-bold flex items-center gap-1 hover:opacity-75 transition-opacity"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1 px-2 text-secondary hover:bg-secondary/10 hover:text-secondary"
                               >
                                 <span className="material-symbols-outlined text-[14px]">add</span>
                                 Add Lesson
-                              </button>
+                              </Button>
                               <AnimatePresence>
                                 {lessonDropdown?.runId === run.id && lessonDropdown?.chapterId === chapter.id && (
                                   <motion.div
@@ -1483,13 +1519,15 @@ export default function CreateCoursePage() {
                       ))}
 
                       {/* Add Chapter button */}
-                      <button
+                      <Button
                         onClick={() => addChapter(run.id)}
-                        className="w-full py-3.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-secondary/40 hover:bg-secondary/5 text-slate-400 hover:text-secondary text-sm font-bold transition-all flex items-center justify-center gap-2"
+                        variant="outline"
+                        size="lg"
+                        className="h-12 w-full rounded-xl border-2 border-dashed border-slate-200 text-sm font-bold text-slate-400 hover:border-secondary/40 hover:bg-secondary/5 hover:text-secondary"
                       >
                         <span className="material-symbols-outlined text-[18px]">add</span>
                         Add Chapter to {run.code}
-                      </button>
+                      </Button>
                     </div>
                   </>
                 )}
@@ -1508,24 +1546,28 @@ export default function CreateCoursePage() {
 
       {/* Sticky Footer */}
       <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between z-30">
-        <button onClick={() => setStep(1)} className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors">
+        <Button onClick={() => setStep(1)} variant="ghost" size="sm" className="h-9 gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Back to Basic Info
-        </button>
+        </Button>
         <div className="flex items-center gap-3">
-          <button
+          <Button
             onClick={() => saveCourse()}
             disabled={saving || isBannerUploading}
-            className="text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+            variant="ghost"
+            size="sm"
+            className="h-9 text-sm font-semibold text-slate-500 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-60"
           >
             Save as Draft
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setStep(3)}
-            className="flex items-center gap-2 bg-primary-fixed text-on-primary-fixed px-7 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+            variant="default"
+            size="lg"
+            className="h-11 gap-2 rounded-xl bg-primary-fixed px-7 text-sm font-bold text-on-primary-fixed shadow-md hover:shadow-lg"
           >
             Save &amp; Review Course
-          </button>
+          </Button>
         </div>
       </div>
 

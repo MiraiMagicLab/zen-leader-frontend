@@ -6,6 +6,11 @@ import remarkGfm from "remark-gfm"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, assetApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 import FileActionLinks from "@/components/FileActionLinks"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Select } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { buildLessonContentData, getLessonAsset } from "@/lib/lessonContent"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,18 +45,22 @@ type SaveState = "idle" | "saving" | "saved" | "error"
 // ─── Modal backdrop ───────────────────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="w-full max-w-md rounded-2xl border-0 bg-white p-0 shadow-2xl sm:rounded-2xl"
+      >
+        <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7"
-        onClick={(e) => e.stopPropagation()}
+        className="p-7"
       >
         {children}
-      </motion.div>
-    </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -96,16 +105,16 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
           </div>
           <h3 className="text-lg font-extrabold font-headline text-slate-900">Add Video Lesson</h3>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></button>
+        <Button onClick={onClose} variant="ghost" size="icon-sm"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></Button>
       </div>
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Lesson Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Introduction to Modern Leadership" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Introduction to Modern Leadership" className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Duration (mins)</label>
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} type="number" placeholder="e.g. 12" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input value={duration} onChange={(e) => setDuration(e.target.value)} type="number" placeholder="e.g. 12" className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Video File</label>
@@ -140,8 +149,8 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
         </div>
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button 
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button 
           onClick={() => { 
             if (!title.trim() || !fileUrl) {
               if (!fileUrl) alert("Please upload a video file first.")
@@ -152,10 +161,12 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
             onClose() 
           }} 
           disabled={isUploading || !title.trim() || !fileUrl}
-          className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
+          variant="secondary"
+          size="lg"
+          className="h-12 flex-1 rounded-xl text-sm font-bold"
         >
           Add Lesson
-        </button>
+        </Button>
       </div>
     </ModalBackdrop>
   )
@@ -211,9 +222,9 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Type</label>
-          <select value={fileType} onChange={(e) => setFileType(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20">
+          <Select value={fileType} onChange={(e) => setFileType(e.target.value)} className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-primary focus-visible:ring-primary/20">
             <option>PDF Document</option><option>Spreadsheet</option><option>Presentation</option><option>Word Document</option><option>Other</option>
-          </select>
+          </Select>
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">File</label>
@@ -247,8 +258,8 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         </div>
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button 
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button 
           onClick={() => { 
             if (!file || !fileUrl) {
               if (!fileUrl) alert("Please upload a file first.")
@@ -260,10 +271,11 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
             onClose() 
           }} 
           disabled={isUploading || !file || !fileUrl}
-          className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50"
+          size="lg"
+          className="h-12 flex-1 rounded-xl text-sm font-bold"
         >
           Add Resource
-        </button>
+        </Button>
       </div>
     </ModalBackdrop>
   )
@@ -287,22 +299,22 @@ function AddLiveModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Session Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Live Q&A: Leadership in Crisis" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-tertiary/20" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Live Q&A: Leadership in Crisis" className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-tertiary focus-visible:ring-tertiary/20" />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Date</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-tertiary/20" />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-tertiary focus-visible:ring-tertiary/20" />
           </div>
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Time</label>
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-tertiary/20" />
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-tertiary focus-visible:ring-tertiary/20" />
           </div>
         </div>
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; const d = date ? new Date(date).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : ""; onAdd({ type: "live", title: title.trim(), description: `Live Session${d ? ` • ${d}${time ? ` ${time}` : ""}` : ""}` }); onClose() }} className="flex-1 py-3 rounded-xl bg-tertiary text-white text-sm font-bold hover:opacity-90">Add Session</button>
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button onClick={() => { if (!title.trim()) return; const d = date ? new Date(date).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : ""; onAdd({ type: "live", title: title.trim(), description: `Live Session${d ? ` • ${d}${time ? ` ${time}` : ""}` : ""}` }); onClose() }} size="lg" className="h-12 flex-1 rounded-xl bg-tertiary text-sm font-bold text-white hover:opacity-90">Add Session</Button>
       </div>
     </ModalBackdrop>
   )
@@ -320,21 +332,21 @@ function AddTextModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omit
           </div>
           <h3 className="text-lg font-extrabold font-headline text-slate-900">Add Text Content</h3>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></button>
+        <Button onClick={onClose} variant="ghost" size="icon-sm"><span className="material-symbols-outlined text-slate-400 text-[20px]">close</span></Button>
       </div>
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Module Introduction" className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Module Introduction" className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-slate-300 focus-visible:ring-slate-200" />
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Content</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Enter text content here..." rows={5} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200 resize-none" />
+          <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Enter text content here..." rows={5} className="rounded-xl border-border bg-muted/40 px-4 py-3 text-sm text-slate-700 focus-visible:border-slate-300 focus-visible:ring-slate-200 resize-none" />
         </div>
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { if (!title.trim()) return; onAdd({ type: "text", title: title.trim(), description: content.trim() || "Text content" }); onClose() }} className="flex-1 py-3 rounded-xl bg-slate-700 text-white text-sm font-bold hover:opacity-90">Add Text</button>
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button onClick={() => { if (!title.trim()) return; onAdd({ type: "text", title: title.trim(), description: content.trim() || "Text content" }); onClose() }} size="lg" className="h-12 flex-1 rounded-xl bg-slate-700 text-white text-sm font-bold hover:bg-slate-800">Add Text</Button>
       </div>
     </ModalBackdrop>
   )
@@ -380,11 +392,11 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       <div className="space-y-4">
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
+          <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20" />
         </div>
         {(lesson.type === "resource" || lesson.type === "document" || lesson.type === "photo" || lesson.type === "video") && (
           <div>
@@ -422,8 +434,8 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
         )}
       </div>
       <div className="flex gap-3 mt-6">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={() => { onSave(title.trim(), description.trim(), fileUrl, displayFileName); onClose() }} disabled={isUploading} className="flex-1 py-3 rounded-xl bg-secondary text-white text-sm font-bold hover:opacity-90 disabled:opacity-50">Save Changes</button>
+        <Button onClick={onClose} variant="outline" size="lg" className="h-12 flex-1 rounded-xl border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</Button>
+        <Button onClick={() => { onSave(title.trim(), description.trim(), fileUrl, displayFileName); onClose() }} disabled={isUploading} variant="secondary" size="lg" className="h-12 flex-1 rounded-xl text-sm font-bold">Save Changes</Button>
       </div>
     </ModalBackdrop>
   )
@@ -788,7 +800,7 @@ export default function EditCoursePage() {
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <span className="material-symbols-outlined text-slate-200 text-6xl">search_off</span>
         <p className="text-slate-400 font-semibold">Course not found.</p>
-        <button onClick={() => navigate("/dashboard/courses")} className="px-6 py-2.5 rounded-xl bg-secondary text-white font-bold text-sm">Back to Courses</button>
+        <Button onClick={() => navigate("/dashboard/courses")} variant="secondary" size="lg" className="h-10 rounded-xl px-6 text-sm font-bold text-white">Back to Courses</Button>
       </div>
     )
   }
@@ -804,21 +816,22 @@ export default function EditCoursePage() {
         {/* ── Header ── */}
         <section className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div>
-            <button onClick={() => navigate("/dashboard/courses")} className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-sm font-semibold mb-3 transition-colors">
+            <Button onClick={() => navigate("/dashboard/courses")} variant="ghost" size="sm" className="mb-3 h-8 gap-1 text-sm font-semibold text-slate-400 hover:text-slate-600">
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
               Back to Courses
-            </button>
+            </Button>
             <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">Edit Course</h2>
             <p className="text-slate-500 mt-2 font-body max-w-xl">Update course details, curriculum, and settings.</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button onClick={() => navigate("/dashboard/courses")} className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors">
+            <Button onClick={() => navigate("/dashboard/courses")} variant="outline" size="lg" className="h-11 rounded-xl border-2 border-slate-200 px-6 text-sm font-bold text-slate-700 hover:bg-slate-50">
               Discard
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={saveState === "saving" || isThumbnailUploading}
-              className={`px-6 py-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
+              size="lg"
+              className={`h-11 rounded-xl px-6 font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
                 saveState === "saved"
                   ? "bg-secondary text-white"
                   : saveState === "error"
@@ -832,7 +845,7 @@ export default function EditCoursePage() {
                 {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : saveState === "error" ? "error" : "save"}
               </span>
               {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : saveState === "error" ? "Retry Save" : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -852,21 +865,21 @@ export default function EditCoursePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Course Code <span className="text-error">*</span></label>
-                    <input
+                    <Input
                       type="text"
                       value={courseCode}
                       onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
                       placeholder="e.g. STRAT-001"
-                      className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm font-mono text-slate-700 focus:outline-none transition-colors"
+                      className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-mono text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     />
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Course Title <span className="text-error">*</span></label>
-                    <input
+                    <Input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 focus:outline-none transition-colors font-semibold"
+                      className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     />
                   </div>
                 </div>
@@ -882,13 +895,13 @@ export default function EditCoursePage() {
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Category</label>
-                  <div className="relative border-b-2 border-slate-200 focus-within:border-secondary transition-colors">
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full appearance-none bg-transparent py-3 text-sm font-semibold text-slate-700 focus:outline-none pr-8">
+                  <div className="relative">
+                    <Select value={category} onChange={(e) => setCategory(e.target.value)} className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20">
                       <option value="STRATEGIC MASTERY">Strategic Mastery</option>
                       <option value="HUMAN CENTRICITY">Human Centricity</option>
                       <option value="FINANCE & OPS">Finance &amp; Ops</option>
-                    </select>
-                    <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                    </Select>
+                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                   </div>
                 </div>
               </div>
@@ -915,21 +928,23 @@ export default function EditCoursePage() {
                           <p className="text-sm font-bold text-slate-900">{run.code}</p>
                           <div className="flex gap-1.5 mt-1">
                             {(["DRAFT", "PUBLISHED"] as const).map((s) => (
-                              <button
+                              <Button
                                 key={s}
                                 onClick={() => setRuns((prev) => prev.map((r) => r.id === run.id ? { ...r, status: s } : r))}
-                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border transition-all ${run.status === s ? (s === "PUBLISHED" ? "bg-primary-fixed text-on-primary-fixed border-primary-fixed" : "bg-slate-200 text-slate-600 border-slate-300") : "bg-transparent border-slate-200 text-slate-400 hover:border-slate-300"}`}
+                                variant="outline"
+                                size="xs"
+                                className={`h-6 rounded-full border text-[9px] font-bold uppercase ${run.status === s ? (s === "PUBLISHED" ? "bg-primary-fixed text-on-primary-fixed border-primary-fixed" : "bg-slate-200 text-slate-600 border-slate-300") : "bg-transparent border-slate-200 text-slate-400 hover:border-slate-300"}`}
                               >
                                 {s}
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         </div>
                       </div>
-                      <button onClick={() => addChapter(run.id)} className="flex items-center gap-1 text-secondary font-bold text-xs hover:opacity-75 transition-opacity">
+                      <Button onClick={() => addChapter(run.id)} variant="ghost" size="sm" className="h-8 gap-1 text-xs font-bold text-secondary hover:opacity-75">
                         <span className="material-symbols-outlined text-[16px]">add_circle</span>
                         Add Chapter
-                      </button>
+                      </Button>
                     </div>
 
                     {/* Chapters */}
@@ -940,7 +955,7 @@ export default function EditCoursePage() {
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <span className="material-symbols-outlined text-slate-300 text-[18px] cursor-grab shrink-0">drag_indicator</span>
                               {editingChapterId === ch.id ? (
-                                <input
+                                <Input
                                   autoFocus
                                   value={editingChapterTitle}
                                   onChange={(e) => setEditingChapterTitle(e.target.value)}
@@ -1045,18 +1060,18 @@ export default function EditCoursePage() {
                             </div>
                           )}
                           <div className="px-5 py-3 flex flex-wrap gap-2 bg-white border-t border-slate-50">
-                            <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "video" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-secondary/50 hover:text-secondary rounded-lg text-xs font-bold transition-colors">
+                            <Button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "video" })} variant="outline" size="xs" className="h-8 gap-1 border-2 border-dashed border-slate-200 text-xs font-bold text-slate-500 hover:border-secondary/50 hover:text-secondary">
                               <span className="material-symbols-outlined text-[14px]">add</span>Add Video
-                            </button>
-                            <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "resource" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-primary/50 hover:text-primary rounded-lg text-xs font-bold transition-colors">
+                            </Button>
+                            <Button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "resource" })} variant="outline" size="xs" className="h-8 gap-1 border-2 border-dashed border-slate-200 text-xs font-bold text-slate-500 hover:border-primary/50 hover:text-primary">
                               <span className="material-symbols-outlined text-[14px]">add</span>Add Resource
-                            </button>
-                            <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "live" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-tertiary/50 hover:text-tertiary rounded-lg text-xs font-bold transition-colors">
+                            </Button>
+                            <Button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "live" })} variant="outline" size="xs" className="h-8 gap-1 border-2 border-dashed border-slate-200 text-xs font-bold text-slate-500 hover:border-tertiary/50 hover:text-tertiary">
                               <span className="material-symbols-outlined text-[14px]">add</span>Add Live
-                            </button>
-                            <button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "text" })} className="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors">
+                            </Button>
+                            <Button onClick={() => setAddModal({ runId: run.id, chapterId: ch.id, type: "text" })} variant="outline" size="xs" className="h-8 gap-1 border-2 border-dashed border-slate-200 text-xs font-bold text-slate-500 hover:border-slate-400 hover:text-slate-700">
                               <span className="material-symbols-outlined text-[14px]">add</span>Add Text
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1111,9 +1126,9 @@ export default function EditCoursePage() {
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-3">Level</label>
                 <div className="flex flex-wrap gap-2">
                   {(["Beginner", "Intermediate", "Advanced", "Expert"] as const).map((l) => (
-                    <button key={l} onClick={() => setLevel(l)} className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${level === l ? "bg-secondary border-secondary text-white shadow-md" : "border-slate-200 text-slate-500 hover:border-secondary/40 hover:text-secondary"}`}>
+                    <Button key={l} onClick={() => setLevel(l)} variant="outline" size="xs" className={`h-7 rounded-xl border-2 text-xs font-bold ${level === l ? "bg-secondary border-secondary text-white shadow-md" : "border-slate-200 text-slate-500 hover:border-secondary/40 hover:text-secondary"}`}>
                       {l}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -1121,7 +1136,7 @@ export default function EditCoursePage() {
               {/* Order Index */}
               <div>
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Order Index</label>
-                <input
+                <Input
                   type="number"
                   min={1}
                   value={orderIndex}
@@ -1134,7 +1149,7 @@ export default function EditCoursePage() {
               <div>
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Program</label>
                 <div className="relative">
-                  <select
+                  <Select
                     value={selectedProgramId ?? ""}
                     onChange={(e) => setSelectedProgramId(e.target.value || null)}
                     className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
@@ -1143,7 +1158,7 @@ export default function EditCoursePage() {
                     {allPrograms.map((p) => (
                       <option key={p.id} value={p.id}>{p.code} — {p.title}</option>
                     ))}
-                  </select>
+                  </Select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
                 </div>
               </div>
@@ -1162,23 +1177,24 @@ export default function EditCoursePage() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag() } }}
                     placeholder="Type tag + Enter"
                     className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                   />
-                  <button onClick={addTag} className="px-3 py-2 bg-secondary/10 text-secondary rounded-xl text-xs font-bold hover:bg-secondary/20 transition-colors">Add</button>
+                  <Button onClick={addTag} variant="secondary" size="sm" className="h-8 rounded-xl bg-secondary/10 px-3 text-xs font-bold text-secondary hover:bg-secondary/20">Add</Button>
                 </div>
               </div>
             </div>
 
             {/* Save */}
-            <button
+            <Button
               onClick={handleSave}
               disabled={saveState === "saving" || isThumbnailUploading}
-              className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md ${
+              size="lg"
+              className={`h-12 w-full font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md ${
                 saveState === "saved"
                   ? "bg-secondary text-white"
                   : saveState === "error"
@@ -1190,7 +1206,7 @@ export default function EditCoursePage() {
                 {saveState === "saved" ? "check_circle" : saveState === "saving" ? "autorenew" : saveState === "error" ? "error" : "save"}
               </span>
               {saveState === "saved" ? "Saved!" : saveState === "saving" ? "Saving..." : saveState === "error" ? "Retry Save" : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </div>
       </motion.div>

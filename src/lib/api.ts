@@ -470,7 +470,7 @@ export const enrollmentApi = {
   manualEnroll: (data: ManualEnrollmentRequest) =>
     req<EnrollmentResponse>("/enrollments/manual", { method: "POST", body: JSON.stringify(data) }),
 
-  importByExcel: async (courseRunId: string, file: File) => {
+  importByExcel: async (courseRunId: string, file: File, dryRun = false) => {
     const token = authStorage.getToken()
     const headers: Record<string, string> = {}
     if (token) headers["Authorization"] = `Bearer ${token}`
@@ -478,6 +478,7 @@ export const enrollmentApi = {
     const form = new FormData()
     form.append("courseRunId", courseRunId)
     form.append("file", file)
+    form.append("dryRun", String(dryRun))
 
     const res = await fetch(`${BASE}/enrollments/import`, {
       method: "POST",
@@ -487,6 +488,15 @@ export const enrollmentApi = {
     if (!res.ok) throw new Error(buildHttpErrorMessage(res))
     const json: ApiResponse<EnrollmentImportResponse> = await res.json()
     return json.data
+  },
+
+  downloadImportTemplate: async () => {
+    const token = authStorage.getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE}/enrollments/import-template`, { headers })
+    if (!res.ok) throw new Error(buildHttpErrorMessage(res))
+    return res.blob()
   },
 }
 
