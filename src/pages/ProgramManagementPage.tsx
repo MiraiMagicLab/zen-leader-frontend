@@ -1,803 +1,985 @@
-import { motion, AnimatePresence } from "framer-motion"
-import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  programApi,
+  ArrowRight,
+  BookCopy,
+  CalendarRange,
+  ChevronRight,
+  FolderKanban,
+  Layers3,
+  Plus,
+  Search,
+  Settings2,
+  Trash2,
+} from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import {
   courseApi,
-  type ProgramResponse,
+  programApi,
   type CourseResponse,
+  type ProgramResponse,
   type ProgramUpsertRequest,
 } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Program = ProgramResponse
+type Course = CourseResponse
+type ProgramSheetMode = "create" | "settings" | "add-course" | null
+type ProgramFilterStatus = "ALL" | "PUBLISHED" | "DRAFT"
 
-// ─── Create Program Modal ─────────────────────────────────────────────────────
-function CreateProgramModal({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void
-  onCreate: (data: ProgramUpsertRequest) => void
-}) {
-  const [code, setCode] = useState("")
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [isPublished, setIsPublished] = useState(false)
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
-  const bannerRef = useRef<HTMLInputElement>(null)
+type ProgramFormState = {
+  code: string
+  title: string
+  description: string
+  thumbnailUrl: string
+  isPublished: boolean
+}
 
-  const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setBannerPreview(URL.createObjectURL(file))
-  }
+const EMPTY_PROGRAM_FORM: ProgramFormState = {
+  code: "",
+  title: "",
+  description: "",
+  thumbnailUrl: "",
+  isPublished: false,
+}
 
-  const handleCreate = () => {
-    if (!title.trim() || !code.trim()) return
-    onCreate({
-      code: code.trim().toUpperCase(),
-      title: title.trim(),
-      description: description.trim() || null,
-      thumbnailUrl: bannerPreview,
-      isPublished,
-      publishedAt: isPublished ? new Date().toISOString() : null,
-    })
-    onClose()
-  }
+function sortCourses(courses: Course[]) {
+  return [...courses].sort((a, b) => a.orderIndex - b.orderIndex)
+}
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>folder_special</span>
-            </div>
-            <h3 className="text-lg font-extrabold font-headline text-slate-900">Create New Program</h3>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
-          </button>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Banner Image</label>
-            <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
-            <button
-              onClick={() => bannerRef.current?.click()}
-              className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/40 rounded-xl py-4 flex flex-col items-center justify-center gap-1 overflow-hidden relative group transition-colors"
-              style={{ minHeight: 120 }}
-            >
-              {bannerPreview ? (
-                <>
-                  <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="material-symbols-outlined text-white text-2xl">cloud_upload</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-slate-300 text-2xl">cloud_upload</span>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Upload Banner (16:9)</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
-              Program Code <span className="text-error">*</span>
-            </label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="e.g. EXEC-LDR-2024"
-              className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
-              Program Title <span className="text-error">*</span>
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Executive Leadership Excellence"
-              className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Brief overview of the program..."
-              className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 resize-none"
-            />
-          </div>
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm font-bold text-slate-700">Published</span>
-            <button
-              onClick={() => setIsPublished((v) => !v)}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublished ? "bg-secondary" : "bg-slate-200"}`}
-            >
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isPublished ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={handleCreate} className="flex-1 py-3 rounded-xl bg-primary-fixed text-on-primary-fixed text-sm font-bold hover:opacity-90 transition-opacity">Create Program</button>
-        </div>
-      </motion.div>
-    </div>
+function countCourseRuns(program: Program) {
+  return program.courses.reduce((total, course) => total + course.courseRuns.length, 0)
+}
+
+function countLessons(course: Course) {
+  return course.courseRuns.reduce(
+    (total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0),
+    0,
   )
 }
 
-// ─── Program Settings Modal ───────────────────────────────────────────────────
-function ProgramSettingsModal({
-  program,
-  onClose,
-  onSave,
-}: {
-  program: Program
-  onClose: () => void
-  onSave: (data: ProgramUpsertRequest) => void
-}) {
-  const [code, setCode] = useState(program.code)
-  const [title, setTitle] = useState(program.title)
-  const [description, setDescription] = useState(program.description ?? "")
-  const [isPublished, setIsPublished] = useState(program.isPublished)
-  const [bannerPreview, setBannerPreview] = useState<string | null>(program.thumbnailUrl)
-  const bannerRef = useRef<HTMLInputElement>(null)
+function formatDateRange(startsAt: string | null, endsAt: string | null) {
+  if (!startsAt && !endsAt) return "Schedule not set"
 
-  const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setBannerPreview(URL.createObjectURL(file))
-  }
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
 
-  const handleSave = () => {
-    if (!title.trim() || !code.trim()) return
-    onSave({
-      code: code.trim().toUpperCase(),
-      title: title.trim(),
-      description: description.trim() || null,
-      thumbnailUrl: bannerPreview,
-      isPublished,
-      publishedAt: isPublished && !program.publishedAt ? new Date().toISOString() : program.publishedAt,
-    })
-    onClose()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>settings</span>
-            </div>
-            <h3 className="text-lg font-extrabold font-headline text-slate-900">Program Settings</h3>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
-          </button>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Banner Image</label>
-            <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
-            <button
-              onClick={() => bannerRef.current?.click()}
-              className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/40 rounded-xl py-4 flex flex-col items-center justify-center gap-1 overflow-hidden relative group transition-colors"
-              style={{ minHeight: 120 }}
-            >
-              {bannerPreview ? (
-                <>
-                  <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="material-symbols-outlined text-white text-2xl">cloud_upload</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-slate-300 text-2xl">cloud_upload</span>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Upload Banner (16:9)</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Program Code</label>
-            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Program Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 resize-none" />
-          </div>
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm font-bold text-slate-700">Published</span>
-            <button
-              onClick={() => setIsPublished((v) => !v)}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${isPublished ? "bg-secondary" : "bg-slate-200"}`}
-            >
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${isPublished ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} className="flex-1 py-3 rounded-xl bg-primary-fixed text-on-primary-fixed text-sm font-bold hover:opacity-90 transition-opacity">Save Changes</button>
-        </div>
-      </motion.div>
-    </div>
-  )
+  const startText = startsAt ? formatter.format(new Date(startsAt)) : "TBD"
+  const endText = endsAt ? formatter.format(new Date(endsAt)) : "TBD"
+  return `${startText} - ${endText}`
 }
 
-// ─── Add Course to Program Modal ──────────────────────────────────────────────
-function AddCourseModal({
-  onClose,
-  onAdd,
-  existingIds,
-  allCourses,
-}: {
-  onClose: () => void
-  onAdd: (c: CourseResponse) => void
-  existingIds: Set<string>
-  allCourses: CourseResponse[]
-}) {
-  const [search, setSearch] = useState("")
+function toProgramFormState(program: Program): ProgramFormState {
+  return {
+    code: program.code,
+    title: program.title,
+    description: program.description ?? "",
+    thumbnailUrl: program.thumbnailUrl ?? "",
+    isPublished: program.isPublished,
+  }
+}
 
-  const filtered = useMemo(
-    () =>
-      allCourses.filter(
-        (c) =>
-          !existingIds.has(c.id) &&
-          (search.trim() === "" ||
-            c.title.toLowerCase().includes(search.toLowerCase()) ||
-            c.code.toLowerCase().includes(search.toLowerCase())),
-      ),
-    [allCourses, existingIds, search],
-  )
+function toProgramPayload(form: ProgramFormState, publishedAt?: string | null): ProgramUpsertRequest {
+  return {
+    code: form.code.trim().toUpperCase(),
+    title: form.title.trim(),
+    description: form.description.trim() || null,
+    thumbnailUrl: form.thumbnailUrl.trim() || null,
+    isPublished: form.isPublished,
+    publishedAt: form.isPublished ? publishedAt ?? new Date().toISOString() : null,
+  }
+}
+
+function getRunBadgeVariant(status: string) {
+  switch (status.toUpperCase()) {
+    case "PUBLISHED":
+    case "ACTIVE":
+    case "OPEN":
+      return "secondary" as const
+    case "DRAFT":
+      return "outline" as const
+    default:
+      return "outline" as const
+  }
+}
+
+function ProgramForm({
+  form,
+  onChange,
+  onSubmit,
+  submitLabel,
+}: {
+  form: ProgramFormState
+  onChange: (next: ProgramFormState) => void
+  onSubmit: () => void
+  submitLabel: string
+}) {
+  const isInvalid = !form.code.trim() || !form.title.trim()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-7"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-secondary/10 rounded-xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>library_add</span>
-            </div>
-            <h3 className="text-lg font-extrabold font-headline text-slate-900">Add Course to Program</h3>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
-          </button>
-        </div>
-
-        <div className="relative mb-4">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[18px]">search</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title or code..."
-            autoFocus
-            className="w-full bg-surface-container-low rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+    <form
+      className="flex h-full flex-col"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!isInvalid) onSubmit()
+      }}
+    >
+      <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-4">
+        <div className="space-y-2">
+          <Label htmlFor="program-code">Program code</Label>
+          <Input
+            id="program-code"
+            value={form.code}
+            onChange={(event) => onChange({ ...form, code: event.target.value.toUpperCase() })}
+            placeholder="EXEC-LEAD-2026"
           />
         </div>
 
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-          {filtered.length === 0 && (
-            <div className="py-10 text-center">
-              <span className="material-symbols-outlined text-slate-200 text-4xl block mb-2">search_off</span>
-              <p className="text-sm text-slate-400 font-semibold">
-                {allCourses.length === existingIds.size ? "All courses already added." : "No courses match your search."}
+        <div className="space-y-2">
+          <Label htmlFor="program-title">Program title</Label>
+          <Input
+            id="program-title"
+            value={form.title}
+            onChange={(event) => onChange({ ...form, title: event.target.value })}
+            placeholder="Zenith Executive Leadership"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="program-thumbnail">Thumbnail URL</Label>
+          <Input
+            id="program-thumbnail"
+            value={form.thumbnailUrl}
+            onChange={(event) => onChange({ ...form, thumbnailUrl: event.target.value })}
+            placeholder="https://..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="program-description">Description</Label>
+          <Textarea
+            id="program-description"
+            value={form.description}
+            onChange={(event) => onChange({ ...form, description: event.target.value })}
+            placeholder="Describe the program, audience, and expected outcomes."
+            className="min-h-28"
+          />
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/40 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="program-published">Published</Label>
+              <p className="text-sm text-muted-foreground">
+                Published programs are visible in the LMS hierarchy and can host active course runs.
               </p>
             </div>
-          )}
-          {filtered.map((course) => (
-            <button
-              key={course.id}
-              onClick={() => {
-                onAdd(course)
-                onClose()
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-secondary/30 hover:bg-secondary/5 transition-all text-left group"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-secondary transition-colors">{course.title}</p>
-                <p className="text-[11px] text-slate-400 font-mono">{course.code}{course.category ? ` · ${course.category}` : ""}</p>
-              </div>
-              <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary text-[20px] shrink-0 transition-colors">add_circle</span>
-            </button>
-          ))}
+            <Switch
+              id="program-published"
+              checked={form.isPublished}
+              onCheckedChange={(checked) => onChange({ ...form, isPublished: checked })}
+            />
+          </div>
         </div>
-      </motion.div>
-    </div>
+      </div>
+
+      <SheetFooter className="border-t border-border">
+        <Button type="submit" disabled={isInvalid}>
+          {submitLabel}
+        </Button>
+      </SheetFooter>
+    </form>
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProgramManagementPage() {
   const navigate = useNavigate()
+
   const [programs, setPrograms] = useState<Program[]>([])
-  const [allCourses, setAllCourses] = useState<CourseResponse[]>([])
+  const [allCourses, setAllCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState<string>("")
+  const [error, setError] = useState<string | null>(null)
 
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showAddCourseModal, setShowAddCourseModal] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [selectedId, setSelectedId] = useState("")
+  const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
 
-  const [showFilter, setShowFilter] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<"ALL" | "PUBLISHED" | "DRAFT">("ALL")
   const [filterSearch, setFilterSearch] = useState("")
-  const [filterMinCourses, setFilterMinCourses] = useState<number | "">("")
+  const [filterStatus, setFilterStatus] = useState<ProgramFilterStatus>("ALL")
+  const [filterMinCourses, setFilterMinCourses] = useState("")
+  const [courseSearch, setCourseSearch] = useState("")
 
-  // ── Load data from API ──────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  const [programForm, setProgramForm] = useState<ProgramFormState>(EMPTY_PROGRAM_FORM)
+
+  async function loadData() {
+    setLoading(true)
+    setError(null)
+
     try {
-      const [progs, crs] = await Promise.all([programApi.getAll(), courseApi.getAll()])
-      setPrograms(progs)
-      setAllCourses(crs)
-      setSelectedId((prev) => prev || progs[0]?.id || "")
-    } catch (e) {
-      console.error("Failed to load data:", e)
+      const [programList, courseList] = await Promise.all([programApi.getAll(), courseApi.getAll()])
+      setPrograms(programList)
+      setAllCourses(courseList)
+      setSelectedId((current) => current || programList[0]?.id || "")
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load LMS program flow.")
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    void loadData()
+  }, [])
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
-  const filteredPrograms = programs.filter((p) => {
-    if (filterStatus === "PUBLISHED" && !p.isPublished) return false
-    if (filterStatus === "DRAFT" && p.isPublished) return false
-    if (filterSearch.trim() && !p.title.toLowerCase().includes(filterSearch.toLowerCase()) && !p.code.toLowerCase().includes(filterSearch.toLowerCase())) return false
-    if (filterMinCourses !== "" && p.courses.length < Number(filterMinCourses)) return false
-    return true
-  })
+  const filteredPrograms = useMemo(() => {
+    return programs.filter((program) => {
+      const search = filterSearch.trim().toLowerCase()
+      const matchesSearch =
+        !search ||
+        program.title.toLowerCase().includes(search) ||
+        program.code.toLowerCase().includes(search) ||
+        (program.description ?? "").toLowerCase().includes(search)
 
-  const hasActiveFilters = filterStatus !== "ALL" || filterSearch.trim() !== "" || filterMinCourses !== ""
+      const matchesStatus =
+        filterStatus === "ALL" ||
+        (filterStatus === "PUBLISHED" ? program.isPublished : !program.isPublished)
 
-  const clearFilters = () => {
-    setFilterStatus("ALL")
-    setFilterSearch("")
-    setFilterMinCourses("")
-  }
+      const matchesMinCourses =
+        !filterMinCourses.trim() || program.courses.length >= Number(filterMinCourses)
 
-  const selected = programs.find((p) => p.id === selectedId) ?? programs[0]
+      return matchesSearch && matchesStatus && matchesMinCourses
+    })
+  }, [filterMinCourses, filterSearch, filterStatus, programs])
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleCreateProgram = async (data: ProgramUpsertRequest) => {
-    try {
-      const created = await programApi.create(data)
-      setPrograms((prev) => [...prev, created])
-      setSelectedId(created.id)
-    } catch (e) {
-      console.error("Failed to create program:", e)
-    }
-  }
-
-  const handleAddCourse = async (course: CourseResponse) => {
-    if (!selected) return
-    try {
-      await courseApi.update(course.id, {
-        code: course.code,
-        title: course.title,
-        description: course.description,
-        level: course.level,
-        thumbnailUrl: course.thumbnailUrl,
-        category: course.category,
-        programId: selected.id,
-        orderIndex: course.orderIndex,
-        tags: course.tags,
-      })
-      // Refresh programs to reflect the updated course list
-      const progs = await programApi.getAll()
-      setPrograms(progs)
-    } catch (e) {
-      console.error("Failed to add course to program:", e)
-    }
-  }
-
-  const togglePublished = async (program: Program) => {
-    try {
-      const updated = await programApi.update(program.id, {
-        code: program.code,
-        title: program.title,
-        description: program.description,
-        thumbnailUrl: program.thumbnailUrl,
-        isPublished: !program.isPublished,
-        publishedAt: !program.isPublished ? new Date().toISOString() : program.publishedAt,
-      })
-      setPrograms((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-    } catch (e) {
-      console.error("Failed to toggle published:", e)
-    }
-  }
-
-  const handleDeleteProgram = async (programId: string) => {
-    try {
-      await programApi.remove(programId)
-      setPrograms((prev) => {
-        const next = prev.filter((p) => p.id !== programId)
-        if (selectedId === programId) setSelectedId(next[0]?.id ?? "")
-        return next
-      })
-    } catch (e) {
-      console.error("Failed to delete program:", e)
-    }
-  }
-
-  const handleSaveSettings = async (data: ProgramUpsertRequest) => {
-    if (!selected) return
-    try {
-      const updated = await programApi.update(selected.id, data)
-      setPrograms((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-    } catch (e) {
-      console.error("Failed to update program:", e)
-    }
-  }
-
-  const existingCourseIds = useMemo(
-    () => new Set(selected?.courses.map((c) => c.id) ?? []),
-    [selected],
+  const selectedProgram = useMemo(
+    () => filteredPrograms.find((program) => program.id === selectedId) ?? programs.find((program) => program.id === selectedId) ?? null,
+    [filteredPrograms, programs, selectedId],
   )
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  const availableCourses = useMemo(() => {
+    if (!selectedProgram) return []
+
+    const existingIds = new Set(selectedProgram.courses.map((course) => course.id))
+    const search = courseSearch.trim().toLowerCase()
+
+    return allCourses.filter((course) => {
+      if (existingIds.has(course.id)) return false
+      if (!search) return true
+
+      return (
+        course.title.toLowerCase().includes(search) ||
+        course.code.toLowerCase().includes(search) ||
+        (course.category ?? "").toLowerCase().includes(search)
+      )
+    })
+  }, [allCourses, courseSearch, selectedProgram])
+
+  useEffect(() => {
+    if (!selectedId && filteredPrograms[0]) {
+      setSelectedId(filteredPrograms[0].id)
+    }
+  }, [filteredPrograms, selectedId])
+
+  const totalCourses = programs.reduce((total, program) => total + program.courses.length, 0)
+  const totalCourseRuns = programs.reduce((total, program) => total + countCourseRuns(program), 0)
+  const publishedPrograms = programs.filter((program) => program.isPublished).length
+
+  async function handleCreateProgram() {
+    const created = await programApi.create(toProgramPayload(programForm))
+    setPrograms((current) => [created, ...current])
+    setSelectedId(created.id)
+    setProgramForm(EMPTY_PROGRAM_FORM)
+    setSheetMode(null)
+  }
+
+  async function handleSaveProgramSettings() {
+    if (!selectedProgram) return
+
+    const updated = await programApi.update(
+      selectedProgram.id,
+      toProgramPayload(programForm, selectedProgram.publishedAt),
+    )
+
+    setPrograms((current) => current.map((program) => (program.id === updated.id ? updated : program)))
+    setSheetMode(null)
+  }
+
+  async function handleDeleteProgram(programId: string) {
+    await programApi.remove(programId)
+    setPrograms((current) => {
+      const next = current.filter((program) => program.id !== programId)
+      if (selectedId === programId) {
+        setSelectedId(next[0]?.id ?? "")
+      }
+      return next
+    })
+  }
+
+  async function handleTogglePublished(program: Program) {
+    const updated = await programApi.update(program.id, {
+      code: program.code,
+      title: program.title,
+      description: program.description,
+      thumbnailUrl: program.thumbnailUrl,
+      isPublished: !program.isPublished,
+      publishedAt: !program.isPublished ? new Date().toISOString() : null,
+    })
+
+    setPrograms((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+  }
+
+  async function handleAddCourse(course: Course) {
+    if (!selectedProgram) return
+
+    const nextOrderIndex = selectedProgram.courses.length
+    await courseApi.update(course.id, {
+      code: course.code,
+      title: course.title,
+      description: course.description,
+      level: course.level,
+      thumbnailUrl: course.thumbnailUrl,
+      category: course.category,
+      programId: selectedProgram.id,
+      orderIndex: nextOrderIndex,
+      tags: course.tags,
+    })
+
+    setCourseSearch("")
+    setSheetMode(null)
+    await loadData()
+  }
+
+  function openCreateSheet() {
+    setProgramForm(EMPTY_PROGRAM_FORM)
+    setSheetMode("create")
+  }
+
+  function openSettingsSheet() {
+    if (!selectedProgram) return
+    setProgramForm(toProgramFormState(selectedProgram))
+    setSheetMode("settings")
+  }
+
+  async function runAsyncAction(action: () => Promise<void>) {
+    try {
+      setError(null)
+      await action()
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "An unexpected error occurred.")
+    }
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <span className="material-symbols-outlined text-slate-300 text-5xl animate-spin">progress_activity</span>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="w-full max-w-md border-border/80 bg-card/90">
+          <CardHeader>
+            <CardTitle>Loading LMS flow</CardTitle>
+            <CardDescription>Resolving programs, courses, and course runs from backend.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-8"
-      >
-        {/* ── Header ── */}
-        <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">
-              Program & Curriculum Management
-            </h2>
-            <p className="text-slate-500 mt-2 font-body">
-              Organize individual courses into comprehensive leadership programs.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => navigate("/dashboard/programs/create")}
-              className="flex items-center gap-1.5 bg-primary-fixed text-on-primary-fixed px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              Create New Program
-            </button>
-          </div>
-        </section>
-
-        {/* ── Main Grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          {/* Left (3/5) */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] overflow-hidden">
-              <div className="px-6 py-5 flex items-center justify-between border-b border-slate-50">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-extrabold font-headline text-slate-900">Programs</h3>
-                  {hasActiveFilters && (
-                    <span className="bg-secondary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                      {filteredPrograms.length} / {programs.length}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {hasActiveFilters && (
-                    <button onClick={clearFilters} className="text-xs font-bold text-error hover:underline transition-colors">
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowFilter((v) => !v)}
-                    className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                      showFilter || hasActiveFilters
-                        ? "bg-secondary/10 text-secondary"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">filter_list</span>
-                    Filter
-                  </button>
-                </div>
+      <div className="space-y-6">
+        <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-primary-fixed)_26%,white))] p-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <Badge variant="secondary" className="bg-background/80 text-foreground">
+                LMS Flow
+              </Badge>
+              <div className="space-y-2">
+                <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">
+                  Program → Course → Course Run
+                </h1>
+                <p className="max-w-2xl text-sm leading-6 text-foreground/80">
+                  Backend đang trả đúng hierarchy cho LMS. Trang này bây giờ render lại flow đó theo dạng
+                  quản trị: bảng program ở bên trái, drill-down course và course run ở bên phải.
+                </p>
               </div>
+            </div>
 
-              {/* Filter Panel */}
-              <AnimatePresence>
-                {showFilter && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden border-b border-slate-100"
-                  >
-                    <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-surface-container-low/50">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Search</label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[18px]">search</span>
-                          <input
-                            value={filterSearch}
-                            onChange={(e) => setFilterSearch(e.target.value)}
-                            placeholder="Title or code..."
-                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Status</label>
-                        <div className="flex gap-2">
-                          {(["ALL", "PUBLISHED", "DRAFT"] as const).map((s) => (
-                            <button
-                              key={s}
-                              onClick={() => setFilterStatus(s)}
-                              className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
-                                filterStatus === s
-                                  ? "bg-secondary border-secondary text-white"
-                                  : "border-slate-200 text-slate-400 hover:border-secondary/40 hover:text-secondary"
-                              }`}
-                            >
-                              {s === "ALL" ? "All" : s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Min. Courses</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={filterMinCourses}
-                          onChange={(e) => setFilterMinCourses(e.target.value === "" ? "" : Number(e.target.value))}
-                          placeholder="e.g. 3"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Table Header */}
-              <div className="grid grid-cols-12 px-6 py-3 bg-surface-container-low text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <span className="col-span-6">Program</span>
-                <span className="col-span-2 text-center">Courses</span>
-                <span className="col-span-3 text-center">Status</span>
-                <span className="col-span-1"></span>
-              </div>
-
-              {/* Table Rows */}
-              <div className="divide-y divide-slate-50">
-                {filteredPrograms.length === 0 && programs.length > 0 && (
-                  <div className="py-12 text-center">
-                    <span className="material-symbols-outlined text-slate-200 text-4xl block mb-2">search_off</span>
-                    <p className="text-slate-400 text-sm font-semibold">No programs match your filters.</p>
-                    <button onClick={clearFilters} className="mt-2 text-secondary text-xs font-bold hover:underline">Clear filters</button>
-                  </div>
-                )}
-                {filteredPrograms.map((program) => (
-                  <div
-                    key={program.id}
-                    onClick={() => setSelectedId(program.id)}
-                    className={`grid grid-cols-12 px-6 py-5 cursor-pointer transition-colors items-center ${
-                      selectedId === program.id
-                        ? "bg-secondary/5 border-l-4 border-secondary"
-                        : "hover:bg-slate-50 border-l-4 border-transparent"
-                    }`}
-                  >
-                    <div className="col-span-6 pr-3 flex items-center gap-3">
-                      {program.thumbnailUrl ? (
-                        <img src={program.thumbnailUrl} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-slate-300 text-[18px]">image</span>
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className={`text-sm font-bold leading-snug truncate ${selectedId === program.id ? "text-secondary" : "text-slate-800"}`}>
-                          {program.title}
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-mono mt-0.5">{program.code}</p>
-                      </div>
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <p className="text-sm font-extrabold text-slate-900">{program.courses.length}</p>
-                      <p className="text-[10px] text-slate-400">Courses</p>
-                    </div>
-                    <div className="col-span-3 flex justify-center">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); togglePublished(program) }}
-                        className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest transition-colors ${
-                          program.isPublished
-                            ? "bg-secondary/15 text-secondary hover:bg-secondary/25"
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                        }`}
-                      >
-                        {program.isPublished ? "Published" : "Draft"}
-                      </button>
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteProgram(program.id) }}
-                        className="p-1.5 text-slate-300 hover:text-error hover:bg-error/10 rounded-lg transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {programs.length === 0 && (
-                  <div className="py-16 text-center">
-                    <span className="material-symbols-outlined text-slate-200 text-5xl block mb-3">folder_open</span>
-                    <p className="text-slate-400 text-sm font-semibold">No programs yet. Create one to get started.</p>
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
+                <BookCopy />
+                Manage Courses
+              </Button>
+              <Button onClick={openCreateSheet}>
+                <Plus />
+                New Program
+              </Button>
             </div>
           </div>
 
-          {/* Right (2/5): Curriculum Preview */}
-          <div className="lg:col-span-2 space-y-4">
-            <AnimatePresence mode="wait">
-              {selected && (
-                <motion.div
-                  key={selected.id}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.25 }}
-                  className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] overflow-hidden"
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Programs</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{programs.length}</p>
+                </div>
+                <FolderKanban className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Courses</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCourses}</p>
+                </div>
+                <Layers3 className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Course runs</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCourseRuns}</p>
+                </div>
+                <CalendarRange className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {error ? (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="py-1 text-sm text-destructive">{error}</CardContent>
+          </Card>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)]">
+          <Card className="border-border/80">
+            <CardHeader className="gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Programs</CardTitle>
+                  <CardDescription>List view for program containers in the LMS.</CardDescription>
+                </div>
+                <Badge variant="outline">{publishedPrograms} published</Badge>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_140px]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={filterSearch}
+                    onChange={(event) => setFilterSearch(event.target.value)}
+                    placeholder="Search program title, code, or description"
+                    className="pl-8"
+                  />
+                </div>
+
+                <Select
+                  value={filterStatus}
+                  onChange={(event) => setFilterStatus(event.target.value as ProgramFilterStatus)}
                 >
-                  {/* Preview Header */}
-                  <div className="p-6 border-b border-slate-50">
-                    <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-2">Curriculum Preview</p>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-xl font-extrabold font-headline text-slate-900 leading-tight">{selected.title}</h3>
-                        <p className="text-[11px] text-slate-400 font-mono mt-1">{selected.code}</p>
+                  <option value="ALL">All status</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="DRAFT">Draft</option>
+                </Select>
+
+                <Input
+                  type="number"
+                  min="0"
+                  value={filterMinCourses}
+                  onChange={(event) => setFilterMinCourses(event.target.value)}
+                  placeholder="Min courses"
+                />
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-0">
+              <div className="overflow-hidden rounded-xl border border-border/70">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-left text-sm">
+                    <thead className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Program</th>
+                        <th className="px-4 py-3 font-medium">Courses</th>
+                        <th className="px-4 py-3 font-medium">Course runs</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPrograms.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                            No program matches the current LMS filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredPrograms.map((program) => {
+                          const isSelected = selectedProgram?.id === program.id
+
+                          return (
+                            <tr
+                              key={program.id}
+                              className={cn(
+                                "cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40",
+                                isSelected && "bg-secondary/10",
+                              )}
+                              onClick={() => setSelectedId(program.id)}
+                            >
+                              <td className="px-4 py-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
+                                    <FolderKanban className="size-5" />
+                                  </div>
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="truncate font-medium text-foreground">{program.title}</p>
+                                      {isSelected ? <Badge variant="secondary">Selected</Badge> : null}
+                                    </div>
+                                    <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
+                                    {program.description ? (
+                                      <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                                        {program.description}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 font-medium text-foreground">{program.courses.length}</td>
+                              <td className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</td>
+                              <td className="px-4 py-4">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    void runAsyncAction(async () => {
+                                      await handleTogglePublished(program)
+                                    })
+                                  }}
+                                >
+                                  <Badge variant={program.isPublished ? "secondary" : "outline"}>
+                                    {program.isPublished ? "Published" : "Draft"}
+                                  </Badge>
+                                </button>
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      setSelectedId(program.id)
+                                      setProgramForm(toProgramFormState(program))
+                                      setSheetMode("settings")
+                                    }}
+                                  >
+                                    <Settings2 />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      void runAsyncAction(async () => {
+                                        await handleDeleteProgram(program.id)
+                                      })
+                                    }}
+                                  >
+                                    <Trash2 />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80">
+            <CardHeader className="gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Program Detail Flow</CardTitle>
+                  <CardDescription>
+                    Click one program to inspect its courses and the course runs inside each course.
+                  </CardDescription>
+                </div>
+                {selectedProgram ? (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={openSettingsSheet}>
+                      <Settings2 />
+                      Settings
+                    </Button>
+                    <Button onClick={() => setSheetMode("add-course")}>
+                      <Plus />
+                      Add Course
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 pt-0">
+              {!selectedProgram ? (
+                <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+                  Select a program from the table to inspect its LMS hierarchy.
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_14%,white),color-mix(in_srgb,var(--color-secondary-container)_52%,white))] p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="bg-background/80">
+                            {selectedProgram.code}
+                          </Badge>
+                          <Badge variant={selectedProgram.isPublished ? "secondary" : "outline"}>
+                            {selectedProgram.isPublished ? "Published" : "Draft"}
+                          </Badge>
+                        </div>
+                        <div>
+                          <h2 className="font-headline text-2xl font-semibold text-foreground">
+                            {selectedProgram.title}
+                          </h2>
+                          <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/75">
+                            {selectedProgram.description || "No description yet for this program."}
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-secondary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+
+                      <Button variant="ghost" onClick={() => navigate("/dashboard/courses")}>
+                        Open Course Library
+                        <ArrowRight />
+                      </Button>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
+                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Courses</p>
+                        <p className="mt-2 text-2xl font-semibold text-foreground">
+                          {selectedProgram.courses.length}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
+                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Course runs</p>
+                        <p className="mt-2 text-2xl font-semibold text-foreground">
+                          {countCourseRuns(selectedProgram)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-background/80 p-4">
+                        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Published at</p>
+                        <p className="mt-2 text-base font-medium text-foreground">
+                          {selectedProgram.publishedAt
+                            ? new Intl.DateTimeFormat("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              }).format(new Date(selectedProgram.publishedAt))
+                            : "Not published"}
+                        </p>
                       </div>
                     </div>
-                    {selected.description && (
-                      <p className="text-[12px] text-slate-500 mt-2 line-clamp-2">{selected.description}</p>
+                  </div>
+
+                  <Tabs defaultValue="courses" className="gap-4">
+                    <TabsList variant="line">
+                      <TabsTrigger value="courses">Courses</TabsTrigger>
+                      <TabsTrigger value="structure">Structure Notes</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="courses" className="space-y-4">
+                      {selectedProgram.courses.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                          This program has no courses yet. Add a course, then each course can own multiple course runs.
+                        </div>
+                      ) : (
+                        sortCourses(selectedProgram.courses).map((course, index) => (
+                          <Card key={course.id} className="border-border/80">
+                            <CardHeader>
+                              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline">Course {index + 1}</Badge>
+                                    <Badge variant="outline">{course.code}</Badge>
+                                    {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
+                                    {course.level ? <Badge variant="outline">{course.level}</Badge> : null}
+                                  </div>
+                                  <div>
+                                    <CardTitle>{course.title}</CardTitle>
+                                    <CardDescription className="mt-1">
+                                      {course.description || "No course description."}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  <Badge variant="secondary">{course.courseRuns.length} runs</Badge>
+                                  <Badge variant="outline">{countLessons(course)} lessons</Badge>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => navigate(`/dashboard/courses/${course.id}`)}
+                                  >
+                                    Course Detail
+                                    <ChevronRight />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent className="space-y-4">
+                              <div className="grid gap-3 md:grid-cols-3">
+                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Order index</p>
+                                  <p className="mt-2 font-medium text-foreground">{course.orderIndex}</p>
+                                </div>
+                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Tags</p>
+                                  <p className="mt-2 font-medium text-foreground">
+                                    {course.tags.length ? course.tags.join(", ") : "No tags"}
+                                  </p>
+                                </div>
+                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Course runs</p>
+                                  <p className="mt-2 font-medium text-foreground">{course.courseRuns.length}</p>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-foreground">Course run list</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Course owns many runs. Chapters and lessons live under each run.
+                                  </p>
+                                </div>
+
+                                {course.courseRuns.length === 0 ? (
+                                  <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                                    No course runs yet for this course.
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {course.courseRuns.map((run) => {
+                                      const lessonCount = run.chapters.reduce(
+                                        (total, chapter) => total + chapter.lessons.length,
+                                        0,
+                                      )
+
+                                      return (
+                                        <button
+                                          key={run.id}
+                                          type="button"
+                                          onClick={() => navigate(`/dashboard/runs/${run.id}`)}
+                                          className="flex w-full items-center justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                                        >
+                                          <div className="min-w-0 space-y-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <p className="font-medium text-foreground">{run.code}</p>
+                                              <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                              {formatDateRange(run.startsAt, run.endsAt)}
+                                            </p>
+                                          </div>
+
+                                          <div className="flex items-center gap-4">
+                                            <div className="hidden text-right md:block">
+                                              <p className="text-xs text-muted-foreground">Chapters</p>
+                                              <p className="font-medium text-foreground">{run.chapters.length}</p>
+                                            </div>
+                                            <div className="hidden text-right md:block">
+                                              <p className="text-xs text-muted-foreground">Lessons</p>
+                                              <p className="font-medium text-foreground">{lessonCount}</p>
+                                            </div>
+                                            <ChevronRight className="size-4 text-muted-foreground" />
+                                          </div>
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="structure">
+                      <Card className="border-border/80 bg-muted/10">
+                        <CardContent className="space-y-4 py-1">
+                          <div>
+                            <p className="font-medium text-foreground">Confirmed backend flow</p>
+                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                              `ProgramResponse` contains `courses[]`, each `CourseResponse` contains `courseRuns[]`,
+                              and each `CourseRunResponse` contains `chapters[]`. This is the real LMS hierarchy from
+                              `zenleader-backend`.
+                            </p>
+                          </div>
+                          <Separator />
+                          <div>
+                            <p className="font-medium text-foreground">Content ownership</p>
+                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                              Chapters and lessons are tied to `courseRun`, not directly to `course`. So two different
+                              runs of the same course can have different structure and schedule.
+                            </p>
+                          </div>
+                          <Separator />
+                          <div>
+                            <p className="font-medium text-foreground">UI implication</p>
+                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                              The admin flow should always start with selecting a program, then drill into its courses,
+                              then inspect or manage runs inside each course. This page now follows that order.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Sheet open={sheetMode !== null} onOpenChange={(open) => !open && setSheetMode(null)}>
+        <SheetContent side="right" className="w-full max-w-xl border-border bg-background sm:max-w-xl">
+          {sheetMode === "create" ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>Create Program</SheetTitle>
+                <SheetDescription>
+                  Create a new top-level LMS program. Courses and course runs will be attached under it.
+                </SheetDescription>
+              </SheetHeader>
+              <ProgramForm
+                form={programForm}
+                onChange={setProgramForm}
+                onSubmit={() => {
+                  void runAsyncAction(handleCreateProgram)
+                }}
+                submitLabel="Create Program"
+              />
+            </>
+          ) : null}
+
+          {sheetMode === "settings" && selectedProgram ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>Edit Program</SheetTitle>
+                <SheetDescription>
+                  Update the selected program while preserving the existing course and course run hierarchy.
+                </SheetDescription>
+              </SheetHeader>
+              <ProgramForm
+                form={programForm}
+                onChange={setProgramForm}
+                onSubmit={() => {
+                  void runAsyncAction(handleSaveProgramSettings)
+                }}
+                submitLabel="Save Changes"
+              />
+            </>
+          ) : null}
+
+          {sheetMode === "add-course" && selectedProgram ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>Add Course To Program</SheetTitle>
+                <SheetDescription>
+                  Reassign a course into <span className="font-medium text-foreground">{selectedProgram.title}</span>.
+                  Each selected course keeps its existing course runs.
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="flex h-full flex-col">
+                <div className="space-y-4 px-4 pb-4">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={courseSearch}
+                      onChange={(event) => setCourseSearch(event.target.value)}
+                      placeholder="Search by course title, code, or category"
+                      className="pl-8"
+                    />
+                  </div>
+
+                  <div className="space-y-2 overflow-y-auto">
+                    {availableCourses.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+                        No available course matches this search.
+                      </div>
+                    ) : (
+                      availableCourses.map((course) => (
+                        <button
+                          key={course.id}
+                          type="button"
+                          onClick={() => {
+                            void runAsyncAction(async () => {
+                              await handleAddCourse(course)
+                            })
+                          }}
+                          className="flex w-full items-start justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium text-foreground">{course.title}</p>
+                              <Badge variant="outline">{course.code}</Badge>
+                              {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
+                            </div>
+                            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                              {course.description || "No description"}
+                            </p>
+                          </div>
+
+                          <div className="ml-4 shrink-0 text-right">
+                            <p className="text-xs text-muted-foreground">Runs</p>
+                            <p className="font-medium text-foreground">{course.courseRuns.length}</p>
+                          </div>
+                        </button>
+                      ))
                     )}
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="px-6 py-4 flex gap-3 border-b border-slate-50">
-                    <button onClick={() => setShowSettingsModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">settings</span>
-                      Settings
-                    </button>
-                    <button
-                      onClick={() => setShowAddCourseModal(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-fixed text-on-primary-fixed text-xs font-bold hover:opacity-90 transition-opacity"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                      Add Course
-                    </button>
-                  </div>
-
-                  {/* Course Sequence */}
-                  <div className="p-6">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
-                      Course Sequence ({selected.courses.length})
-                    </p>
-
-                    <div className="space-y-2">
-                      {selected.courses
-                        .slice()
-                        .sort((a, b) => a.orderIndex - b.orderIndex)
-                        .map((course, idx) => (
-                          <div
-                            key={course.id}
-                            className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-secondary/20 hover:bg-secondary/5 transition-all"
-                          >
-                            <span className="w-7 h-7 rounded-lg bg-surface-container-low text-slate-500 text-[11px] font-extrabold flex items-center justify-center shrink-0">
-                              {String(idx + 1).padStart(2, "0")}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-800 leading-snug truncate">{course.title}</p>
-                              <p className="text-[11px] text-slate-400 font-mono">{course.code}{course.category ? ` · ${course.category}` : ""}</p>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
-                      <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${
-                        selected.isPublished
-                          ? "bg-secondary/15 text-secondary"
-                          : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {selected.isPublished ? "Published" : "Draft"}
-                      </span>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Courses</p>
-                        <p className="text-xl font-extrabold font-headline text-slate-900">{selected.courses.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-      </motion.div>
-
-      {/* ── Modals ── */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <CreateProgramModal key="create" onClose={() => setShowCreateModal(false)} onCreate={handleCreateProgram} />
-        )}
-        {showAddCourseModal && selected && (
-          <AddCourseModal
-            key="add-course"
-            onClose={() => setShowAddCourseModal(false)}
-            onAdd={handleAddCourse}
-            existingIds={existingCourseIds}
-            allCourses={allCourses}
-          />
-        )}
-        {showSettingsModal && selected && (
-          <ProgramSettingsModal
-            key="settings"
-            program={selected}
-            onClose={() => setShowSettingsModal(false)}
-            onSave={handleSaveSettings}
-          />
-        )}
-      </AnimatePresence>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </>
   )
 }

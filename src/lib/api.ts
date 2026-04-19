@@ -170,6 +170,10 @@ export interface CourseRunResponse {
   endsAt: string | null
   timezone: string | null
   metadata: Record<string, unknown>
+  enrollmentStartDate: string | null
+  enrollmentEndDate: string | null
+  capacity: number | null
+  prerequisiteCourseRunId: string | null
   chapters: ChapterResponse[]
   createdAt: string
   updatedAt: string
@@ -191,6 +195,22 @@ export interface EnrollmentResponse {
   completedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface EnrollmentImportFailureItem {
+  rowNumber: number
+  email: string | null
+  orderNo: string | null
+  amount: number | null
+  reason: string
+}
+
+export interface EnrollmentImportResponse {
+  totalRows: number
+  successCount: number
+  skippedCount: number
+  failedCount: number
+  failures: EnrollmentImportFailureItem[]
 }
 
 export interface CourseResponse {
@@ -449,6 +469,25 @@ export const enrollmentApi = {
 
   manualEnroll: (data: ManualEnrollmentRequest) =>
     req<EnrollmentResponse>("/enrollments/manual", { method: "POST", body: JSON.stringify(data) }),
+
+  importByExcel: async (courseRunId: string, file: File) => {
+    const token = authStorage.getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+
+    const form = new FormData()
+    form.append("courseRunId", courseRunId)
+    form.append("file", file)
+
+    const res = await fetch(`${BASE}/enrollments/import`, {
+      method: "POST",
+      headers,
+      body: form,
+    })
+    if (!res.ok) throw new Error(buildHttpErrorMessage(res))
+    const json: ApiResponse<EnrollmentImportResponse> = await res.json()
+    return json.data
+  },
 }
 
 // ─── Chapter API ───────────────────────────────────────────────────────────────

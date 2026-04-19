@@ -1,358 +1,385 @@
-import { motion } from "framer-motion"
-import { useState, useMemo, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { programApi, courseApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
-import type { CourseData } from "@/data/courses"
+import {
+  BookCopy,
+  CalendarRange,
+  ChevronRight,
+  Layers3,
+  PencilLine,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react"
 
-const actionIcons: Record<string, string> = {
-  EDIT: "edit",
-  STATS: "bar_chart",
-  DELETE: "delete_forever",
-  ARCHIVE: "archive",
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { courseApi, programApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
+
+type CategoryFilter = "ALL" | string
+type ProgramFilter = "ALL" | string
+
+function sortCourses(courses: CourseResponse[]) {
+  return [...courses].sort((a, b) => {
+    if (a.programCode !== b.programCode) {
+      return (a.programCode ?? "").localeCompare(b.programCode ?? "")
+    }
+    return a.orderIndex - b.orderIndex
+  })
 }
 
-const actionColors: Record<string, string> = {
-  EDIT: "text-slate-600 hover:text-secondary hover:bg-secondary/10",
-  STATS: "text-slate-600 hover:text-tertiary hover:bg-tertiary/10",
-  DELETE: "text-slate-600 hover:text-error hover:bg-error/10",
-  ARCHIVE: "text-slate-600 hover:text-slate-800 hover:bg-slate-100",
+function countLessons(course: CourseResponse) {
+  return course.courseRuns.reduce(
+    (total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0),
+    0,
+  )
 }
 
-const categoryColors: Record<string, string> = {
-  "STRATEGIC MASTERY": "bg-secondary/80",
-  "HUMAN CENTRICITY": "bg-tertiary/80",
-  "FINANCE & OPS": "bg-primary/80",
+function getRunStatusSummary(course: CourseResponse) {
+  const statuses = new Set(course.courseRuns.map((run) => run.status))
+  return statuses.size === 0 ? "No runs" : Array.from(statuses).join(", ")
 }
 
-const levelColors: Record<string, string> = {
-  "Beginner": "bg-emerald-100 text-emerald-700",
-  "Intermediate": "bg-amber-100 text-amber-700",
-  "Advanced": "bg-orange-100 text-orange-700",
-  "Expert": "bg-rose-100 text-rose-700",
-}
-
-function mapToCourseData(c: CourseResponse): CourseData {
-  return {
-    id: c.id,
-    code: c.code,
-    title: c.title,
-    category: c.category ?? "",
-    level: c.level ?? "",
-    thumbnailUrl: c.thumbnailUrl ?? "",
-    description: c.description ?? undefined,
-    tags: c.tags ?? [],
-    orderIndex: c.orderIndex,
-    programId: c.programId ?? null,
-    programCode: c.programCode ?? undefined,
-    actions: ["EDIT", "DELETE"],
+function getLevelVariant(level: string | null) {
+  switch ((level ?? "").toUpperCase()) {
+    case "BEGINNER":
+      return "secondary" as const
+    case "ADVANCED":
+    case "EXPERT":
+      return "default" as const
+    default:
+      return "outline" as const
   }
 }
 
 export default function CourseManagementPage() {
   const navigate = useNavigate()
-  const [programFilter, setProgramFilter] = useState("All")
-  const [categoryFilter, setCategoryFilter] = useState("All")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [deletingCourse, setDeletingCourse] = useState<CourseData | null>(null)
 
-  const [apiCourses, setApiCourses] = useState<CourseResponse[]>([])
-  const [allPrograms, setAllPrograms] = useState<ProgramResponse[]>([])
+  const [courses, setCourses] = useState<CourseResponse[]>([])
+  const [programs, setPrograms] = useState<ProgramResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // ── Load data from API ──────────────────────────────────────────────────────
+  const [search, setSearch] = useState("")
+  const [programFilter, setProgramFilter] = useState<ProgramFilter>("ALL")
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("ALL")
+  const [deletingCourse, setDeletingCourse] = useState<CourseResponse | null>(null)
+
   useEffect(() => {
     Promise.all([courseApi.getAll(), programApi.getAll()])
-      .then(([crs, progs]) => {
-        setApiCourses(crs)
-        setAllPrograms(progs)
+      .then(([courseList, programList]) => {
+        setCourses(courseList)
+        setPrograms(programList)
       })
-      .catch((e) => console.error("Failed to load:", e))
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load course list.")
+      })
       .finally(() => setLoading(false))
   }, [])
 
-  // ── Delete handler ──────────────────────────────────────────────────────────
-  const handleDelete = async () => {
+  const categories = useMemo(() => {
+    return Array.from(new Set(courses.map((course) => course.category).filter(Boolean))) as string[]
+  }, [courses])
+
+  const filteredCourses = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+
+    return sortCourses(courses).filter((course) => {
+      const matchesSearch =
+        !keyword ||
+        course.title.toLowerCase().includes(keyword) ||
+        course.code.toLowerCase().includes(keyword) ||
+        (course.description ?? "").toLowerCase().includes(keyword) ||
+        (course.programCode ?? "").toLowerCase().includes(keyword)
+
+      const matchesProgram = programFilter === "ALL" || course.programId === programFilter
+      const matchesCategory = categoryFilter === "ALL" || course.category === categoryFilter
+
+      return matchesSearch && matchesProgram && matchesCategory
+    })
+  }, [categoryFilter, courses, programFilter, search])
+
+  const totalCourseRuns = courses.reduce((total, course) => total + course.courseRuns.length, 0)
+  const totalLessons = courses.reduce((total, course) => total + countLessons(course), 0)
+
+  async function handleDeleteCourse() {
     if (!deletingCourse) return
+
     try {
       await courseApi.remove(deletingCourse.id)
-      setApiCourses((prev) => prev.filter((c) => c.id !== deletingCourse.id))
-    } catch (e) {
-      console.error("Failed to delete course:", e)
-    } finally {
+      setCourses((current) => current.filter((course) => course.id !== deletingCourse.id))
       setDeletingCourse(null)
+      setError(null)
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete course.")
     }
   }
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
-  const allCourses = useMemo<CourseData[]>(
-    () => apiCourses.map(mapToCourseData),
-    [apiCourses],
-  )
-
-  const filtered = allCourses.filter((c) => {
-    if (programFilter !== "All" && c.programId !== programFilter) return false
-    if (categoryFilter !== "All" && c.category !== categoryFilter) return false
-    return true
-  })
-
-  // ── Pagination ──────────────────────────────────────────────────────────────
-  const ITEMS_PER_PAGE = 6
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const paginatedCourses = useMemo(() => {
-    const head = (currentPage - 1) * ITEMS_PER_PAGE
-    return filtered.slice(head, head + ITEMS_PER_PAGE)
-  }, [filtered, currentPage])
-
-  // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <span className="material-symbols-outlined text-slate-300 text-5xl animate-spin">progress_activity</span>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading course library</CardTitle>
+            <CardDescription>Resolving courses, programs, and course runs.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-8"
-    >
-      {/* Header */}
-      <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">
-            Course Management
-          </h2>
-          <p className="text-slate-500 mt-2 font-body">
-            Strategize, curate, and scale your organization's intellectual capital.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/dashboard/courses/create")}
-          className="flex items-center gap-1.5 bg-primary-fixed text-on-primary-fixed px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 whitespace-nowrap"
-        >
-          <span className="material-symbols-outlined text-[16px]">add</span>
-          Create New Course
-        </button>
-      </section>
-
-      {/* Filters */}
-      <section>
-        <div className="bg-surface-container-lowest rounded-xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
-                Program
-              </label>
-              <div className="relative">
-                <select
-                  value={programFilter}
-                  onChange={(e) => { setProgramFilter(e.target.value); setCurrentPage(1) }}
-                  className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
-                >
-                  <option value="All">All Programs</option>
-                  {allPrograms.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title} ({p.code})</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">
-                  expand_more
-                </span>
+    <>
+      <div className="space-y-6">
+        <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-tertiary-fixed)_20%,white))] p-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <Badge variant="secondary" className="bg-background/80 text-foreground">
+                Course Library
+              </Badge>
+              <div className="space-y-2">
+                <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">
+                  Courses inside the LMS hierarchy
+                </h1>
+                <p className="max-w-2xl text-sm leading-6 text-foreground/80">
+                  Courses belong to a program and each course can own multiple course runs. This screen keeps that
+                  relationship visible instead of treating courses as isolated records.
+                </p>
               </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
-                Category
-              </label>
-              <div className="relative">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1) }}
-                  className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
-                >
-                  <option value="All">All Categories</option>
-                  {Object.keys(categoryColors).map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">
-                  expand_more
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Course Cards Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.length === 0 && (
-          <div className="col-span-full py-16 text-center">
-            <span className="material-symbols-outlined text-slate-200 text-5xl block mb-3">menu_book</span>
-            <p className="text-slate-400 text-sm font-semibold">No courses found.</p>
+            <Button onClick={() => navigate("/dashboard/courses/create")}>
+              <Plus />
+              New Course
+            </Button>
           </div>
-        )}
-        {paginatedCourses.map((course, i) => (
-          <motion.div
-            key={course.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-            onClick={() => navigate(`/dashboard/courses/${course.id}`)}
-            className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] overflow-hidden group hover:shadow-[0px_20px_48px_rgba(31,62,114,0.12)] transition-shadow cursor-pointer"
-          >
-            {/* Cover Image */}
-            <div className="relative h-48 overflow-hidden">
-              {course.thumbnailUrl ? (
-                <img
-                  src={course.thumbnailUrl}
-                  alt={course.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Courses</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{courses.length}</p>
+                </div>
+                <BookCopy className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Course runs</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCourseRuns}</p>
+                </div>
+                <CalendarRange className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+            <Card className="bg-background/90">
+              <CardContent className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm text-muted-foreground">Lessons</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalLessons}</p>
+                </div>
+                <Layers3 className="size-5 text-secondary" />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {error ? (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="py-1 text-sm text-destructive">{error}</CardContent>
+          </Card>
+        ) : null}
+
+        <Card>
+          <CardHeader className="gap-4">
+            <div>
+              <CardTitle>Course list</CardTitle>
+              <CardDescription>Filter by program and category, then drill down into course detail and runs.</CardDescription>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by course title, code, program, or description"
+                  className="pl-8"
                 />
-              ) : (
-                <div className="w-full h-full bg-surface-container-low flex items-center justify-center">
-                  <span className="material-symbols-outlined text-slate-200 text-5xl">image</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
-              {/* Category Badge */}
-              {course.category && (
-                <span className={`absolute top-3 left-3 text-[10px] font-bold text-white px-2.5 py-1 rounded ${categoryColors[course.category] ?? "bg-slate-600/80"} backdrop-blur-sm`}>
-                  {course.category}
-                </span>
-              )}
-              {/* Level Badge */}
-              {course.level && (
-                <span className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded backdrop-blur-sm ${levelColors[course.level] ?? "bg-white/80 text-slate-600"}`}>
-                  {course.level}
-                </span>
-              )}
-            </div>
-
-            {/* Card Body */}
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-0.5">{course.code}</p>
-                  <h4 className="text-sm font-extrabold text-slate-900 font-headline leading-snug group-hover:text-secondary transition-colors line-clamp-2">
-                    {course.title}
-                  </h4>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {course.actions.map((action) => (
-                    <button
-                      key={action}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (action === "EDIT") navigate(`/dashboard/courses/${course.id}/edit`)
-                        if (action === "DELETE") setDeletingCourse(course)
-                      }}
-                      className={`p-1.5 rounded-lg transition-all ${actionColors[action]}`}
-                      title={action}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">{actionIcons[action]}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
 
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100">
-                <span className="text-[11px] text-slate-400">
-                  <span className="font-bold text-slate-600">#{course.orderIndex}</span> · {course.programCode ?? <span className="italic">No program</span>}
-                </span>
-              </div>
-              {course.tags && course.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {course.tags.slice(0, 4).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                  {course.tags.length > 4 && (
-                    <span className="text-[10px] font-semibold text-slate-400 px-1 py-0.5">+{course.tags.length - 4}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </section>
+              <Select value={programFilter} onChange={(event) => setProgramFilter(event.target.value)}>
+                <option value="ALL">All programs</option>
+                {programs.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {program.title}
+                  </option>
+                ))}
+              </Select>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pb-4">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setCurrentPage(p)}
-              className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
-                currentPage === p
-                  ? "bg-secondary text-white shadow-md"
-                  : "border border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-          </button>
-        </div>
-      )}
+              <Select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                <option value="ALL">All categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </CardHeader>
 
-      {/* Delete Confirmation Modal */}
-      {deletingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
-          >
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-12 h-12 rounded-xl bg-error/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-error text-[24px]">delete_forever</span>
+          <CardContent className="space-y-4 pt-0">
+            {filteredCourses.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-muted/20 p-10 text-center text-sm text-muted-foreground">
+                No course matches the current filters.
               </div>
-              <div>
-                <h3 className="text-lg font-extrabold font-headline text-slate-900">Delete Course</h3>
-                <p className="text-sm text-slate-500 mt-0.5">This action cannot be undone.</p>
-              </div>
+            ) : (
+              filteredCourses.map((course) => (
+                <Card key={course.id} className="border-border/80">
+                  <CardContent className="space-y-4 py-1">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{course.code}</Badge>
+                          {course.programCode ? <Badge variant="outline">{course.programCode}</Badge> : null}
+                          {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
+                          {course.level ? <Badge variant={getLevelVariant(course.level)}>{course.level}</Badge> : null}
+                        </div>
+
+                        <div>
+                          <p className="font-headline text-xl font-semibold text-foreground">{course.title}</p>
+                          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                            {course.description || "No description for this course yet."}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}>
+                          <PencilLine />
+                          Edit
+                        </Button>
+                        <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
+                          View Detail
+                          <ChevronRight />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeletingCourse(course)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Program</p>
+                        <p className="mt-2 font-medium text-foreground">{course.programCode || "Unassigned"}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Order index</p>
+                        <p className="mt-2 font-medium text-foreground">{course.orderIndex}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Course runs</p>
+                        <p className="mt-2 font-medium text-foreground">{course.courseRuns.length}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Lessons</p>
+                        <p className="mt-2 font-medium text-foreground">{countLessons(course)}</p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">Course run summary</p>
+                        <p className="text-xs text-muted-foreground">{getRunStatusSummary(course)}</p>
+                      </div>
+
+                      {course.courseRuns.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                          This course does not have any course runs yet.
+                        </div>
+                      ) : (
+                        <div className="grid gap-2 md:grid-cols-2">
+                          {course.courseRuns.map((run) => (
+                            <button
+                              key={run.id}
+                              type="button"
+                              onClick={() => navigate(`/dashboard/runs/${run.id}`)}
+                              className="flex items-center justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">{run.code}</p>
+                                  <Badge variant="outline">{run.status}</Badge>
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {run.chapters.length} chapters
+                                </p>
+                              </div>
+                              <ChevronRight className="size-4 text-muted-foreground" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Sheet open={Boolean(deletingCourse)} onOpenChange={(open) => !open && setDeletingCourse(null)}>
+        <SheetContent side="right" className="w-full max-w-lg bg-background">
+          <SheetHeader>
+            <SheetTitle>Delete Course</SheetTitle>
+            <SheetDescription>
+              This action removes the selected course from the LMS. Continue only if you also want its course-run tree gone.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-4 px-4 py-2">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+              <p className="text-sm font-medium text-foreground">{deletingCourse?.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{deletingCourse?.code}</p>
             </div>
-            <p className="text-sm text-slate-600 bg-surface-container-low rounded-xl px-4 py-3 mb-6">
-              Are you sure you want to delete <strong className="text-slate-900">{deletingCourse.title}</strong>?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingCourse(null)}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 py-3 rounded-xl bg-error text-white text-sm font-bold hover:opacity-90 transition-opacity"
-              >
-                Delete Course
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </motion.div>
+          </div>
+
+          <SheetFooter className="border-t border-border">
+            <Button variant="outline" onClick={() => setDeletingCourse(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void handleDeleteCourse()}>
+              Delete Course
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
