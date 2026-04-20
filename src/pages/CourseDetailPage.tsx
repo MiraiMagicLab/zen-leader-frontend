@@ -1,21 +1,57 @@
-import { motion } from "framer-motion"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { useState, useEffect } from "react"
+import {
+  ArrowLeft,
+  BookCopy,
+  CalendarRange,
+  ChevronRight,
+  Layers3,
+  PencilLine,
+} from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { courseApi, type CourseResponse } from "@/lib/api"
 
-const categoryColors: Record<string, string> = {
-  "STRATEGIC MASTERY": "bg-secondary/80",
-  "HUMAN CENTRICITY": "bg-tertiary/80",
-  "FINANCE & OPS": "bg-primary/80",
+function countLessons(course: CourseResponse) {
+  return course.courseRuns.reduce(
+    (total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0),
+    0,
+  )
 }
 
-const levelColors: Record<string, string> = {
-  "Beginner": "bg-emerald-100 text-emerald-700",
-  "Intermediate": "bg-amber-100 text-amber-700",
-  "Advanced": "bg-orange-100 text-orange-700",
-  "Expert": "bg-rose-100 text-rose-700",
+function formatDateRange(startsAt: string | null, endsAt: string | null) {
+  if (!startsAt && !endsAt) return "Schedule not set"
+
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+
+  const startText = startsAt ? formatter.format(new Date(startsAt)) : "TBD"
+  const endText = endsAt ? formatter.format(new Date(endsAt)) : "TBD"
+  return `${startText} - ${endText}`
 }
 
+function getRunBadgeVariant(status: string) {
+  switch (status.toUpperCase()) {
+    case "PUBLISHED":
+    case "ACTIVE":
+    case "OPEN":
+      return "secondary" as const
+    default:
+      return "outline" as const
+  }
+}
 
 export default function CourseDetailPage() {
   const navigate = useNavigate()
@@ -24,203 +60,261 @@ export default function CourseDetailPage() {
 
   const [course, setCourse] = useState<CourseResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!courseId) return
+
     courseApi.getById(courseId)
-      .then(setCourse)
-      .catch(() => setCourse(null))
+      .then((data) => {
+        setCourse(data)
+        setError(null)
+      })
+      .catch((loadError) => {
+        setCourse(null)
+        setError(loadError instanceof Error ? loadError.message : "Failed to load course detail.")
+      })
       .finally(() => setLoading(false))
   }, [courseId])
 
+  const totalLessons = useMemo(() => (course ? countLessons(course) : 0), [course])
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <span className="material-symbols-outlined text-slate-300 text-5xl animate-spin">progress_activity</span>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading course detail</CardTitle>
+            <CardDescription>Resolving course structure and its runs.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   if (!course) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-4">
-        <span className="material-symbols-outlined text-slate-200 text-6xl">search_off</span>
-        <p className="text-slate-400 font-semibold">Course not found.</p>
-        <button onClick={() => navigate("/dashboard/courses")} className="text-secondary text-sm font-bold hover:underline">
+      <div className="space-y-4">
+        <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
+          <ArrowLeft />
           Back to Courses
-        </button>
+        </Button>
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-1 text-sm text-destructive">
+            {error || "Course not found."}
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  const courseRuns = course.courseRuns ?? []
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-6"
-    >
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <button onClick={() => navigate("/dashboard/courses")} className="hover:text-secondary transition-colors">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <button onClick={() => navigate("/dashboard/programs")} className="transition-colors hover:text-foreground">
+          Programs
+        </button>
+        <ChevronRight className="size-4" />
+        <button onClick={() => navigate("/dashboard/courses")} className="transition-colors hover:text-foreground">
           Courses
         </button>
-        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-slate-600 font-semibold truncate max-w-xs">{course.title}</span>
+        <ChevronRight className="size-4" />
+        <span className="font-medium text-foreground">{course.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-        {/* ── Left: Main Card ── */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Banner */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] overflow-hidden">
-            <div className="relative h-56">
-              {course.thumbnailUrl ? (
-                <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-linear-to-br from-secondary/20 to-tertiary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-slate-200 text-6xl">image</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
-              {course.category && (
-                <span className={`absolute top-4 left-4 text-[10px] font-bold text-white px-3 py-1.5 rounded-lg ${categoryColors[course.category] ?? "bg-slate-600/80"} backdrop-blur-sm`}>
-                  {course.category}
-                </span>
-              )}
-              {course.level && (
-                <span className={`absolute top-4 right-4 text-[10px] font-bold px-3 py-1.5 rounded-lg backdrop-blur-sm ${levelColors[course.level] ?? "bg-white/80 text-slate-600"}`}>
-                  {course.level}
-                </span>
-              )}
+      <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-primary-fixed)_18%,white))] p-6 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="bg-background/80">
+                {course.code}
+              </Badge>
+              {course.programCode ? <Badge variant="outline">{course.programCode}</Badge> : null}
+              {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
+              {course.level ? <Badge variant="secondary">{course.level}</Badge> : null}
             </div>
 
-            {/* Info */}
-            <div className="p-6">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">{course.code}</p>
-              <h2 className="text-2xl font-extrabold font-headline text-secondary leading-tight mb-3">
-                {course.title}
-              </h2>
-
-              {/* Tags */}
-              {course.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {course.tags.map((tag) => (
-                    <span key={tag} className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {course.description && (
-                <p className="text-sm text-slate-500 leading-relaxed">{course.description}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Course Runs */}
-          {courseRuns.length > 0 && (
-            <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
-                <h3 className="text-base font-extrabold font-headline text-slate-900">Course Runs</h3>
-                <span className="ml-auto text-[10px] font-bold bg-secondary/10 text-secondary px-2.5 py-1 rounded-lg">{courseRuns.length} Runs</span>
-              </div>
-
-              {courseRuns.map((run, ri) => (
-                <button
-                  key={run.id}
-                  onClick={() => navigate(`/dashboard/runs/${run.id}`)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-container-low hover:bg-secondary/5 transition-colors text-left"
-                >
-                  <span className="w-6 h-6 rounded-lg bg-secondary/10 text-secondary text-[11px] font-extrabold flex items-center justify-center shrink-0">
-                    {String(ri + 1).padStart(2, "0")}
-                  </span>
-                  <p className="text-sm font-bold text-slate-800 flex-1 truncate font-mono">{run.code}</p>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    run.status === "PUBLISHED" ? "bg-primary-fixed text-on-primary-fixed" : "bg-slate-200 text-slate-500"
-                  }`}>
-                    {run.status}
-                  </span>
-                  <span className="material-symbols-outlined text-slate-300 text-[16px]">chevron_right</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Right: Details ── */}
-        <div className="space-y-4">
-
-          {/* Course Details */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
-            <h3 className="text-sm font-extrabold text-slate-900 font-headline mb-5">Course Details</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-semibold">Code</span>
-                <span className="text-sm font-mono font-bold text-slate-700">{course.code}</span>
-              </div>
-              {course.category && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-semibold">Category</span>
-                  <span className="text-[10px] font-bold text-secondary bg-secondary/10 px-2.5 py-1 rounded-lg">
-                    {course.category}
-                  </span>
-                </div>
-              )}
-              {course.level && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-semibold">Level</span>
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${levelColors[course.level] ?? "bg-slate-100 text-slate-500"}`}>
-                    {course.level}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-semibold">Order Index</span>
-                <span className="text-sm font-bold text-slate-700">#{course.orderIndex}</span>
-              </div>
-              {course.programCode && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-semibold">Program</span>
-                  <span className="text-sm font-bold text-slate-700">{course.programCode}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-semibold">Course Runs</span>
-                <span className="text-sm font-bold text-slate-700">{courseRuns.length}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
-            <h3 className="text-sm font-extrabold text-slate-900 font-headline mb-4">Quick Actions</h3>
             <div className="space-y-2">
-              <button
-                onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-secondary/5 text-left transition-colors group"
-              >
-                <span className="material-symbols-outlined text-slate-400 group-hover:text-secondary text-[18px] transition-colors">edit</span>
-                <span className="text-sm font-semibold text-slate-600 group-hover:text-secondary transition-colors">Edit Course</span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-tertiary/5 text-left transition-colors group">
-                <span className="material-symbols-outlined text-slate-400 group-hover:text-tertiary text-[18px] transition-colors">bar_chart</span>
-                <span className="text-sm font-semibold text-slate-600 group-hover:text-tertiary transition-colors">View Stats</span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-left transition-colors group">
-                <span className="material-symbols-outlined text-slate-400 group-hover:text-slate-700 text-[18px] transition-colors">archive</span>
-                <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-700 transition-colors">Archive Course</span>
-              </button>
+              <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">{course.title}</h1>
+              <p className="max-w-2xl text-sm leading-6 text-foreground/80">
+                {course.description || "No description for this course yet."}
+              </p>
             </div>
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
+              <ArrowLeft />
+              Back
+            </Button>
+            <Button onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}>
+              <PencilLine />
+              Edit Course
+            </Button>
+          </div>
         </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <Card className="bg-background/90">
+            <CardContent className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Course runs</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{course.courseRuns.length}</p>
+              </div>
+              <CalendarRange className="size-5 text-secondary" />
+            </CardContent>
+          </Card>
+          <Card className="bg-background/90">
+            <CardContent className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Lessons</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{totalLessons}</p>
+              </div>
+              <Layers3 className="size-5 text-secondary" />
+            </CardContent>
+          </Card>
+          <Card className="bg-background/90">
+            <CardContent className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Order index</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{course.orderIndex}</p>
+              </div>
+              <BookCopy className="size-5 text-secondary" />
+            </CardContent>
+          </Card>
+          <Card className="bg-background/90">
+            <CardContent className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Tags</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {course.tags.length ? course.tags.join(", ") : "No tags"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Course run flow</CardTitle>
+            <CardDescription>
+              This is the next level in the LMS hierarchy. Each run has its own chapters and lessons.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
+            {course.courseRuns.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                This course does not have any course runs yet.
+              </div>
+            ) : (
+              course.courseRuns.map((run) => {
+                const lessonCount = run.chapters.reduce((total, chapter) => total + chapter.lessons.length, 0)
+
+                return (
+                  <Card key={run.id} className="border-border/80">
+                    <CardContent className="space-y-4 py-1">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">{run.code}</p>
+                            <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDateRange(run.startsAt, run.endsAt)}
+                          </p>
+                        </div>
+
+                        <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
+                          Open Run
+                          <ChevronRight />
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Chapters</p>
+                          <p className="mt-2 font-medium text-foreground">{run.chapters.length}</p>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Lessons</p>
+                          <p className="mt-2 font-medium text-foreground">{lessonCount}</p>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Timezone</p>
+                          <p className="mt-2 font-medium text-foreground">{run.timezone || "Not set"}</p>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Capacity</p>
+                          <p className="mt-2 font-medium text-foreground">{run.capacity ?? "Unlimited"}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Course metadata</CardTitle>
+            <CardDescription>Summary of the parent course in the LMS.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Program</span>
+                <span className="font-medium text-foreground">{course.programCode || "Unassigned"}</span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Category</span>
+                <span className="font-medium text-foreground">{course.category || "Not set"}</span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Level</span>
+                <span className="font-medium text-foreground">{course.level || "Not set"}</span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Created</span>
+                <span className="font-medium text-foreground">
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(new Date(course.createdAt))}
+                </span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Updated</span>
+                <span className="font-medium text-foreground">
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(new Date(course.updatedAt))}
+                </span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+              <p className="font-medium text-foreground">Flow note</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Course is still only the middle layer. Operational learning content is actually attached to each
+                course run.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </motion.div>
+    </div>
   )
 }

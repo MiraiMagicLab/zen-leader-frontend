@@ -1,65 +1,134 @@
-import { motion, AnimatePresence } from "framer-motion"
-import { useState, useEffect } from "react"
-import { useNavigate, useParams, Link } from "react-router-dom"
-import {
-  courseRunApi,
-  courseApi,
-  enrollmentApi,
-  userApi,
-  type CourseRunResponse,
-  type CourseResponse,
-  type LessonResponse,
-  type EnrollmentResponse,
-  type UserResponse,
-} from "@/lib/api"
-import FileActionLinks from "@/components/FileActionLinks"
-import { getLessonAsset } from "@/lib/lessonContent"
+import { useEffect, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { ArrowLeft, Eye, Layers3, PlayCircle, Upload, UserPlus, Users } from "lucide-react"
 
-function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: () => void }) {
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import FileActionLinks from "@/components/FileActionLinks"
+import {
+  courseApi,
+  courseRunApi,
+  enrollmentApi,
+  type CourseResponse,
+  type CourseRunResponse,
+  type EnrollmentImportResponse,
+  type EnrollmentResponse,
+  type LessonResponse,
+  type UserResponse,
+  userApi,
+} from "@/lib/api"
+import { getLessonAsset } from "@/lib/lessonContent"
+import { cn } from "@/lib/utils"
+
+function getInitials(name: string | null | undefined) {
+  const source = (name ?? "").trim()
+  if (!source) return "U"
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
+function formatDateRange(startsAt: string | null, endsAt: string | null) {
+  if (!startsAt && !endsAt) return "Schedule not set"
+
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
+  const startText = startsAt ? formatter.format(new Date(startsAt)) : "TBD"
+  const endText = endsAt ? formatter.format(new Date(endsAt)) : "TBD"
+  return `${startText} - ${endText}`
+}
+
+function countLessons(run: CourseRunResponse) {
+  return run.chapters.reduce((total, chapter) => total + chapter.lessons.length, 0)
+}
+
+function getRunStatusVariant(status: string) {
+  switch (status.toUpperCase()) {
+    case "PUBLISHED":
+    case "ACTIVE":
+    case "OPEN":
+      return "secondary" as const
+    default:
+      return "outline" as const
+  }
+}
+
+function getLessonVisual(type: string) {
+  switch (type) {
+    case "video":
+      return { icon: PlayCircle, className: "bg-secondary/10 text-secondary" }
+    case "photo":
+      return { icon: Eye, className: "bg-primary/10 text-primary" }
+    default:
+      return { icon: Layers3, className: "bg-muted text-muted-foreground" }
+  }
+}
+
+function LessonPreviewDialog({
+  lesson,
+  open,
+  onOpenChange,
+}: {
+  lesson: LessonResponse | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  if (!lesson) return null
+
   const asset = getLessonAsset(lesson.contentData)
   const fileUrl = asset.url
   const fileName = asset.fileName || lesson.title
   const openLabel = lesson.type === "video" ? "Open Video" : lesson.type === "photo" ? "Open Image" : "Open File"
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {lesson.type === "video" ? "play_circle" : lesson.type === "photo" ? "image" : "description"}
-            </span>
-            <div>
-              <p className="text-sm font-bold text-slate-900">{lesson.title}</p>
-              {lesson.description && <p className="text-[11px] text-slate-400">{lesson.description}</p>}
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">close</span>
-          </button>
-        </div>
-        <div className="p-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{lesson.title}</DialogTitle>
+          <DialogDescription>{lesson.description || "Lesson asset preview."}</DialogDescription>
+        </DialogHeader>
+
+        <div className="px-4 pb-4">
           {fileUrl ? (
             lesson.type === "video" ? (
-              <video controls src={fileUrl} className="w-full rounded-xl max-h-96 bg-black" />
+              <video controls src={fileUrl} className="max-h-[65vh] w-full rounded-xl bg-black" />
             ) : lesson.type === "photo" ? (
-              <img src={fileUrl} alt={lesson.title} className="w-full rounded-xl max-h-96 object-contain" />
+              <img src={fileUrl} alt={lesson.title} className="max-h-[65vh] w-full rounded-xl object-contain" />
             ) : (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <span className="material-symbols-outlined text-slate-300 text-6xl">description</span>
-                <p className="text-sm text-slate-500">{lesson.description}</p>
-                <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-border bg-muted/20 p-8">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <Upload className="size-12 text-muted-foreground" />
+                  <p className="max-w-md text-sm text-muted-foreground">
+                    This lesson contains an attached file. Open it in a new tab or download it directly.
+                  </p>
                   <FileActionLinks
                     url={fileUrl}
                     fileName={fileName}
-                    openClassName="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
-                    downloadClassName="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                    openClassName="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    downloadClassName="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                     openLabel={openLabel}
                     downloadLabel="Download"
                   />
@@ -67,108 +136,297 @@ function PreviewModal({ lesson, onClose }: { lesson: LessonResponse; onClose: ()
               </div>
             )
           ) : (
-            <div className="flex flex-col items-center gap-3 py-10 text-slate-400">
-              <span className="material-symbols-outlined text-5xl">cloud_off</span>
-              <p className="text-sm font-semibold">No file uploaded yet</p>
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 p-10 text-center text-sm text-muted-foreground">
+              No file uploaded for this lesson yet.
             </div>
           )}
         </div>
-      </motion.div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-const iconMap: Record<string, string> = {
-  video: "play_circle",
-  photo: "image",
-  document: "description",
-  resource: "description",
-  live: "podcasts",
-  text: "article",
-}
-const colorMap: Record<string, string> = {
-  video: "text-secondary bg-secondary/10",
-  photo: "text-primary bg-primary/10",
-  document: "text-tertiary bg-tertiary/10",
-  resource: "text-primary bg-primary/10",
-  live: "text-tertiary bg-tertiary/10",
-  text: "text-slate-500 bg-slate-100",
+function EnrollmentDialog(props: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  runId: string
+  enrollments: EnrollmentResponse[]
+  users: UserResponse[]
+  loadingEnrollments: boolean
+  addingEnrollment: boolean
+  importingEnrollments: boolean
+  enrollmentError: string
+  importResult: EnrollmentImportResponse | null
+  enrollmentUserQuery: string
+  setEnrollmentUserQuery: (value: string) => void
+  selectedUserId: string
+  setSelectedUserId: (value: string) => void
+  directEmail: string
+  setDirectEmail: (value: string) => void
+  onManualEnroll: () => void
+  onImportFile: (file: File | null) => void
+}) {
+  const {
+    open,
+    onOpenChange,
+    runId,
+    enrollments,
+    users,
+    loadingEnrollments,
+    addingEnrollment,
+    importingEnrollments,
+    enrollmentError,
+    importResult,
+    enrollmentUserQuery,
+    setEnrollmentUserQuery,
+    selectedUserId,
+    setSelectedUserId,
+    directEmail,
+    setDirectEmail,
+    onManualEnroll,
+    onImportFile,
+  } = props
+
+  const enrollmentUserOptions = users.filter((user) => {
+    if (!enrollmentUserQuery.trim()) return true
+    const query = enrollmentUserQuery.trim().toLowerCase()
+    return user.displayName.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Manage Enrollments</DialogTitle>
+          <DialogDescription>
+            Assign users to course run <span className="font-medium text-foreground">{runId}</span> manually or import from Excel.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5 px-4 pb-4">
+          <Card>
+            <CardContent className="space-y-4 py-1">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Excel import</p>
+                <p className="text-sm text-muted-foreground">
+                  Header columns supported: <code>email</code>, <code>order_no</code>, <code>amount</code>.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted">
+                  <Upload className="size-4" />
+                  Upload Excel
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    disabled={importingEnrollments}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null
+                      onImportFile(file)
+                      event.currentTarget.value = ""
+                    }}
+                  />
+                </label>
+                {importingEnrollments ? <span className="text-sm text-muted-foreground">Importing...</span> : null}
+              </div>
+
+              {importResult ? (
+                <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-foreground">
+                  Imported rows: {importResult.totalRows} | Success: {importResult.successCount} | Skipped: {importResult.skippedCount} | Failed: {importResult.failedCount}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-4 py-1">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Manual enrollment</p>
+                <p className="text-sm text-muted-foreground">
+                  Search a user or paste an exact email, then add that user into this course run.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <Input
+                  value={enrollmentUserQuery}
+                  onChange={(event) => setEnrollmentUserQuery(event.target.value)}
+                  placeholder="Search users by name or email"
+                />
+                <Select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} className="md:col-span-2">
+                  <option value="">Select user to enroll</option>
+                  {enrollmentUserOptions.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.displayName} ({user.email})
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  value={directEmail}
+                  onChange={(event) => setDirectEmail(event.target.value)}
+                  placeholder="Or enter exact email"
+                  className="md:col-span-2"
+                />
+                <div className="flex items-center text-xs text-muted-foreground">
+                  Useful when pasting emails from billing sheets.
+                </div>
+              </div>
+
+              {enrollmentError ? (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+                  {enrollmentError}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Enrolled users</CardTitle>
+              <CardDescription>{enrollments.length} records loaded for this run.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {loadingEnrollments ? (
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+                  Loading enrollments...
+                </div>
+              ) : enrollments.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+                  No enrolled users yet.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Method</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {enrollments.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar size="sm">
+                              <AvatarImage src={row.userAvatarUrl ?? undefined} alt={row.userDisplayName ?? row.userId} />
+                              <AvatarFallback>{getInitials(row.userDisplayName ?? row.userEmail ?? row.userId)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-foreground">{row.userDisplayName ?? row.userId}</p>
+                              <p className="text-xs text-muted-foreground">{row.userId}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{row.userEmail ?? "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant={row.status === "ACTIVE" ? "secondary" : "outline"}>{row.status}</Badge>
+                        </TableCell>
+                        <TableCell>{row.enrolmentMethod ?? "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button disabled={addingEnrollment} onClick={onManualEnroll}>
+            <UserPlus />
+            {addingEnrollment ? "Adding..." : "Add Enrollment"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export default function CourseRunDetailPage() {
   const navigate = useNavigate()
   const { runId } = useParams<{ runId: string }>()
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
-  const [previewLesson, setPreviewLesson] = useState<LessonResponse | null>(null)
-  const [publishing, setPublishing] = useState(false)
 
   const [run, setRun] = useState<CourseRunResponse | null>(null)
   const [course, setCourse] = useState<CourseResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [previewLesson, setPreviewLesson] = useState<LessonResponse | null>(null)
+  const [openEnrollmentDialog, setOpenEnrollmentDialog] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+  const [addingEnrollment, setAddingEnrollment] = useState(false)
+  const [importingEnrollments, setImportingEnrollments] = useState(false)
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
   const [users, setUsers] = useState<UserResponse[]>([])
-  const [openEnrollmentDialog, setOpenEnrollmentDialog] = useState(false)
   const [enrollmentUserQuery, setEnrollmentUserQuery] = useState("")
-  const [directEmail, setDirectEmail] = useState("")
   const [selectedUserId, setSelectedUserId] = useState("")
-  const [addingEnrollment, setAddingEnrollment] = useState(false)
-  const [loadingEnrollments, setLoadingEnrollments] = useState(false)
+  const [directEmail, setDirectEmail] = useState("")
   const [enrollmentError, setEnrollmentError] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [importResult, setImportResult] = useState<EnrollmentImportResponse | null>(null)
 
   useEffect(() => {
     if (!runId) return
+
     courseRunApi.getById(runId)
-      .then(async (r) => {
-        setRun(r)
-        // Fetch parent course for breadcrumb
+      .then(async (courseRun) => {
+        setRun(courseRun)
         try {
-          const c = await courseApi.getById(r.courseId)
-          setCourse(c)
+          setCourse(await courseApi.getById(courseRun.courseId))
         } catch {
-          // breadcrumb will still show courseId
+          setCourse(null)
         }
       })
-      .catch(() => setRun(null))
+      .catch(() => {
+        setRun(null)
+        setCourse(null)
+      })
       .finally(() => setLoading(false))
   }, [runId])
 
-  const loadEnrollments = async (id: string) => {
+  async function loadEnrollments(targetRunId: string) {
     setLoadingEnrollments(true)
     try {
-      const rows = await enrollmentApi.getByCourseRun(id)
-      setEnrollments(rows)
+      setEnrollments(await enrollmentApi.getByCourseRun(targetRunId))
     } finally {
       setLoadingEnrollments(false)
     }
   }
 
-  const loadUsers = async () => {
+  async function loadUsers() {
     const page = await userApi.getUsers({ page: 1, size: 200 })
     setUsers(page.data)
   }
 
-  const openManageEnrollments = async () => {
+  async function openManageEnrollments() {
     if (!runId) return
     setOpenEnrollmentDialog(true)
     await Promise.all([loadEnrollments(runId), loadUsers()])
   }
 
-  const handleManualEnroll = async () => {
+  async function handleManualEnroll() {
     if (!runId || addingEnrollment) return
+
     let targetUserId = selectedUserId
     const normalizedEmail = directEmail.trim().toLowerCase()
+
     if (!targetUserId && normalizedEmail) {
-      const matchedUser = users.find((u) => u.email.toLowerCase() === normalizedEmail)
+      const matchedUser = users.find((user) => user.email.toLowerCase() === normalizedEmail)
       if (!matchedUser) {
-        setEnrollmentError("Email không khớp user nào trong hệ thống.")
+        setEnrollmentError("Email does not match any user in the system.")
         return
       }
       targetUserId = matchedUser.id
     }
+
     if (!targetUserId) {
-      setEnrollmentError("Vui lòng chọn user hoặc nhập email hợp lệ.")
+      setEnrollmentError("Select a user or provide an exact email.")
       return
     }
+
     setAddingEnrollment(true)
     setEnrollmentError("")
     try {
@@ -177,397 +435,266 @@ export default function CourseRunDetailPage() {
       setSelectedUserId("")
       setEnrollmentUserQuery("")
       setDirectEmail("")
+    } catch (error) {
+      setEnrollmentError(error instanceof Error ? error.message : "Failed to add enrollment.")
     } finally {
       setAddingEnrollment(false)
     }
   }
 
-  const toggleChapter = (chId: string) => {
-    setExpandedChapters((prev) => {
-      const next = new Set(prev)
-      next.has(chId) ? next.delete(chId) : next.add(chId)
-      return next
-    })
+  async function handleImportEnrollments(file: File | null) {
+    if (!runId || !file || importingEnrollments) return
+    setImportingEnrollments(true)
+    setEnrollmentError("")
+    try {
+      const result = await enrollmentApi.importByExcel(runId, file)
+      setImportResult(result)
+      await loadEnrollments(runId)
+    } catch (error) {
+      setEnrollmentError(error instanceof Error ? error.message : "Import failed.")
+    } finally {
+      setImportingEnrollments(false)
+    }
   }
 
-  const toggleStatus = async () => {
+  async function toggleStatus() {
     if (!run || publishing) return
-    const newStatus = run.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
+
+    const nextStatus = run.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
     setPublishing(true)
     try {
       await courseRunApi.update(run.id, {
         courseId: run.courseId,
         code: run.code,
-        status: newStatus,
+        status: nextStatus,
         startsAt: run.startsAt ?? new Date().toISOString(),
         endsAt: run.endsAt ?? new Date().toISOString(),
         timezone: run.timezone ?? "UTC",
         metadata: run.metadata ?? {},
       })
-      setRun((prev) => prev ? { ...prev, status: newStatus } : prev)
+      setRun((current) => (current ? { ...current, status: nextStatus } : current))
     } finally {
       setPublishing(false)
     }
   }
 
-  const formatDateTime = (val: string | null) => {
-    if (!val) return "—"
-    return new Date(val).toLocaleString("en-US", {
-      month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    })
-  }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <span className="material-symbols-outlined text-slate-300 text-5xl animate-spin">progress_activity</span>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading course run</CardTitle>
+            <CardDescription>Resolving chapters, lessons, and enrollment state.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   if (!run) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-4">
-        <span className="material-symbols-outlined text-slate-300 text-6xl">error</span>
-        <p className="text-slate-500 font-semibold">Course run not found.</p>
-        <button onClick={() => navigate(-1)} className="text-sm font-bold text-secondary hover:underline">
-          Go back
-        </button>
+      <div className="space-y-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft />
+          Go Back
+        </Button>
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-1 text-sm text-destructive">Course run not found.</CardContent>
+        </Card>
       </div>
     )
   }
 
-  const chapters = run.chapters ?? []
-  const totalLessons = chapters.reduce((a, ch) => a + (ch.lessons?.length ?? 0), 0)
-  const enrollmentUserOptions = users.filter((u) => {
-    if (!enrollmentUserQuery.trim()) return true
-    const q = enrollmentUserQuery.trim().toLowerCase()
-    return (
-      u.displayName.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
-    )
-  })
-
   return (
     <>
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-6 pb-12"
-    >
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <Link to="/dashboard/courses" className="hover:text-secondary transition-colors">Courses</Link>
-        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        {course ? (
-          <Link to={`/dashboard/courses/${course.id}`} className="hover:text-secondary transition-colors truncate max-w-40">
-            {course.title}
-          </Link>
-        ) : (
-          <span className="truncate max-w-40">Course</span>
-        )}
-        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-slate-600 font-semibold truncate max-w-50">{run.code}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <button
-              onClick={toggleStatus}
-              disabled={publishing}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase flex items-center gap-1 transition-all ${
-                run.status === "PUBLISHED"
-                  ? "bg-primary-fixed text-on-primary-fixed hover:opacity-80"
-                  : "bg-slate-200 text-slate-500 hover:bg-primary-fixed hover:text-on-primary-fixed"
-              } ${publishing ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
-            >
-              {publishing
-                ? <span className="material-symbols-outlined text-[12px] animate-spin">autorenew</span>
-                : <span className="material-symbols-outlined text-[12px]">{run.status === "PUBLISHED" ? "visibility" : "visibility_off"}</span>
-              }
-              {run.status}
-            </button>
-          </div>
-          <h2 className="text-3xl font-extrabold font-headline tracking-tight text-slate-900">{run.code}</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            {run.startsAt ? `${formatDateTime(run.startsAt)} → ${formatDateTime(run.endsAt)}` : "No schedule set"}
-          </p>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <Link to="/dashboard/courses" className="transition-colors hover:text-foreground">Courses</Link>
+          <span>/</span>
+          {course ? (
+            <Link to={`/dashboard/courses/${course.id}`} className="transition-colors hover:text-foreground">{course.title}</Link>
+          ) : (
+            <span>Course</span>
+          )}
+          <span>/</span>
+          <span className="font-medium text-foreground">{run.code}</span>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors shrink-0 mt-1"
-        >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back
-        </button>
-      </div>
-      <div className="flex justify-end">
-        <button
-          onClick={openManageEnrollments}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <span className="material-symbols-outlined text-[18px]">group_add</span>
-          Manage Enrollments
-        </button>
-      </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { icon: "layers", label: "Chapters", value: chapters.length },
-          { icon: "menu_book", label: "Lessons", value: totalLessons },
-          { icon: "schedule", label: "Est. Duration", value: `${(totalLessons * 0.35).toFixed(1)}h` },
-        ].map(({ icon, label, value }) => (
-          <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
-            <span className="material-symbols-outlined text-secondary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-            <div>
-              <p className="text-lg font-extrabold font-headline text-slate-900">{value}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+        <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-secondary-container)_45%,white))] p-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={getRunStatusVariant(run.status)}>{run.status}</Badge>
+                <Badge variant="outline">{run.code}</Badge>
+                {run.timezone ? <Badge variant="outline">{run.timezone}</Badge> : null}
+              </div>
+              <div className="space-y-2">
+                <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">{run.code}</h1>
+                <p className="text-sm leading-6 text-foreground/80">{formatDateRange(run.startsAt, run.endsAt)}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => navigate(-1)}>
+                <ArrowLeft />
+                Back
+              </Button>
+              <Button variant="outline" disabled={publishing} onClick={() => void toggleStatus()}>
+                {publishing ? "Updating..." : run.status === "PUBLISHED" ? "Move To Draft" : "Publish Run"}
+              </Button>
+              <Button onClick={() => void openManageEnrollments()}>
+                <Users />
+                Manage Enrollments
+              </Button>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Chapters */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Curriculum</h3>
-
-        {chapters.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-10 flex flex-col items-center gap-3 text-slate-400">
-            <span className="material-symbols-outlined text-5xl">inbox</span>
-            <p className="text-sm font-semibold">No chapters in this run.</p>
+          <div className="mt-6 grid gap-3 md:grid-cols-4">
+            <Card className="bg-background/90"><CardContent className="py-1"><p className="text-sm text-muted-foreground">Chapters</p><p className="mt-1 text-2xl font-semibold text-foreground">{run.chapters.length}</p></CardContent></Card>
+            <Card className="bg-background/90"><CardContent className="py-1"><p className="text-sm text-muted-foreground">Lessons</p><p className="mt-1 text-2xl font-semibold text-foreground">{countLessons(run)}</p></CardContent></Card>
+            <Card className="bg-background/90"><CardContent className="py-1"><p className="text-sm text-muted-foreground">Capacity</p><p className="mt-1 text-2xl font-semibold text-foreground">{run.capacity ?? "∞"}</p></CardContent></Card>
+            <Card className="bg-background/90"><CardContent className="py-1"><p className="text-sm text-muted-foreground">Enrollment window</p><p className="mt-1 text-sm font-semibold text-foreground">{formatDateRange(run.enrollmentStartDate, run.enrollmentEndDate)}</p></CardContent></Card>
           </div>
-        ) : (
-          chapters
-            .slice()
-            .sort((a, b) => a.orderIndex - b.orderIndex)
-            .map((chapter, idx) => {
-              const isOpen = expandedChapters.has(chapter.id)
-              const lessons = chapter.lessons ?? []
-              return (
-                <div key={chapter.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  {/* Chapter header */}
-                  <button
-                    onClick={() => toggleChapter(chapter.id)}
-                    className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
-                  >
-                    <span className="w-8 h-8 rounded-xl bg-secondary text-white text-[12px] font-extrabold flex items-center justify-center shrink-0">
-                      {String(idx + 1).padStart(2, "0")}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{chapter.title}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {lessons.length === 0
-                          ? "No lessons"
-                          : `${lessons.length} lesson${lessons.length > 1 ? "s" : ""}`}
-                      </p>
-                    </div>
-                    <span className={`material-symbols-outlined text-slate-400 text-[20px] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
-                      expand_more
-                    </span>
-                  </button>
+        </section>
 
-                  {/* Lessons */}
-                  <AnimatePresence>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="border-t border-slate-100 divide-y divide-slate-50">
-                          {lessons.length === 0 ? (
-                            <div className="px-5 py-4 text-[11px] text-slate-300 italic">No lessons yet.</div>
-                          ) : (
-                            lessons
-                              .slice()
-                              .sort((a, b) => a.orderIndex - b.orderIndex)
-                              .map((lesson) => {
-                                const asset = getLessonAsset(lesson.contentData)
-                                const hasFile = Boolean(asset.url)
-                                return (
-                                  <div key={lesson.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/50 transition-colors group">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${colorMap[lesson.type] ?? "text-slate-400 bg-slate-100"}`}>
-                                      <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                        {iconMap[lesson.type] ?? "article"}
-                                      </span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Curriculum by chapter</CardTitle>
+              <CardDescription>Chapter and lesson content is attached to this course run.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {run.chapters.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                  No chapters in this run yet.
+                </div>
+              ) : (
+                <Accordion>
+                  {run.chapters
+                    .slice()
+                    .sort((a, b) => a.orderIndex - b.orderIndex)
+                    .map((chapter, index) => (
+                      <AccordionItem key={chapter.id}>
+                        <AccordionTrigger>
+                          <div className="flex items-center gap-4">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+                              {String(index + 1).padStart(2, "0")}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{chapter.title}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {chapter.lessons.length} lesson{chapter.lessons.length > 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-2">
+                            {chapter.lessons.length === 0 ? (
+                              <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                                No lessons in this chapter yet.
+                              </div>
+                            ) : (
+                              chapter.lessons
+                                .slice()
+                                .sort((a, b) => a.orderIndex - b.orderIndex)
+                                .map((lesson) => {
+                                  const asset = getLessonAsset(lesson.contentData)
+                                  const hasFile = Boolean(asset.url)
+                                  const visual = getLessonVisual(lesson.type)
+                                  const Icon = visual.icon
+
+                                  return (
+                                    <div key={lesson.id} className="flex items-center gap-4 rounded-xl border border-border/70 bg-background px-4 py-3">
+                                      <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", visual.className)}>
+                                        <Icon className="size-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <p className="font-medium text-foreground">{lesson.title}</p>
+                                          <Badge variant="outline">{lesson.type}</Badge>
+                                          {lesson.isOptional ? <Badge variant="outline">Optional</Badge> : null}
+                                        </div>
+                                        <p className="mt-1 text-sm text-muted-foreground">{lesson.description || "No lesson description."}</p>
+                                      </div>
                                       {hasFile ? (
-                                        <a
-                                          href={asset.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex max-w-full items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 underline underline-offset-4 decoration-primary/40 min-w-0"
-                                          onClick={(e) => e.stopPropagation()}
-                                          title={lesson.type === "video" ? "Open video in new tab" : "Open file in new tab"}
-                                        >
-                                          <span className="material-symbols-outlined text-[16px] text-primary shrink-0">
-                                            {lesson.type === "video" ? "play_circle" : lesson.type === "photo" ? "image" : "description"}
-                                          </span>
-                                          <span className="truncate">{lesson.title}</span>
-                                        </a>
-                                      ) : (
-                                        <p className="text-sm font-semibold text-slate-800 truncate">{lesson.title}</p>
-                                      )}
-                                      {lesson.description && (
-                                        <p className="text-[11px] text-slate-400">{lesson.description}</p>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                      {hasFile && (
-                                        <button
-                                          onClick={() => setPreviewLesson(lesson)}
-                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-secondary border border-secondary/20 bg-secondary/5 hover:bg-secondary/10 rounded-lg transition-colors shrink-0"
-                                          title="Preview"
-                                        >
-                                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                        <Button variant="outline" onClick={() => setPreviewLesson(lesson)}>
+                                          <Eye />
                                           Preview
-                                        </button>
-                                      )}
-                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide shrink-0">
-                                        {lesson.type}
-                                      </span>
+                                        </Button>
+                                      ) : null}
                                     </div>
-                                  </div>
-                                )
-                              })
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })
-        )}
-      </div>
-    </motion.div>
-
-    <AnimatePresence>
-      {previewLesson && <PreviewModal lesson={previewLesson} onClose={() => setPreviewLesson(null)} />}
-    </AnimatePresence>
-    <AnimatePresence>
-      {openEnrollmentDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setOpenEnrollmentDialog(false)}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.18 }}
-            className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-lg font-bold text-slate-900">Manual Enrollment</p>
-                <p className="text-xs text-slate-500">Assign web-paid users to this course run for mobile access.</p>
-              </div>
-              <button onClick={() => setOpenEnrollmentDialog(false)} className="p-2 rounded-lg hover:bg-slate-100">
-                <span className="material-symbols-outlined text-slate-500">close</span>
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <input
-                  className="md:col-span-1 h-10 rounded-lg border border-slate-200 px-3 text-sm"
-                  placeholder="Search users by name/email"
-                  value={enrollmentUserQuery}
-                  onChange={(e) => setEnrollmentUserQuery(e.target.value)}
-                />
-                <select
-                  className="md:col-span-2 h-10 rounded-lg border border-slate-200 px-3 text-sm"
-                  value={selectedUserId}
-                  onChange={(e) => {
-                    setSelectedUserId(e.target.value)
-                    setEnrollmentError("")
-                  }}
-                >
-                  <option value="">Select user to enroll</option>
-                  {enrollmentUserOptions.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.displayName} ({u.email})
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="md:col-span-2 h-10 rounded-lg border border-slate-200 px-3 text-sm"
-                  placeholder="Hoặc nhập thẳng email (exact match)"
-                  value={directEmail}
-                  onChange={(e) => {
-                    setDirectEmail(e.target.value)
-                    setEnrollmentError("")
-                  }}
-                />
-                <div className="md:col-span-1 text-xs text-slate-500 flex items-center">
-                  Gợi ý: paste email từ Excel rồi bấm Add
-                </div>
-              </div>
-              {enrollmentError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                  {enrollmentError}
-                </div>
+                                  )
+                                })
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                </Accordion>
               )}
+            </CardContent>
+          </Card>
 
-              <div className="flex justify-end">
-                <button
-                  disabled={addingEnrollment}
-                  onClick={handleManualEnroll}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-[18px]">person_add</span>
-                  {addingEnrollment ? "Adding..." : "Add Enrollment"}
-                </button>
-              </div>
-
-              <div className="border border-slate-100 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-slate-50 text-sm font-semibold text-slate-700">
-                  Enrolled Users ({enrollments.length})
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Run metadata</CardTitle>
+                <CardDescription>Operational fields for this run.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Timezone</span><span className="font-medium text-foreground">{run.timezone || "Not set"}</span></div>
+                  <Separator />
+                  <div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Prerequisite run</span><span className="font-medium text-foreground">{run.prerequisiteCourseRunId || "None"}</span></div>
+                  <Separator />
+                  <div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Created</span><span className="font-medium text-foreground">{new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(run.createdAt))}</span></div>
+                  <Separator />
+                  <div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Updated</span><span className="font-medium text-foreground">{new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(run.updatedAt))}</span></div>
                 </div>
-                {loadingEnrollments ? (
-                  <div className="p-6 text-sm text-slate-500">Loading enrollments...</div>
-                ) : enrollments.length === 0 ? (
-                  <div className="p-6 text-sm text-slate-500">No enrolled users yet.</div>
-                ) : (
-                  <div className="max-h-72 overflow-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-2">User</th>
-                          <th className="px-4 py-2">Email</th>
-                          <th className="px-4 py-2">Status</th>
-                          <th className="px-4 py-2">Method</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {enrollments.map((row) => (
-                          <tr key={row.id} className="border-t border-slate-100">
-                            <td className="px-4 py-2">{row.userDisplayName ?? row.userId}</td>
-                            <td className="px-4 py-2">{row.userEmail ?? "—"}</td>
-                            <td className="px-4 py-2">{row.status}</td>
-                            <td className="px-4 py-2">{row.enrolmentMethod ?? "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Parent course</CardTitle>
+                <CardDescription>Context for where this run sits in the LMS.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div>
+                  <p className="font-medium text-foreground">{course?.title || "Unknown course"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{course?.code || run.courseId}</p>
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => course && navigate(`/dashboard/courses/${course.id}`)} disabled={!course}>
+                  Open Course
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+      </div>
+
+      <LessonPreviewDialog lesson={previewLesson} open={Boolean(previewLesson)} onOpenChange={(open) => !open && setPreviewLesson(null)} />
+      <EnrollmentDialog
+        open={openEnrollmentDialog}
+        onOpenChange={setOpenEnrollmentDialog}
+        runId={run.id}
+        enrollments={enrollments}
+        users={users}
+        loadingEnrollments={loadingEnrollments}
+        addingEnrollment={addingEnrollment}
+        importingEnrollments={importingEnrollments}
+        enrollmentError={enrollmentError}
+        importResult={importResult}
+        enrollmentUserQuery={enrollmentUserQuery}
+        setEnrollmentUserQuery={setEnrollmentUserQuery}
+        selectedUserId={selectedUserId}
+        setSelectedUserId={(value) => { setSelectedUserId(value); setEnrollmentError("") }}
+        directEmail={directEmail}
+        setDirectEmail={(value) => { setDirectEmail(value); setEnrollmentError("") }}
+        onManualEnroll={() => void handleManualEnroll()}
+        onImportFile={(file) => void handleImportEnrollments(file)}
+      />
     </>
   )
 }

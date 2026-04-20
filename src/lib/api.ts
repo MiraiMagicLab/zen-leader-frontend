@@ -107,6 +107,7 @@ export interface UserResponse {
   email: string
   displayName: string
   avatarUrl: string | null
+  backgroundUrl: string | null
   isActive: boolean
   isVerified: boolean
   verifiedAt: string | null
@@ -117,6 +118,19 @@ export interface UserResponse {
   roles: string[]
   createdAt: string
   updatedAt: string
+}
+
+type RawUserResponse = UserResponse & {
+  active?: boolean
+  verified?: boolean
+}
+
+function normalizeUserResponse(user: RawUserResponse): UserResponse {
+  return {
+    ...user,
+    isActive: user.isActive ?? user.active ?? false,
+    isVerified: user.isVerified ?? user.verified ?? false,
+  }
 }
 
 export interface LessonFileAttachmentResponse {
@@ -170,6 +184,10 @@ export interface CourseRunResponse {
   endsAt: string | null
   timezone: string | null
   metadata: Record<string, unknown>
+  enrollmentStartDate: string | null
+  enrollmentEndDate: string | null
+  capacity: number | null
+  prerequisiteCourseRunId: string | null
   chapters: ChapterResponse[]
   createdAt: string
   updatedAt: string
@@ -191,6 +209,22 @@ export interface EnrollmentResponse {
   completedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface EnrollmentImportFailureItem {
+  rowNumber: number
+  email: string | null
+  orderNo: string | null
+  amount: number | null
+  reason: string
+}
+
+export interface EnrollmentImportResponse {
+  totalRows: number
+  successCount: number
+  skippedCount: number
+  failedCount: number
+  failures: EnrollmentImportFailureItem[]
 }
 
 export interface CourseResponse {
@@ -282,6 +316,19 @@ export interface RegisterRequest {
   passwordHash: string
 }
 
+export interface UserUpdateRequest {
+  displayName?: string
+  avatarUrl?: string
+  backgroundUrl?: string
+  appMetadata?: Record<string, unknown>
+  userMetadata?: Record<string, unknown>
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 export interface ProgramUpsertRequest {
   code: string
   title: string
@@ -362,11 +409,16 @@ export const authApi = {
 
   register: (data: RegisterRequest) =>
     reqPublic<void>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    req<void>("/auth/change-password", { method: "PUT", body: JSON.stringify(data) }),
 }
 
 // ─── User API ──────────────────────────────────────────────────────────────────
 export const userApi = {
-  getMe: () => req<UserResponse>("/users/me"),
+  getMe: async () => normalizeUserResponse(await req<RawUserResponse>("/users/me")),
+  updateMe: (data: UserUpdateRequest) =>
+    req<RawUserResponse>("/users/me", { method: "PUT", body: JSON.stringify(data) }).then(normalizeUserResponse),
   getAll: (page = 1, size = 10, field = "createdAt", direction = "DESC") =>
     req<PagingResponse<UserResponse>>(`/users?page=${page}&size=${size}&field=${field}&direction=${direction}`),
   getUsers: (paging: {
@@ -384,9 +436,12 @@ export const userApi = {
     if (paging.field) params.set("field", paging.field)
     if (paging.direction) params.set("direction", paging.direction)
     if (paging.keyword) params.set("keyword", paging.keyword)
-    return req<PagingResponse<UserResponse>>(`/users?${params.toString()}`)
+    return req<PagingResponse<RawUserResponse>>(`/users?${params.toString()}`).then((response) => ({
+      ...response,
+      data: response.data.map(normalizeUserResponse),
+    }))
   },
-  getById: (id: string) => req<UserResponse>(`/users/${id}`),
+  getById: (id: string) => req<RawUserResponse>(`/users/${id}`).then(normalizeUserResponse),
 }
 
 // ─── Program API ───────────────────────────────────────────────────────────────
@@ -449,6 +504,35 @@ export const enrollmentApi = {
 
   manualEnroll: (data: ManualEnrollmentRequest) =>
     req<EnrollmentResponse>("/enrollments/manual", { method: "POST", body: JSON.stringify(data) }),
+
+  importByExcel: async (courseRunId: string, file: File, dryRun = false) => {
+    const token = authStorage.getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+
+    const form = new FormData()
+    form.append("courseRunId", courseRunId)
+    form.append("file", file)
+    form.append("dryRun", String(dryRun))
+
+    const res = await fetch(`${BASE}/enrollments/import`, {
+      method: "POST",
+      headers,
+      body: form,
+    })
+    if (!res.ok) throw new Error(buildHttpErrorMessage(res))
+    const json: ApiResponse<EnrollmentImportResponse> = await res.json()
+    return json.data
+  },
+
+  downloadImportTemplate: async () => {
+    const token = authStorage.getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${BASE}/enrollments/import-template`, { headers })
+    if (!res.ok) throw new Error(buildHttpErrorMessage(res))
+    return res.blob()
+  },
 }
 
 // ─── Chapter API ───────────────────────────────────────────────────────────────
