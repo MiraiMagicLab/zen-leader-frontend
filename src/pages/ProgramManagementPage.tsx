@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { z } from "zod"
-import {
-  BookOpen,
-  CalendarRange,
-  FolderKanban,
-  Layers3,
-  MoreVertical,
-  Plus,
-  Search,
-  Trash2,
-} from "lucide-react"
+import { AlertCircle, BookOpen, CalendarRange, FolderKanban, ImageOff, Layers3, MoreVertical, Plus, Search, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,7 +14,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -33,6 +23,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
+import { Select } from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -56,6 +47,8 @@ import {
   type ProgramResponse,
   type ProgramUpsertRequest,
 } from "@/lib/api"
+import { PageLoading } from "@/components/common/PageLoading"
+import { cn } from "@/lib/utils"
 
 type Program = ProgramResponse
 type ProgramSheetMode = "create" | "settings" | null
@@ -171,36 +164,38 @@ function ProgramForm({
         if (!isInvalid) onSubmit()
       }}
     >
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-1 pb-4 no-scrollbar">
         <div className="space-y-2">
-          <Label htmlFor="program-code">Program code</Label>
+          <Label htmlFor="program-code" className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program code</Label>
           <Input
             id="program-code"
             value={form.code}
             aria-invalid={Boolean(errors.code)}
             onChange={(event) => onChange({ ...form, code: event.target.value.toUpperCase() })}
             placeholder="EXEC-LEAD-2026"
+            className="h-10 rounded-xl border-transparent bg-muted/50 font-mono font-semibold focus:border-primary/20 focus:bg-background"
           />
-          {errors.code ? <p className="text-xs text-destructive">{errors.code}</p> : null}
+          {errors.code ? <p className="text-xs text-error font-bold ml-1">{errors.code}</p> : null}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="program-title">Program title</Label>
+          <Label htmlFor="program-title" className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program title</Label>
           <Input
             id="program-title"
             value={form.title}
             aria-invalid={Boolean(errors.title)}
             onChange={(event) => onChange({ ...form, title: event.target.value })}
             placeholder="Zenith Executive Leadership"
+            className="h-10 rounded-xl border-transparent bg-muted/50 font-semibold focus:border-primary/20 focus:bg-background"
           />
-          {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
+          {errors.title ? <p className="text-xs text-error font-bold ml-1">{errors.title}</p> : null}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="program-thumbnail">Thumbnail</Label>
-          <div className="space-y-3">
+          <Label htmlFor="program-thumbnail" className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program thumbnail</Label>
+          <div className="space-y-4">
             {(thumbnailPreview || form.thumbnailUrl) ? (
-              <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
+              <div className="overflow-hidden rounded-xl border border-border/40 bg-muted/20">
                 <img
                   alt="Program thumbnail preview"
                   src={thumbnailPreview ?? form.thumbnailUrl}
@@ -208,70 +203,81 @@ function ProgramForm({
                 />
               </div>
             ) : (
-              <div className="flex aspect-[16/9] w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
-                No thumbnail uploaded yet
+              <div className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/10 p-4 text-center text-sm">
+                <ImageOff className="mb-3 size-8 text-muted-foreground/40" />
+                <p className="text-muted-foreground font-bold tracking-tight">No representation image.</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/60">Please upload a visual baseline.</p>
               </div>
             )}
 
-            <Input
-              id="program-thumbnail"
-              type="file"
-              accept="image/*"
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null
-                onChange({ ...form, thumbnailFile: file })
-              }}
-            />
+            <div className="relative">
+                <Input
+                id="program-thumbnail"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    onChange({ ...form, thumbnailFile: file })
+                }}
+                className="h-10 cursor-pointer rounded-xl border-transparent bg-muted/50 file:mr-4 file:rounded-md file:border-none file:bg-primary file:px-3 file:py-1 file:text-xs file:font-semibold file:uppercase file:text-primary-foreground focus:border-primary/20 focus:bg-background"
+                />
+            </div>
 
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
+                className="rounded-xl font-bold h-9 text-error hover:bg-error/10 hover:text-error"
                 onClick={() => onChange({ ...form, thumbnailFile: null, thumbnailUrl: "" })}
               >
-                Clear
+                Reset Visuals
               </Button>
-              <p className="text-xs text-muted-foreground self-center">
-                Upload one image file. If you do not upload a new file, the existing thumbnail is kept in edit mode.
+              <p className="self-center text-xs italic text-muted-foreground">
+                Max 5MB. Existing images are preserved if no new file is uploaded.
               </p>
             </div>
-            {errors.thumbnailFile ? <p className="text-xs text-destructive">{errors.thumbnailFile}</p> : null}
+            {errors.thumbnailFile ? <p className="text-xs text-error font-bold ml-1">{errors.thumbnailFile}</p> : null}
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="program-description">Description</Label>
+          <Label htmlFor="program-description" className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</Label>
           <Textarea
             id="program-description"
             value={form.description}
             aria-invalid={Boolean(errors.description)}
             onChange={(event) => onChange({ ...form, description: event.target.value })}
-            placeholder="Describe the program, audience, and expected outcomes."
-            className="min-h-28"
+            placeholder="Describe the program and who it is for."
+            className="min-h-[140px] rounded-xl border-transparent bg-muted/50 font-medium leading-relaxed focus:border-primary/20 focus:bg-background"
           />
-          {errors.description ? <p className="text-xs text-destructive">{errors.description}</p> : null}
+          {errors.description ? <p className="text-xs text-error font-bold ml-1">{errors.description}</p> : null}
         </div>
 
-        <div className="rounded-xl border border-border bg-muted/40 p-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className="mt-4 rounded-xl border border-border/40 bg-muted/30 p-5">
+          <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <Label htmlFor="program-published">Published</Label>
-              <p className="text-sm text-muted-foreground">
-                Published programs are visible in the LMS hierarchy and can host active course runs.
+              <Label htmlFor="program-published" className="text-sm font-semibold text-foreground">Public Visibility</Label>
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                Published programs are accessible in the LMS hierarchy and can host active course runs.
               </p>
             </div>
             <Switch
               id="program-published"
               checked={form.isPublished}
               onCheckedChange={(checked) => onChange({ ...form, isPublished: checked })}
+              className="data-[state=checked]:bg-primary"
             />
           </div>
         </div>
       </div>
 
-      <SheetFooter className="border-t border-border">
-        <Button type="submit" disabled={isInvalid}>
+      <SheetFooter className="mt-8 border-t border-border pt-8">
+        <Button 
+            type="submit" 
+            disabled={isInvalid}
+            className="h-10 w-full rounded-xl text-xs font-semibold uppercase tracking-wide"
+        >
           {submitLabel}
         </Button>
       </SheetFooter>
@@ -330,8 +336,6 @@ export default function ProgramManagementPage() {
     })
   }, [filterSearch, filterStatus, programs])
 
-  const totalCourses = programs.reduce((total, program) => total + program.courses.length, 0)
-  const totalCourseRuns = programs.reduce((total, program) => total + countCourseRuns(program), 0)
   const publishedPrograms = programs.filter((program) => program.isPublished).length
 
   async function resolveProgramThumbnailUrl(): Promise<string | null> {
@@ -415,281 +419,261 @@ export default function ProgramManagementPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Card className="w-full max-w-md border-border/80 bg-card/90">
-          <CardHeader>
-            <CardTitle>Loading LMS flow</CardTitle>
-            <CardDescription>Resolving programs, courses, and course runs from backend.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
+    return <PageLoading />
   }
 
   return (
     <>
-      <div className="space-y-6">
-        <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-primary-fixed)_26%,white))] p-6 shadow-sm">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl space-y-3">
-              <Badge variant="secondary" className="bg-background/80 text-foreground">
-                LMS Flow
-              </Badge>
-              <div className="space-y-2">
-                <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">
-                  Program → Course → Course Run
-                </h1>
-                <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                  Manage programs in a clean table view. Open the dedicated detail page to manage related
-                  courses and course runs.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={openCreateSheet} className="gap-2">
-                <Plus className="size-4 shrink-0" />
-                New program
-              </Button>
-            </div>
+      <div className="mx-auto max-w-[1400px] space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Program Management</h1>
+            <p className="text-sm text-muted-foreground font-medium mt-1">
+              Top-level hierarchy management. {programs.length} programs registered, {publishedPrograms} active.
+            </p>
           </div>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            <Card className="bg-background/90">
-              <CardContent className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm text-muted-foreground">Programs</p>
-                  <p className="mt-1 text-2xl font-semibold text-foreground">{programs.length}</p>
-                </div>
-                <FolderKanban className="size-5 text-secondary" />
-              </CardContent>
-            </Card>
-            <Card className="bg-background/90">
-              <CardContent className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm text-muted-foreground">Courses</p>
-                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCourses}</p>
-                </div>
-                <Layers3 className="size-5 text-secondary" />
-              </CardContent>
-            </Card>
-            <Card className="bg-background/90">
-              <CardContent className="flex items-center justify-between py-1">
-                <div>
-                  <p className="text-sm text-muted-foreground">Course runs</p>
-                  <p className="mt-1 text-2xl font-semibold text-foreground">{totalCourseRuns}</p>
-                </div>
-                <CalendarRange className="size-5 text-secondary" />
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+          <Button
+            onClick={openCreateSheet} 
+            size="lg"
+            className="gap-2"
+          >
+            <Plus className="size-6" />
+            New Program
+          </Button>
+        </div>
 
         {error ? (
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="py-1 text-sm text-destructive">{error}</CardContent>
+          <Card className="border-error/20 bg-error/5 rounded-xl shadow-sm">
+            <CardContent className="py-4 text-sm text-error font-bold flex items-center gap-3">
+                <AlertCircle className="size-4" />
+                {error}
+            </CardContent>
           </Card>
         ) : null}
 
-        <div className="space-y-6">
-          <Card className="border-border/80">
-            <CardHeader className="gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Programs</CardTitle>
-                  <CardDescription>Program list table. Open detail page to manage courses of each program.</CardDescription>
-                </div>
-                <Badge variant="outline">{publishedPrograms} published</Badge>
+        <Card className="overflow-hidden">
+          <CardHeader className="p-6 pb-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-semibold tracking-tight">Programs</CardTitle>
+                <CardDescription className="text-sm font-medium opacity-70">
+                    Manage program information and visibility.
+                </CardDescription>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="flex flex-col sm:flex-row gap-4 min-w-0 lg:min-w-[600px]">
+                <div className="relative flex-1 group">
+                  <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                   <Input
                     value={filterSearch}
                     onChange={(event) => setFilterSearch(event.target.value)}
-                    placeholder="Search program title, code, or description"
-                    className="pl-8"
+                    placeholder="Search by code or title..."
+                    className="h-10 rounded-xl border-transparent bg-muted/40 pl-10 font-medium focus:border-primary/20 focus:bg-background"
                   />
                 </div>
 
-                <Select
-                  value={filterStatus}
-                  onChange={(event) => setFilterStatus(event.target.value as ProgramFilterStatus)}
-                >
-                  <option value="ALL">All status</option>
-                  <option value="PUBLISHED">Published</option>
-                  <option value="DRAFT">Draft</option>
-                </Select>
-              </div>
-            </CardHeader>
-
-            <CardContent className="pt-0">
-              <div className="overflow-hidden rounded-xl border border-border/70">
-                <div className="overflow-x-auto">
-                  <Table className="min-w-[720px] text-left text-sm sm:min-w-[800px]">
-                    <TableHeader className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                      <TableRow className="border-b border-border/60 hover:bg-transparent">
-                        <TableHead className="px-4 py-3 font-medium">Program</TableHead>
-                        <TableHead className="px-4 py-3 font-medium text-center sm:text-left">Courses</TableHead>
-                        <TableHead className="px-4 py-3 font-medium text-center sm:text-left">Course runs</TableHead>
-                        <TableHead className="px-4 py-3 font-medium">Visibility</TableHead>
-                        <TableHead className="px-4 py-3 text-right font-medium">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPrograms.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                            No program matches the current LMS filters.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredPrograms.map((program) => {
-                          return (
-                            <TableRow key={program.id} className="border-t border-border/60 transition-colors hover:bg-muted/40">
-                                <TableCell className="px-4 py-4">
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
-                                      <FolderKanban className="size-5" />
-                                    </div>
-                                    <div className="min-w-0 space-y-1">
-                                      <p className="truncate font-medium text-foreground">{program.title}</p>
-                                      <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
-                                      {program.description ? (
-                                        <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                                          {program.description}
-                                        </p>
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-4 py-4 text-center font-medium text-foreground sm:text-left">
-                                  {program.courses.length}
-                                </TableCell>
-                                <TableCell className="px-4 py-4 text-center font-medium text-foreground sm:text-left">
-                                  {countCourseRuns(program)}
-                                </TableCell>
-                                <TableCell className="px-4 py-4">
-                                  <div className="flex items-start">
-                                    <Badge variant={program.isPublished ? "secondary" : "outline"}>
-                                      {program.isPublished ? "Published" : "Draft"}
-                                    </Badge>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-4 py-4 text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger nativeButton className="inline-flex w-full justify-end sm:w-auto">
-                                      <span className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-foreground shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]">
-                                        <MoreVertical className="size-4" />
-                                      </span>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-52">
-                                      <DropdownMenuLabel>Program actions</DropdownMenuLabel>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        onClick={() =>
-                                          navigate(`/dashboard/courses?programId=${encodeURIComponent(program.id)}`)
-                                        }
-                                      >
-                                        <BookOpen className="size-4 shrink-0" />
-                                        Manage courses
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        onClick={() => {
-                                          setEditingProgramId(program.id)
-                                          setProgramForm(toProgramFormState(program))
-                                          setProgramFormErrors({})
-                                          setSheetMode("settings")
-                                        }}
-                                      >
-                                        <Layers3 className="size-4 shrink-0" />
-                                        Edit program
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        onClick={() => {
-                                          void runAsyncAction(async () => {
-                                            await handleTogglePublished(program)
-                                          })
-                                        }}
-                                      >
-                                        <CalendarRange className="size-4 shrink-0" />
-                                        {program.isPublished ? "Unpublish program" : "Publish program"}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        variant="destructive"
-                                        className="gap-2"
-                                        onClick={() => {
-                                          void runAsyncAction(async () => {
-                                            await handleDeleteProgram(program.id)
-                                          })
-                                        }}
-                                      >
-                                        <Trash2 className="size-4 shrink-0" />
-                                        Delete program
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                          )
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="w-full sm:w-[220px]">
+                  <Select
+                    value={filterStatus}
+                    onChange={(event) => setFilterStatus(event.target.value as ProgramFilterStatus)}
+                    className="h-10 rounded-xl border-input bg-background px-4 text-sm"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="DRAFT">Draft</option>
+                  </Select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto no-scrollbar">
+              <Table className="w-full text-left">
+                <TableHeader className="border-y border-border/40 bg-muted/30 text-xs uppercase text-muted-foreground">
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableHead className="px-8 py-6 font-semibold">Program</TableHead>
+                    <TableHead className="px-6 py-6 text-center font-semibold sm:text-left">Courses</TableHead>
+                    <TableHead className="px-6 py-6 text-center font-semibold sm:text-left">Runs</TableHead>
+                    <TableHead className="px-6 py-6 font-semibold">Status</TableHead>
+                    <TableHead className="px-8 py-6 text-right font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-border/20">
+                  {filteredPrograms.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="px-8 py-24 text-center">
+                        <div className="flex flex-col items-center gap-4 opacity-50">
+                            <FolderKanban className="size-16 mb-2 text-muted-foreground/30" />
+                            <p className="text-xl font-semibold">No matching programs</p>
+                            <p className="text-sm text-muted-foreground">Try changing your search or filters.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPrograms.map((program) => {
+                      return (
+                        <TableRow key={program.id} className="group border-none hover:bg-muted/10">
+                            <TableCell className="px-8 py-7">
+                              <div className="flex items-start gap-5">
+                                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary border border-primary/5">
+                                  <FolderKanban className="size-6 shrink-0" />
+                                </div>
+                                <div className="min-w-0 space-y-2">
+                                  <button
+                                    type="button"
+                                    className="truncate text-left text-base font-semibold text-foreground hover:text-primary transition-colors"
+                                    onClick={() => navigate(`/dashboard/programs/${program.id}/courses`)}
+                                  >
+                                    {program.title}
+                                  </button>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline" className="rounded-md border-border/60 px-2 py-0 font-mono text-xs text-muted-foreground/80">{program.code}</Badge>
+                                    {program.isPublished ? (
+                                        <Badge className="rounded-sm border-none bg-primary/10 px-2 py-0.5 text-xs text-primary">Active</Badge>
+                                    ) : null}
+                                  </div>
+                                  {program.description ? (
+                                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground/70 font-medium font-body max-w-[400px]">
+                                      {program.description}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-7 text-center sm:text-left">
+                                <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
+                                    {program.courses.length}
+                                </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-7 text-center sm:text-left">
+                                <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
+                                    {countCourseRuns(program)}
+                                </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-7">
+                              <div className="flex items-start">
+                                <Badge variant={program.isPublished ? "secondary" : "outline"} className={cn(
+                                    "rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-none",
+                                    program.isPublished ? "bg-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground/60 border-border"
+                                )}>
+                                  {program.isPublished ? "Published" : "Draft"}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-8 py-7 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger className="inline-flex size-10 items-center justify-center rounded-xl border border-transparent hover:bg-muted hover:border-border/40 transition-colors">
+                                  <span className="sr-only">Open actions</span>
+                                    <MoreVertical className="size-5" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64 rounded-xl border-border p-2">
+                                  <DropdownMenuLabel className="px-4 py-3 text-xs text-muted-foreground/70">Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator className="opacity-50" />
+                                  <DropdownMenuItem
+                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
+                                    onClick={() =>
+                                      navigate(`/dashboard/programs/${program.id}/courses`)
+                                    }
+                                  >
+                                    <BookOpen className="size-5 shrink-0" />
+                                    Open courses
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
+                                    onClick={() => {
+                                      setEditingProgramId(program.id)
+                                      setProgramForm(toProgramFormState(program))
+                                      setProgramFormErrors({})
+                                      setSheetMode("settings")
+                                    }}
+                                  >
+                                    <Layers3 className="size-5 shrink-0" />
+                                    Edit program
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
+                                    onClick={() => {
+                                      void runAsyncAction(async () => {
+                                        await handleTogglePublished(program)
+                                      })
+                                    }}
+                                  >
+                                    <CalendarRange className="size-5 shrink-0" />
+                                    {program.isPublished ? "Move to draft" : "Publish"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="my-2 opacity-50" />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    className="rounded-xl px-4 py-4 font-bold gap-4 cursor-pointer"
+                                    onClick={() => {
+                                      void runAsyncAction(async () => {
+                                        await handleDeleteProgram(program.id)
+                                      })
+                                    }}
+                                  >
+                                    <Trash2 className="size-5 shrink-0" />
+                                    Delete program
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Sheet open={sheetMode !== null} onOpenChange={(open) => !open && setSheetMode(null)}>
-        <SheetContent side="right" className="w-full max-w-xl border-border bg-background sm:max-w-xl">
-          {sheetMode === "create" ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>Create Program</SheetTitle>
-                <SheetDescription>
-                  Create a new top-level LMS program. Courses and course runs will be attached under it.
-                </SheetDescription>
-              </SheetHeader>
-              <ProgramForm
-                form={programForm}
-                onChange={setProgramForm}
-                errors={programFormErrors}
-                onSubmit={() => {
-                  void runAsyncAction(handleCreateProgram)
-                }}
-                submitLabel="Create Program"
-              />
-            </>
-          ) : null}
+        <SheetContent side="right" className="w-full sm:max-w-[540px] border-l-border bg-background p-0">
+          <div className="h-full flex flex-col p-6 items-start">
+            <div className="w-full mb-8">
+                <SheetHeader className="space-y-4">
+                    <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                        <FolderKanban className="size-8" />
+                    </div>
+                    <SheetTitle className="text-2xl font-semibold tracking-tight">
+                        {sheetMode === "create" ? "Create Program" : "Edit Program"}
+                    </SheetTitle>
+                    <SheetDescription className="text-sm font-medium leading-relaxed max-w-[420px]">
+                        {sheetMode === "create" 
+                            ? "Add a new program to organize courses and runs." 
+                            : "Update program details and visibility settings."}
+                    </SheetDescription>
+                </SheetHeader>
+            </div>
+            
+            <div className="flex-1 w-full no-scrollbar">
+                {sheetMode === "create" ? (
+                <ProgramForm
+                    form={programForm}
+                    onChange={setProgramForm}
+                    errors={programFormErrors}
+                    onSubmit={() => {
+                    void runAsyncAction(handleCreateProgram)
+                    }}
+                    submitLabel="Create Program"
+                />
+                ) : null}
 
-          {sheetMode === "settings" && editingProgramId ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>Edit Program</SheetTitle>
-                <SheetDescription>
-                  Update the selected program while preserving the existing course and course run hierarchy.
-                </SheetDescription>
-              </SheetHeader>
-              <ProgramForm
-                form={programForm}
-                onChange={setProgramForm}
-                errors={programFormErrors}
-                onSubmit={() => {
-                  void runAsyncAction(handleSaveProgramSettings)
-                }}
-                submitLabel="Save Changes"
-              />
-            </>
-          ) : null}
+                {sheetMode === "settings" && editingProgramId ? (
+                <ProgramForm
+                    form={programForm}
+                    onChange={setProgramForm}
+                    errors={programFormErrors}
+                    onSubmit={() => {
+                    void runAsyncAction(handleSaveProgramSettings)
+                    }}
+                    submitLabel="Save Changes"
+                />
+                ) : null}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>

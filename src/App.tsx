@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import { DashboardLayout } from "./components/layout/DashboardLayout"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { Toaster } from "@/components/ui/sonner"
 import { authStorage } from "@/lib/storage"
 
@@ -13,6 +14,7 @@ const CreateEventPage = lazy(() => import("./pages/CreateEventPage"))
 const EditEventPage = lazy(() => import("./pages/EditEventPage"))
 const CourseManagementPage = lazy(() => import("./pages/CourseManagementPage"))
 const CreateCoursePage = lazy(() => import("./pages/CreateCoursePage"))
+const CreateCourseRunPage = lazy(() => import("./pages/CreateCourseRunPage"))
 const EditCoursePage = lazy(() => import("./pages/EditCoursePage"))
 const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage"))
 const CourseRunDetailPage = lazy(() => import("./pages/CourseRunDetailPage"))
@@ -40,7 +42,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Check for admin role
   const roles = user?.roles || []
-  const isAdmin = roles.some(r => r.toUpperCase() === "ADMIN" || r.toUpperCase() === "ROLE_ADMIN" || r.toUpperCase() === "SUPER_ADMIN")
+  const isAdmin = roles.some((role) => role.toUpperCase() === "ADMIN")
 
   if (!isAdmin) {
     // If not admin, logout and redirect to login
@@ -53,38 +55,41 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <TooltipProvider>
-      <Suspense fallback={<RouteLoader />}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <AuthGuard>
-                <DashboardLayout />
-              </AuthGuard>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="events" element={<EventsPage />} />
-            <Route path="events/create" element={<CreateEventPage />} />
-            <Route path="events/edit/:id" element={<EditEventPage />} />
-            <Route path="courses" element={<CourseManagementPage />} />
-            <Route path="courses/create" element={<CreateCoursePage />} />
-            <Route path="courses/:id" element={<CourseDetailPage />} />
-            <Route path="runs/:runId" element={<CourseRunDetailPage />} />
-            <Route path="courses/:id/edit" element={<EditCoursePage />} />
-            <Route path="programs" element={<ProgramManagementPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
-      <Toaster richColors position="top-right" />
-    </TooltipProvider>
+    <ThemeProvider defaultTheme="light" storageKey="zenleader-ui-theme">
+      <TooltipProvider>
+        <Suspense fallback={<RouteLoader />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <AuthGuard>
+                  <DashboardLayout />
+                </AuthGuard>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="events" element={<EventsPage />} />
+              <Route path="events/create" element={<CreateEventPage />} />
+              <Route path="events/edit/:id" element={<EditEventPage />} />
+              <Route path="programs/:programId/courses" element={<CourseManagementPage />} />
+              <Route path="programs/:programId/courses/create" element={<CreateCoursePage />} />
+              <Route path="courses/:id/runs/create" element={<CreateCourseRunPage />} />
+              <Route path="courses/:id" element={<CourseDetailPage />} />
+              <Route path="runs/:runId" element={<CourseRunDetailPage />} />
+              <Route path="courses/:id/edit" element={<EditCoursePage />} />
+              <Route path="programs" element={<ProgramManagementPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+        <Toaster richColors position="top-right" />
+      </TooltipProvider>
+    </ThemeProvider>
   )
 }
 

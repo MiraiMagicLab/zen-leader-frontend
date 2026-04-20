@@ -3,8 +3,23 @@ import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { z } from "zod"
 import { toast } from "sonner"
+import {
+  ArrowLeft,
+  ChevronDown,
+  Clock3,
+  FileText,
+  Info,
+  MapPin,
+  Save,
+  Upload,
+  User,
+  Users,
+  Video,
+} from "lucide-react"
 import { eventApi, assetApi } from "../lib/api"
 import MarkdownEditor from "../components/MarkdownEditor"
+import { Button } from "@/components/ui/button"
+import { PageLoading } from "@/components/common/PageLoading"
 
 const TIMEZONES = [
   "GMT-5 (Eastern Time)",
@@ -207,7 +222,7 @@ export default function EditEventPage() {
   }
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-400">Loading Configuration...</div>
+    return <PageLoading />
   }
 
   return (
@@ -219,17 +234,19 @@ export default function EditEventPage() {
     >
       {/* Header */}
       <section>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => navigate("/dashboard/events")}
-          className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-sm font-semibold mb-3 transition-colors"
+          className="mb-3 h-8 gap-1 px-2 text-sm"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <ArrowLeft className="size-4" />
           Back to Events
-        </button>
-        <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-slate-900">
+        </Button>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           Edit Event
         </h2>
-        <p className="text-slate-500 mt-2 font-body">
+        <p className="mt-1 text-sm text-muted-foreground">
           Update the settings and details of your event.
         </p>
       </section>
@@ -241,16 +258,16 @@ export default function EditEventPage() {
         <div className="lg:col-span-2 space-y-6">
 
           {/* Event Essentials */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-8">
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+                <Info className="size-5 text-primary" />
               </div>
-              <h3 className="text-xl font-extrabold font-headline text-slate-900">Event Essentials</h3>
+              <h3 className="text-lg font-semibold text-foreground">Event Essentials</h3>
             </div>
             <div className="space-y-6">
               <div>
-                <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Event Name</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Event Name</label>
                 <input
                   value={eventName}
                   aria-invalid={Boolean(formErrors.eventName)}
@@ -259,34 +276,34 @@ export default function EditEventPage() {
                     if (formErrors.eventName) setFormErrors((prev) => ({ ...prev, eventName: undefined }))
                   }}
                   placeholder="e.g. Q4 Executive Leadership Summit"
-                  className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none transition-colors"
+                  className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
                 />
-                {formErrors.eventName ? <p className="text-[11px] text-error mt-1">{formErrors.eventName}</p> : null}
+                {formErrors.eventName ? <p className="mt-1 text-xs text-error">{formErrors.eventName}</p> : null}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Category</label>
-                  <div className="relative border-b-2 border-slate-200 focus-within:border-secondary transition-colors">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Category</label>
+                  <div className="relative border-b border-border focus-within:border-primary transition-colors">
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full appearance-none bg-transparent py-3 text-sm font-semibold text-slate-700 focus:outline-none pr-8"
+                      className="w-full appearance-none bg-transparent py-2 pr-8 text-sm font-medium text-foreground focus:outline-none"
                     >
                       <option>Workshop</option>
                       <option>Talk</option>
                       <option>Summit</option>
                       <option>Webinar</option>
                     </select>
-                    <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                    <ChevronDown className="pointer-events-none absolute right-1 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Short Summary</label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Short Summary</label>
                   <input
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="One sentence pitch..."
-                    className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none transition-colors"
+                    className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -294,65 +311,64 @@ export default function EditEventPage() {
           </div>
 
           {/* Speaker & Content */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-8">
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
-                <span className="material-symbols-outlined text-secondary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>description</span>
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                <FileText className="size-5 text-primary" />
               </div>
-              <h3 className="text-xl font-extrabold font-headline text-slate-900">Speaker & Content</h3>
+              <h3 className="text-lg font-semibold text-foreground">Speaker & Content</h3>
             </div>
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Speaker */}
                 <div>
-                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Speaker / Instructor</label>
-                  <div className="relative border-b-2 border-slate-200 focus-within:border-secondary transition-colors">
-                    <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-slate-300 text-[18px]">person</span>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Speaker / Instructor</label>
+                  <div className="relative border-b border-border focus-within:border-primary transition-colors">
+                    <User className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
                     <input
                       type="text"
                       value={speaker}
                       onChange={(e) => setSpeaker(e.target.value)}
                       placeholder="e.g. Dr. Aris Thorne, Sarah Jenkins..."
-                      className="w-full bg-transparent py-3 pl-6 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none"
+                      className="w-full bg-transparent py-2 pl-6 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Banner */}
                 <div>
-                  <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Banner Image</label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Banner Image</label>
                   <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => bannerRef.current?.click()}
-                    className="w-full border-2 border-dashed border-slate-200 hover:border-secondary/40 rounded-xl py-4 flex flex-col items-center justify-center gap-1 overflow-hidden relative group transition-colors"
-                    style={{ minHeight: 80 }}
+                    className="relative group min-h-20 w-full flex-col gap-1 overflow-hidden rounded-xl border border-border bg-muted/20 py-4 hover:bg-muted/30"
                   >
                     {bannerPreview ? (
                       <>
                         <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="material-symbols-outlined text-white text-2xl">cloud_upload</span>
+                          <Upload className="size-6 text-white" />
                         </div>
                       </>
                     ) : (
                       <>
-                        <span className="material-symbols-outlined text-slate-300 text-2xl">cloud_upload</span>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Upload Banner (16:9)</span>
+                        <Upload className="size-6 text-muted-foreground/60" />
+                        <span className="text-xs font-medium text-muted-foreground">Upload banner (16:9)</span>
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {/* Description */}
               <div>
-                <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Event Description</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Event Description</label>
                 <MarkdownEditor
-                  id="event-desc"
                   value={description}
                   onChange={setDescription}
                   placeholder="Craft a narrative that inspires participation...\n\n## Highlights\n- Point one\n- Point two"
-                  rows={8}
                 />
               </div>
             </div>
@@ -363,14 +379,14 @@ export default function EditEventPage() {
         <div className="space-y-6">
 
           {/* Date & Time */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
-              <h3 className="text-base font-extrabold font-headline text-slate-900">Date & Time</h3>
+              <Clock3 className="size-5 text-primary" />
+              <h3 className="text-base font-semibold text-foreground">Date & Time</h3>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select Date</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Select Date</label>
                 <input
                   type="date"
                   value={eventDate}
@@ -379,13 +395,13 @@ export default function EditEventPage() {
                     setEventDate(e.target.value)
                     if (formErrors.eventDate) setFormErrors((prev) => ({ ...prev, eventDate: undefined }))
                   }}
-                  className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                  className="w-full rounded-xl border border-input bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                 />
-                {formErrors.eventDate ? <p className="text-[11px] text-error mt-1">{formErrors.eventDate}</p> : null}
+                {formErrors.eventDate ? <p className="mt-1 text-xs text-error">{formErrors.eventDate}</p> : null}
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Start Time</label>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Start Time</label>
                   <input
                     type="time"
                     value={startTime}
@@ -394,12 +410,12 @@ export default function EditEventPage() {
                       setStartTime(e.target.value)
                       if (formErrors.startTime) setFormErrors((prev) => ({ ...prev, startTime: undefined }))
                     }}
-                    className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                    className="w-full rounded-xl border border-input bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                   />
-                  {formErrors.startTime ? <p className="text-[11px] text-error mt-1">{formErrors.startTime}</p> : null}
+                  {formErrors.startTime ? <p className="mt-1 text-xs text-error">{formErrors.startTime}</p> : null}
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">End Time</label>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">End Time</label>
                   <input
                     type="time"
                     value={endTime}
@@ -408,50 +424,52 @@ export default function EditEventPage() {
                       setEndTime(e.target.value)
                       if (formErrors.endTime) setFormErrors((prev) => ({ ...prev, endTime: undefined }))
                     }}
-                    className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                    className="w-full rounded-xl border border-input bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                   />
-                  {formErrors.endTime ? <p className="text-[11px] text-error mt-1">{formErrors.endTime}</p> : null}
+                  {formErrors.endTime ? <p className="mt-1 text-xs text-error">{formErrors.endTime}</p> : null}
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Time Zone</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Time Zone</label>
                 <div className="relative">
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
+                    className="w-full appearance-none rounded-xl border border-input bg-muted px-3 py-2 pr-9 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                   >
                     {TIMEZONES.map((tz) => <option key={tz}>{tz}</option>)}
                   </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Location */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                <h3 className="text-base font-extrabold font-headline text-slate-900">Location</h3>
+                <MapPin className="size-5 text-primary" />
+                <h3 className="text-base font-semibold text-foreground">Location</h3>
               </div>
-              <div className="flex bg-surface-container-low rounded-lg p-0.5 text-[11px] font-bold">
+              <div className="flex rounded-lg bg-muted p-0.5 text-xs font-semibold">
                 {(["Physical", "Online"] as const).map((t) => (
-                  <button
+                  <Button
                     key={t}
+                    type="button"
+                    variant="ghost"
                     onClick={() => setLocationType(t)}
-                    className={`flex-1 px-3 py-1.5 rounded-md transition-all ${locationType === t ? "bg-secondary text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    className={`h-8 flex-1 px-3 ${locationType === t ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     {t}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
             {locationType === "Physical" ? (
               <div className="space-y-3">
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">place</span>
+                  <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     value={venue}
                     aria-invalid={Boolean(formErrors.venue)}
@@ -460,60 +478,68 @@ export default function EditEventPage() {
                       if (formErrors.venue) setFormErrors((prev) => ({ ...prev, venue: undefined }))
                     }}
                     placeholder="Enter venue address..."
-                    className="w-full bg-surface-container-low rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                    className="w-full rounded-xl border border-input bg-muted py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
                   />
                 </div>
-                {formErrors.venue ? <p className="text-[11px] text-error mt-1">{formErrors.venue}</p> : null}
+                {formErrors.venue ? <p className="mt-1 text-xs text-error">{formErrors.venue}</p> : null}
               </div>
             ) : (
-              <div className="flex items-center gap-3 bg-primary-fixed/10 rounded-xl px-4 py-4">
-                <span className="material-symbols-outlined text-primary-fixed-dim text-2xl">videocam</span>
+              <div className="flex items-center gap-3 rounded-xl bg-primary/10 px-4 py-4">
+                <Video className="size-6 text-primary" />
                 <div>
-                  <p className="text-sm font-bold text-slate-800">Online Event</p>
-                  <p className="text-xs text-slate-400 mt-0.5">A meeting link will be sent to registered attendees.</p>
+                  <p className="text-sm font-semibold text-foreground">Online Event</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">A meeting link will be sent to registered attendees.</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Registration */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-[0px_12px_32px_rgba(31,62,114,0.06)] p-6">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
-              <h3 className="text-base font-extrabold font-headline text-slate-900">Registration</h3>
+              <Users className="size-5 text-primary" />
+              <h3 className="text-base font-semibold text-foreground">Registration</h3>
             </div>
             <div className="space-y-4">
               {/* Capacity stepper */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Max Capacity</label>
-                <div className="flex items-center gap-3 bg-surface-container-low rounded-xl px-4 py-2">
-                  <button
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Max Capacity</label>
+                <div className="flex items-center gap-3 rounded-xl bg-muted px-4 py-2">
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon-sm"
                     onClick={() => setCapacity(Math.max(1, capacity - 1))}
-                    className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 font-bold transition-colors text-lg leading-none"
-                  >−</button>
+                    className="text-lg leading-none"
+                  >
+                    −
+                  </Button>
                   <div className="flex-1 flex items-center justify-center">
                     <input
                       type="number"
                       min={0}
                       value={capacity}
                       onChange={(e) => setCapacity(Number(e.target.value) || 0)}
-                      className="w-16 text-right text-base font-bold text-slate-800 bg-transparent outline-none focus:bg-white rounded transition-colors -moz-appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-16 rounded bg-transparent text-right text-base font-semibold text-foreground outline-none transition-colors focus:bg-background -moz-appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <span className="text-xs font-normal text-slate-400 ml-1">seats</span>
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">seats</span>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="icon-sm"
                     onClick={() => setCapacity(capacity + 1)}
-                    className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 font-bold transition-colors text-lg leading-none"
-                  >+</button>
+                    className="text-lg leading-none"
+                  >
+                    +
+                  </Button>
                 </div>
                 <input
                   type="range"
                   min={10} max={1000} step={10}
                   value={capacity}
                   onChange={(e) => setCapacity(Number(e.target.value))}
-                  className="w-full mt-2 accent-secondary"
+                  className="w-full mt-2 accent-primary"
                 />
               </div>
             </div>
@@ -522,29 +548,34 @@ export default function EditEventPage() {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between pt-4 pb-8 border-t border-slate-100">
-        <button
+      <div className="flex items-center justify-between border-t pt-4 pb-8">
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => navigate("/dashboard/events")}
-          className="text-slate-500 font-bold text-sm hover:text-slate-700 transition-colors"
+          className="h-10 px-4 text-sm font-semibold"
         >
           Cancel
-        </button>
+        </Button>
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => saveEvent("draft")}
             disabled={isSubmitting}
-            className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="h-10 px-5 text-sm font-semibold"
           >
             Save as Draft
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
             onClick={() => saveEvent("open")}
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-fixed text-on-primary-fixed font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+            className="h-10 gap-2 px-5 text-sm font-semibold"
           >
-            <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
+            <Save className="size-4" />
             {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
+          </Button>
         </div>
       </div>
     </motion.div>

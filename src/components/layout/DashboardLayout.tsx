@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
+import { CalendarDays, FolderKanban, LayoutDashboard, LogOut, Users } from "lucide-react"
 import {
   SidebarProvider,
   Sidebar,
@@ -13,13 +14,17 @@ import {
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/ui/ThemeToggle"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { authStorage } from "@/lib/storage"
+import { cn } from "@/lib/utils"
+import zenleaderLogo from "@/assets/logo-zenleader.png"
 
 const NAV_ITEMS = [
-  { to: "/dashboard", label: "Dashboard", icon: "dashboard", end: true },
-  { to: "/dashboard/programs", label: "Programs", icon: "folder_special", end: false },
-  { to: "/dashboard/events", label: "Events", icon: "event", end: false },
-  { to: "/dashboard/users", label: "Users", icon: "group", end: false },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/dashboard/programs", label: "Programs", icon: FolderKanban, end: false },
+  { to: "/dashboard/events", label: "Events", icon: CalendarDays, end: false },
+  { to: "/dashboard/users", label: "Users", icon: Users, end: false },
 ] as const
 
 export function DashboardLayout() {
@@ -46,18 +51,18 @@ export function DashboardLayout() {
         className="border-sidebar-border bg-sidebar text-sidebar-foreground"
       >
         <SidebarHeader className="px-3 py-5">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary/10 text-secondary">
-              <span className="material-symbols-outlined text-[20px] leading-none">school</span>
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/5 bg-primary/10 p-1">
+              <img src={zenleaderLogo} alt="Zenleader" className="h-7 w-7 object-contain" />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <h1 className="font-headline text-xl font-bold text-foreground tracking-tight">Zenleader</h1>
-              <p className="text-[10px] font-semibold text-secondary uppercase tracking-widest">Management Portal</p>
+              <h1 className="font-headline text-xl font-extrabold text-foreground tracking-tight">Zenleader</h1>
+              <p className="text-xs font-medium text-primary/80">Admin Panel</p>
             </div>
           </div>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
+        <SidebarContent className="px-2">
+          <SidebarMenu className="gap-1">
             {NAV_ITEMS.map((item) => (
               <SidebarMenuItem key={item.to}>
                 <NavLink to={item.to} end={item.end}>
@@ -65,15 +70,15 @@ export function DashboardLayout() {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.label}
-                      className="font-label text-sm group-data-[collapsible=icon]:justify-center"
+                      className={cn(
+                        "h-10 rounded-xl px-3 text-sm font-medium",
+                        isActive 
+                          ? "bg-primary text-primary-foreground" 
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
                     >
-                      <span
-                        className="material-symbols-outlined shrink-0 text-[20px] leading-none"
-                        style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      <item.icon className="size-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden ml-2">{item.label}</span>
                     </SidebarMenuButton>
                   )}
                 </NavLink>
@@ -81,15 +86,15 @@ export function DashboardLayout() {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="px-3 pb-4">
-          <Separator />
+        <SidebarFooter className="px-3 pb-6">
+          <Separator className="mb-4 opacity-50" />
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="justify-start gap-2 text-sm group-data-[collapsible=icon]:justify-center"
+            className="h-10 justify-start gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center"
           >
-            <span className="flex size-8 shrink-0 items-center justify-center">
-              <span className="material-symbols-outlined text-[20px] leading-none">logout</span>
+            <span className="flex size-6 shrink-0 items-center justify-center">
+              <LogOut className="size-4" />
             </span>
             <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
           </Button>
@@ -97,26 +102,38 @@ export function DashboardLayout() {
       </Sidebar>
 
       <SidebarInset className="min-h-screen bg-background">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur-[20px] lg:px-8">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <p className="text-sm font-medium text-muted-foreground hidden sm:block">LMS Admin Dashboard</p>
+        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-border/50 bg-background px-6 lg:px-10">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="h-10 w-10 rounded-xl bg-muted/50 hover:bg-muted" />
+            <Separator orientation="vertical" className="h-6 opacity-30 hidden sm:block" />
+            <p className="hidden text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 sm:block">Zen Leader Dashboard</p>
           </div>
-          <button
-            className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-slate-50"
-            onClick={() => navigate("/dashboard/profile")}
-          >
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-on-surface leading-tight">{displayName}</p>
-              <p className="text-[10px] font-bold text-primary-fixed-dim bg-primary/5 px-2 py-0.5 rounded mt-0.5 uppercase tracking-wider">{roleLabel}</p>
-            </div>
-            <img alt="User Profile" className="w-10 h-10 rounded-full object-cover border-2 border-primary-fixed shadow-sm" src={avatarUrl} />
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            
+            <Separator orientation="vertical" className="h-6 opacity-30" />
+            
+            <Button
+              variant="ghost"
+              className="h-auto gap-3 rounded-xl border border-transparent px-2 py-1.5 pr-3 hover:border-border/50"
+              onClick={() => navigate("/dashboard/profile")}
+            >
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-semibold leading-tight text-foreground">{displayName}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">{roleLabel}</p>
+              </div>
+              <Avatar className="size-10 rounded-xl ring-2 ring-primary/10">
+                <AvatarImage alt="User Profile" src={avatarUrl} />
+                <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </div>
         </header>
 
-        <div className="flex-1 w-full p-4 sm:p-6 lg:p-10">
+        <main className="flex-1 w-full p-6 sm:p-8 lg:p-12">
           <Outlet />
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

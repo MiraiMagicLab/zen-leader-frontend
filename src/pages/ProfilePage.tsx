@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PageLoading } from "@/components/common/PageLoading"
 
 type ProfileFormState = {
   displayName: string
@@ -147,6 +148,10 @@ export default function ProfilePage() {
   const accountStatusText = user?.isVerified ? "Verified account" : "Not verified"
   const roleText = user?.roles?.join(", ") || "User"
 
+  if (loading) {
+    return <PageLoading />
+  }
+
   const handleAvatarChange: ChangeEventHandler<HTMLInputElement> = (event) => {
     const file = event.target.files?.[0] ?? null
     if (!file) {
@@ -230,7 +235,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
         <p className="text-sm text-muted-foreground">Manage your account information and security settings.</p>
       </div>
 
@@ -247,9 +252,6 @@ export default function ProfilePage() {
               <CardDescription>Update your display information and avatar.</CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <p className="text-sm text-muted-foreground">Loading profile...</p>
-              ) : (
                 <div className="space-y-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
@@ -258,7 +260,7 @@ export default function ProfilePage() {
                         <AvatarFallback>{initials(profileForm.displayName)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium">{user?.email ?? "Unknown email"}</p>
+                        <p className="text-sm font-medium">{user?.email ?? "-"}</p>
                         <p className="text-xs text-muted-foreground">Your login email cannot be changed here.</p>
                       </div>
                     </div>
@@ -299,7 +301,6 @@ export default function ProfilePage() {
                     </div>
                   </form>
                 </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

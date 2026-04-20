@@ -8,12 +8,9 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
-  XCircle,
   Download,
   Copy,
   RefreshCw,
-  UserCog,
-  Ban,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -47,17 +44,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Switch } from "@/components/ui/switch"
+import { PageLoading } from "@/components/common/PageLoading"
+import { cn } from "@/lib/utils"
 
 const formatDate = (dateString: string) => {
   return new Intl.DateTimeFormat("en-US", {
@@ -103,14 +91,6 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [manageOpen, setManageOpen] = useState(false)
-  const [deactivateOpen, setDeactivateOpen] = useState(false)
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
-  const [selectedVerified, setSelectedVerified] = useState(false)
-  const [selectedActive, setSelectedActive] = useState(false)
-  const [manageNotice, setManageNotice] = useState<string | null>(null)
-
-  const roleOptions = ["admin", "mentor", "member"]
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -161,13 +141,6 @@ export default function UsersPage() {
     setUsers((prev) => prev.map((u) => (u.id === nextUser.id ? nextUser : u)))
   }
 
-  const seedManageForm = (user: UserResponse) => {
-    setSelectedRoles(user.roles.map((role) => role.toLowerCase()))
-    setSelectedVerified(user.isVerified)
-    setSelectedActive(user.isActive)
-    setManageNotice(null)
-  }
-
   const handleCopy = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value)
@@ -200,29 +173,6 @@ export default function UsersPage() {
     }
   }
 
-  const handleOpenManage = (user: UserResponse) => {
-    setSelectedUser(user)
-    seedManageForm(user)
-    setManageOpen(true)
-  }
-
-  const handleOpenDeactivate = (user: UserResponse) => {
-    setSelectedUser(user)
-    setDeactivateOpen(true)
-  }
-
-  const toggleRole = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
-    )
-  }
-
-  const handleSaveManageChanges = () => {
-    setManageNotice(
-      "Backend hien tai chua expose endpoint cap nhat role/active/verified cho user khac. UI da san sang va se active ngay khi backend bo sung API.",
-    )
-  }
-
   const handleExport = () => {
     if (filteredUsers.length === 0) {
       toast.error("No users to export.")
@@ -233,353 +183,281 @@ export default function UsersPage() {
     toast.success(`Exported ${filteredUsers.length} user(s).`)
   }
 
+  if (loading && users.length === 0) {
+      return <PageLoading />
+  }
+
   return (
-    <div className="mx-auto max-w-[1600px] space-y-8">
+    <div className="mx-auto max-w-[1400px] space-y-6">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground">User management</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage and monitor your community members and staff.
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">User Management</h1>
+          <p className="mt-2 text-base text-muted-foreground font-medium">
+            Manage and monitor your community members and staff hierarchy.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => void fetchUsers()} disabled={loading}>
+          <Button 
+            variant="ghost" 
+            className="h-10 px-4 font-medium" 
+            onClick={() => void fetchUsers()} 
+            disabled={loading}
+          >
+            <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} />
             Refresh
           </Button>
-          <Button className="gap-2" onClick={handleExport} disabled={loading || filteredUsers.length === 0}>
-            <Download className="h-4 w-4" />
+          <Button 
+            className="h-10 gap-2 px-4" 
+            onClick={handleExport} 
+            disabled={loading || filteredUsers.length === 0}
+          >
+            <Download className="h-5 w-5" />
             Export CSV
           </Button>
         </div>
       </div>
 
+      {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            label: "Total users",
+            label: "Total Community",
             value: users.length,
             icon: Users,
-            iconClass: "text-blue-600",
-            iconBg: "bg-blue-500/10",
+            color: "text-primary",
+            bg: "bg-primary/10",
           },
           {
-            label: "Active admins",
+            label: "Active Staff",
             value: users.filter((u) => u.roles.some((r) => r.toUpperCase().includes("ADMIN"))).length,
             icon: Shield,
-            iconClass: "text-violet-600",
-            iconBg: "bg-violet-500/10",
+            color: "text-primary",
+            bg: "bg-primary/10",
           },
           {
-            label: "Verified",
+            label: "Verified Users",
             value: users.filter((u) => u.isVerified).length,
             icon: CheckCircle2,
-            iconClass: "text-emerald-600",
-            iconBg: "bg-emerald-500/10",
+            color: "text-primary",
+            bg: "bg-primary/10",
           },
           {
-            label: "New (7 days)",
+            label: "Recent Arrivals",
             value: users.filter((u) => new Date(u.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
             icon: Calendar,
-            iconClass: "text-orange-600",
-            iconBg: "bg-orange-500/10",
+            color: "text-foreground",
+            bg: "bg-muted/50",
           },
         ].map((stat) => (
-          <Card key={stat.label} className="border-border shadow-sm">
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className={`rounded-xl p-3 ${stat.iconBg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.iconClass}`} />
+          <Card key={stat.label}>
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className={cn("rounded-md p-3", stat.bg)}>
+                <stat.icon className={cn("h-6 w-6", stat.color)} strokeWidth={2.5} />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="overflow-hidden border-border shadow-sm">
-        <div className="flex flex-col items-stretch justify-between gap-4 border-b border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:p-6">
-          <div className="relative w-full sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Card className="overflow-hidden">
+        <div className="flex flex-col items-stretch justify-between gap-4 bg-muted/20 p-4 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-md group">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input
-              placeholder="Search by name or email..."
-              className="h-11 pl-10"
+              placeholder="Search by identity or email address..."
+              className="h-10 pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredUsers.length} of {users.length} users
+          <p className="rounded-md bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
+             Showing: <span className="text-primary">{filteredUsers.length}</span> / {users.length}
           </p>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="px-6">User</TableHead>
-              <TableHead className="px-6">Role</TableHead>
-              <TableHead className="px-6">Status</TableHead>
-              <TableHead className="px-6">Joined</TableHead>
-              <TableHead className="px-6 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={5} className="px-6 py-4">
-                    <div className="h-12 w-full animate-pulse rounded-lg bg-muted" />
-                  </TableCell>
+        <div className="overflow-x-auto no-scrollbar">
+            <Table>
+            <TableHeader className="border-y border-border/40 bg-muted/30 text-xs uppercase text-muted-foreground">
+                <TableRow className="border-none hover:bg-transparent">
+                <TableHead className="px-8 py-6 font-semibold">User</TableHead>
+                <TableHead className="px-6 py-6 font-semibold">Roles</TableHead>
+                <TableHead className="px-6 py-6 font-semibold">Status</TableHead>
+                <TableHead className="px-6 py-6 font-semibold">Created</TableHead>
+                <TableHead className="px-8 py-6 text-right font-semibold">Actions</TableHead>
                 </TableRow>
-              ))
-            ) : filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
-                        {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <UserIcon className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-foreground">{user.displayName}</div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Mail className="h-3 w-3" />
-                          {user.email}
+            </TableHeader>
+            <TableBody className="divide-y divide-border/20">
+                {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                    <TableRow key={user.id} className="group border-none hover:bg-muted/10">
+                    <TableCell className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/5 bg-muted">
+                            {user.avatarUrl ? (
+                            <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                            <UserIcon className="h-6 w-6 text-muted-foreground/40" />
+                            )}
                         </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles.length > 0 ? (
-                        user.roles.map((role, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-[10px] font-medium">
-                            {role}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs italic text-muted-foreground">No roles</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-4">
-                    {user.isVerified ? (
-                      <div className="flex items-center gap-1.5 text-emerald-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Verified</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <XCircle className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Unverified</span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                    {formatDate(user.createdAt)}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger nativeButton className="inline-flex w-full justify-end sm:w-auto">
-                        <span className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-foreground shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]">
-                          <MoreVertical className="h-4 w-4 shrink-0" />
-                        </span>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>User actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2" onClick={() => void handleViewUserDetails(user.id)}>
-                          <UserIcon className="h-4 w-4" />
-                          View details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => void handleRefreshUser(user.id)}>
-                          <RefreshCw className="h-4 w-4" />
-                          Refresh user
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => handleOpenManage(user)}>
-                          <UserCog className="h-4 w-4" />
-                          Manage access
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => void handleCopy(user.email, "Email")}>
-                          <Mail className="h-4 w-4" />
-                          Copy email
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => void handleCopy(user.id, "User ID")}>
-                          <Copy className="h-4 w-4" />
-                          Copy user ID
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          className="gap-2"
-                          onClick={() => handleOpenDeactivate(user)}
-                        >
-                          <Ban className="h-4 w-4" />
-                          Deactivate user
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                        <div>
+                            <div className="text-base font-semibold text-foreground">{user.displayName}</div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground mt-0.5">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                            </div>
+                        </div>
+                        </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-6 font-medium">
+                        <div className="flex flex-wrap gap-1.5">
+                        {user.roles.length > 0 ? (
+                            user.roles.map((role, idx) => (
+                            <Badge key={idx} variant="outline" className="rounded-sm px-2 text-xs uppercase text-muted-foreground shadow-none">
+                                {role}
+                            </Badge>
+                            ))
+                        ) : (
+                            <span className="text-xs italic text-muted-foreground/40 font-medium tracking-tight">User</span>
+                        )}
+                        </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-6">
+                        {user.isVerified ? (
+                        <div className="flex items-center gap-2 text-primary">
+                            <span className="flex size-2 rounded-full bg-primary animate-pulse" />
+                            <span className="text-xs font-semibold uppercase">Verified</span>
+                        </div>
+                        ) : (
+                        <div className="flex items-center gap-2 text-muted-foreground/40">
+                             <span className="flex size-2 rounded-full bg-muted-foreground/40" />
+                            <span className="text-xs font-semibold uppercase">Pending</span>
+                        </div>
+                        )}
+                    </TableCell>
+                    <TableCell className="px-6 py-6 text-sm font-bold text-muted-foreground/60 uppercase tracking-tight">
+                        {formatDate(user.createdAt)}
+                    </TableCell>
+                    <TableCell className="px-8 py-6 text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger className="inline-flex size-10 items-center justify-center rounded-xl border border-transparent transition-colors hover:border-border/40 hover:bg-muted">
+                          <span className="sr-only">Open actions</span>
+                          <MoreVertical className="h-5 w-5 shrink-0" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-xl border-border p-2">
+                            <DropdownMenuLabel className="px-4 py-3 text-xs text-muted-foreground/70">Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="opacity-50" />
+                            <DropdownMenuItem className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary" onClick={() => void handleViewUserDetails(user.id)}>
+                            <UserIcon className="h-5 w-5" />
+                            View profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary" onClick={() => void handleRefreshUser(user.id)}>
+                            <RefreshCw className="h-5 w-5" />
+                            Refresh user
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary" onClick={() => void handleCopy(user.email, "Email")}>
+                            <Mail className="h-5 w-5" />
+                            Copy email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary" onClick={() => void handleCopy(user.id, "User ID")}>
+                            <Copy className="h-5 w-5" />
+                            Copy user ID
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                ))
+                ) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="px-8 py-32 text-center">
+                        <div className="flex flex-col items-center gap-4 opacity-50">
+                            <Search className="size-16 mb-2 text-muted-foreground/30" />
+                            <p className="text-xl font-semibold">No users found</p>
+                            <p className="text-sm text-muted-foreground">Try changing your search filters.</p>
+                        </div>
+                    </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                  No users match your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                )}
+            </TableBody>
+            </Table>
+        </div>
 
-        <div className="flex items-center justify-between border-t border-border bg-muted/20 px-6 py-4">
-          <p className="text-xs font-medium text-muted-foreground">
-            {loading ? "Loading…" : `${users.length} user(s) loaded from the server`}
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/10 px-8 py-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+            {loading ? "Loading users..." : `Total users: ${users.length}`}
           </p>
         </div>
       </Card>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>User details</DialogTitle>
-            <DialogDescription>Thong tin chi tiet tai thoi diem hien tai tu backend.</DialogDescription>
-          </DialogHeader>
-          {selectedUser ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                <span className="text-muted-foreground">Display name</span>
-                <span className="font-medium">{selectedUser.displayName}</span>
-                <span className="text-muted-foreground">Email</span>
-                <span>{selectedUser.email}</span>
-                <span className="text-muted-foreground">User ID</span>
-                <span className="break-all">{selectedUser.id}</span>
-                <span className="text-muted-foreground">Created at</span>
-                <span>{formatDate(selectedUser.createdAt)}</span>
-                <span className="text-muted-foreground">Last sign-in</span>
-                <span>{selectedUser.lastSignInAt ? formatDate(selectedUser.lastSignInAt) : "Never"}</span>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roles</p>
-                <div className="flex flex-wrap gap-1">
-                  {selectedUser.roles.length > 0 ? (
-                    selectedUser.roles.map((role) => (
-                      <Badge key={role} variant="secondary">
-                        {role}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">No role assigned</span>
-                  )}
+        <DialogContent className="sm:max-w-lg overflow-hidden rounded-xl border bg-card p-0">
+          <div className="bg-muted/20 p-6 border-b border-border/50">
+              <DialogHeader className="space-y-4">
+                <div className="flex size-16 items-center justify-center rounded-xl bg-card text-primary ring-1 ring-border/50">
+                    <UserIcon className="size-8" />
                 </div>
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => selectedUser && void handleRefreshUser(selectedUser.id)}>
-              Refresh data
+                <DialogTitle className="text-2xl font-semibold tracking-tight">User Profile</DialogTitle>
+                <DialogDescription className="text-sm font-medium leading-relaxed opacity-70">
+                    User details from the system.
+                </DialogDescription>
+              </DialogHeader>
+          </div>
+          
+          <CardContent className="p-6 space-y-8">
+            {selectedUser ? (
+                <div className="space-y-8">
+                <div className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-6 text-sm">
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</span>
+                    <span className="text-lg font-semibold tracking-tight text-foreground">{selectedUser.displayName}</span>
+                    
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</span>
+                    <span className="font-bold text-base text-foreground/80">{selectedUser.email}</span>
+                    
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">User ID</span>
+                    <code className="text-xs font-mono font-medium bg-muted/50 p-2 rounded-lg break-all border border-border/40">{selectedUser.id}</code>
+                    
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created</span>
+                    <span className="font-bold text-base text-foreground/80">{formatDate(selectedUser.createdAt)}</span>
+                    
+                    <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Sign-In</span>
+                    <span className="font-bold text-base text-foreground/80">{selectedUser.lastSignInAt ? formatDate(selectedUser.lastSignInAt) : "Never"}</span>
+                </div>
+                
+                <div className="pt-6 border-t border-border/40">
+                    <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roles</p>
+                    <div className="flex flex-wrap gap-2">
+                    {selectedUser.roles.length > 0 ? (
+                        selectedUser.roles.map((role) => (
+                        <Badge key={role} variant="outline" className="rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-none">
+                            {role}
+                        </Badge>
+                        ))
+                    ) : (
+                        <span className="text-sm font-semibold italic text-muted-foreground/50">No role assigned</span>
+                    )}
+                    </div>
+                </div>
+                </div>
+            ) : null}
+          </CardContent>
+          
+          <DialogFooter className="p-6 border-t border-border/40 bg-muted/5 flex gap-3">
+            <Button variant="ghost" className="h-10 flex-1 rounded-xl text-sm font-medium text-muted-foreground" onClick={() => selectedUser && void handleRefreshUser(selectedUser.id)}>
+              Refresh
             </Button>
-            <Button onClick={() => selectedUser && void handleCopy(selectedUser.id, "User ID")}>Copy ID</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={manageOpen} onOpenChange={setManageOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Manage access</DialogTitle>
-            <DialogDescription>Cap nhat role va trang thai user (UI da day du, cho backend endpoint).</DialogDescription>
-          </DialogHeader>
-          {selectedUser ? (
-            <div className="space-y-5">
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-                <p className="font-medium text-foreground">{selectedUser.displayName}</p>
-                <p className="text-muted-foreground">{selectedUser.email}</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Roles</p>
-                <div className="flex flex-wrap gap-2">
-                  {roleOptions.map((role) => {
-                    const active = selectedRoles.includes(role)
-                    return (
-                      <Button
-                        key={role}
-                        type="button"
-                        variant={active ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleRole(role)}
-                      >
-                        {role.toUpperCase()}
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <p className="text-sm font-medium">Verified account</p>
-                    <p className="text-xs text-muted-foreground">Danh dau da xac minh email/tai khoan.</p>
-                  </div>
-                  <Switch checked={selectedVerified} onCheckedChange={setSelectedVerified} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <p className="text-sm font-medium">Active account</p>
-                    <p className="text-xs text-muted-foreground">Tat se khoa user tren he thong.</p>
-                  </div>
-                  <Switch checked={selectedActive} onCheckedChange={setSelectedActive} />
-                </div>
-              </div>
-
-              {manageNotice ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                  {manageNotice}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManageOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={handleSaveManageChanges}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedUser
-                ? `Ban dang yeu cau deactivate ${selectedUser.displayName}.`
-                : "Ban dang yeu cau deactivate user."}{" "}
-              Backend hien chua co endpoint deactivate/activate user, nen hien tai chua the thuc thi thao tac nay.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                toast.message("Chua the deactivate", {
-                  description: "Can backend bo sung endpoint de xu ly thao tac nay.",
-                })
-              }
+            <Button 
+                className="h-10 flex-1 rounded-xl text-sm font-medium" 
+                onClick={() => selectedUser && void handleCopy(selectedUser.id, "User ID")}
             >
-              Da hieu
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                Copy User ID
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -120,17 +120,10 @@ export interface UserResponse {
   updatedAt: string
 }
 
-type RawUserResponse = UserResponse & {
-  active?: boolean
-  verified?: boolean
-}
+type RawUserResponse = UserResponse
 
 function normalizeUserResponse(user: RawUserResponse): UserResponse {
-  return {
-    ...user,
-    isActive: user.isActive ?? user.active ?? false,
-    isVerified: user.isVerified ?? user.verified ?? false,
-  }
+  return user
 }
 
 export interface LessonFileAttachmentResponse {

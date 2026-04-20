@@ -110,7 +110,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Portal preferences are stored in this browser only until a workspace API is available.
         </p>

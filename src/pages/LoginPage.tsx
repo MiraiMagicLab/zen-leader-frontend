@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ThemeToggle } from "@/components/ui/ThemeToggle"
+import zenleaderLogo from "@/assets/logo-zenleader.png"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -27,7 +29,6 @@ export default function LoginPage() {
       if (resp.authenticated && resp.accessToken) {
         authStorage.setToken(resp.accessToken)
         
-        // Fetch user info to get roles/metadata
         try {
           const user = await userApi.getMe()
           authStorage.setUser(user)
@@ -49,126 +50,140 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#1F3E72] to-[#3B82F6] flex flex-col items-center justify-center p-4 font-inter text-slate-800">
-      {/* Header Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center mb-8 text-center"
-      >
-        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg mb-4">
-          <div className="w-6 h-6 bg-[#1F3E72] rounded-md opacity-80" />
-        </div>
-        <h1 className="text-3xl font-bold text-white mb-1 tracking-tight">Zenleader</h1>
-        <p className="text-blue-100 text-sm opacity-90">Elevating Executive Leadership</p>
-      </motion.div>
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background p-6">
+      {/* Background Orbs */}
+      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
 
-      {/* Login Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 md:p-10 border border-white/20"
-      >
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome Back</h2>
-          <p className="text-slate-500 text-sm">Sign in to access your dashboard.</p>
-        </div>
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="mb-6 p-4 bg-error/10 border border-error/20 rounded-xl flex items-start gap-3 text-error"
-          >
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <p className="text-sm font-semibold">{error}</p>
-          </motion.div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-700 font-medium">Email Address</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input 
-                id="email" 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="executive@zenleader.com" 
-                className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-[#1F3E72]/20"
-                required
-              />
+      <div className="w-full max-w-md relative z-10">
+        {/* Header Section */}
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center mb-10 text-center"
+        >
+            <div className="mb-6">
+                <img src={zenleaderLogo} alt="Zenleader" className="h-12 w-auto" />
             </div>
-          </div>
+            <h1 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">Zenleader</h1>
+            <p className="text-muted-foreground font-medium tracking-tight">Learning management platform</p>
+        </motion.div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-              <Link to="/forgot-password" className="text-xs font-semibold text-[#1F3E72] hover:underline">
-                Forgot password?
-              </Link>
+        {/* Login Card */}
+        <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="w-full rounded-xl border border-border bg-card p-8 shadow-sm dark:bg-card/95 md:p-12"
+        >
+            <div className="mb-10 text-center sm:text-left">
+            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">Welcome Back</h2>
+            <p className="font-medium text-muted-foreground">Sign in to continue.</p>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input 
-                id="password" 
-                type={showPassword ? "text" : "password"} 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 pr-10 h-11 bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-[#1F3E72]/20"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 h-4 w-4 text-slate-400 hover:text-slate-600 transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox id="remember" className="bg-slate-50 border-slate-200" />
-            <label
-              htmlFor="remember"
-              className="text-sm font-medium text-slate-500 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            {error && (
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 flex items-start gap-3 rounded-xl border border-error/20 bg-error/10 p-4 text-error"
             >
-              Keep me logged in
-            </label>
-          </div>
-
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full h-12 bg-[#87C744] hover:bg-[#76AE3B] text-slate-900 font-bold text-lg rounded-xl shadow-lg border-none active:scale-[0.98] transition-all"
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-            ) : (
-              "Login"
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <p className="text-sm font-bold leading-relaxed">{error}</p>
+            </motion.div>
             )}
-          </Button>
-        </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-          <p className="text-sm text-slate-500">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-bold text-[#1F3E72] hover:underline">
-              Create one
-            </Link>
-          </p>
+            <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="email" className="ml-1 text-xs font-medium text-muted-foreground">Email</Label>
+                <div className="relative">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+                <Input 
+                    id="email" 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="executive@zenleader.com" 
+                    className="h-10 rounded-xl border-input/80 bg-background/70 pl-10 font-medium dark:border-input dark:bg-background"
+                    required
+                />
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="flex items-center justify-between ml-1">
+                <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
+                <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                    Forgot password?
+                </Link>
+                </div>
+                <div className="relative">
+                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+                <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-10 rounded-xl border-input/80 bg-background/70 pl-10 pr-10 font-medium dark:border-input dark:bg-background"
+                    required
+                />
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </Button>
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-3 ml-1">
+                <Checkbox id="remember" className="rounded-md data-[state=checked]:bg-primary" />
+                <label
+                htmlFor="remember"
+                className="cursor-pointer text-xs font-medium leading-none text-muted-foreground"
+                >
+                Keep me signed in
+                </label>
+            </div>
+
+            <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="h-10 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+                {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} />
+                  Signing in...
+                </span>
+                ) : (
+                "Sign in"
+                )}
+            </Button>
+            </form>
+
+            <div className="mt-10 border-t border-border/50 pt-8 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+                New to the platform?{" "}
+                <Link to="/signup" className="font-semibold text-primary hover:underline">
+                Create account
+                </Link>
+            </p>
+            </div>
+        </motion.div>
+
+        {/* Footer Section */}
+        <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs font-medium text-muted-foreground/80">
+            <Link to="/privacy" className="hover:text-primary">Privacy</Link>
+            <Link to="/terms" className="hover:text-primary">Terms</Link>
+            <Link to="/support" className="hover:text-primary">Support</Link>
         </div>
-      </motion.div>
-
-      {/* Footer Section */}
-      <div className="mt-8 flex gap-6 text-xs text-white/60 font-medium">
-        <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-        <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-        <Link to="/support" className="hover:text-white transition-colors">Support</Link>
       </div>
     </div>
   )

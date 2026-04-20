@@ -1,4 +1,5 @@
 import { buildCloudinaryDownloadUrl } from "@/lib/cloudinary";
+import { Download, Eye } from "lucide-react";
 
 type FileActionLinksProps = {
   url: string;
@@ -30,7 +31,7 @@ export default function FileActionLinks({
         className={openClassName}
         onClick={onClick}
       >
-        <span className="material-symbols-outlined text-[inherit]">visibility</span>
+        <Eye className="size-4" />
         {openLabel}
       </a>
       <a
@@ -39,7 +40,7 @@ export default function FileActionLinks({
         className={downloadClassName}
         onClick={onClick}
       >
-        <span className="material-symbols-outlined text-[inherit]">download</span>
+        <Download className="size-4" />
         {downloadLabel}
       </a>
     </>

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Layers3,
   PencilLine,
+  Workflow,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -18,8 +19,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { courseApi, type CourseResponse } from "@/lib/api"
+import { PageLoading } from "@/components/common/PageLoading"
 
 function countLessons(course: CourseResponse) {
   return course.courseRuns.reduce(
@@ -29,7 +38,7 @@ function countLessons(course: CourseResponse) {
 }
 
 function formatDateRange(startsAt: string | null, endsAt: string | null) {
-  if (!startsAt && !endsAt) return "Schedule not set"
+  if (!startsAt && !endsAt) return "-"
 
   const formatter = new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -80,24 +89,15 @@ export default function CourseDetailPage() {
   const totalLessons = useMemo(() => (course ? countLessons(course) : 0), [course])
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Loading course detail</CardTitle>
-            <CardDescription>Resolving course structure and its runs.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
+    return <PageLoading />
   }
 
   if (!course) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
+        <Button variant="outline" onClick={() => navigate("/dashboard/programs")}>
           <ArrowLeft />
-          Back to Courses
+          Back to programs
         </Button>
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="py-1 text-sm text-destructive">
@@ -108,6 +108,8 @@ export default function CourseDetailPage() {
     )
   }
 
+  const programCoursesPath = `/dashboard/programs/${course.programId}/courses`
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -115,145 +117,135 @@ export default function CourseDetailPage() {
           Programs
         </button>
         <ChevronRight className="size-4" />
-        <button onClick={() => navigate("/dashboard/courses")} className="transition-colors hover:text-foreground">
+        <button onClick={() => navigate(programCoursesPath)} className="transition-colors hover:text-foreground">
           Courses
         </button>
         <ChevronRight className="size-4" />
         <span className="font-medium text-foreground">{course.title}</span>
       </div>
 
-      <section className="rounded-[calc(var(--radius-xl)+6px)] border border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-secondary)_10%,white),color-mix(in_srgb,var(--color-primary-fixed)_18%,white))] p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-3">
+      <Card>
+        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="bg-background/80">
-                {course.code}
-              </Badge>
+              <Badge variant="outline">{course.code}</Badge>
               {course.programCode ? <Badge variant="outline">{course.programCode}</Badge> : null}
               {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
-              {course.level ? <Badge variant="secondary">{course.level}</Badge> : null}
+              {course.level ? <Badge variant="outline">{course.level}</Badge> : null}
             </div>
-
             <div className="space-y-2">
-              <h1 className="font-headline text-3xl font-semibold tracking-tight text-foreground">{course.title}</h1>
-              <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                {course.description || "No description for this course yet."}
-              </p>
+              <CardTitle className="text-2xl">{course.title}</CardTitle>
+              {course.description ? <CardDescription className="max-w-2xl">{course.description}</CardDescription> : null}
             </div>
           </div>
-
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate("/dashboard/courses")}>
+            <Button variant="outline" onClick={() => navigate(programCoursesPath)}>
               <ArrowLeft />
               Back
             </Button>
+            <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}>
+              <Workflow />
+              Create runs
+            </Button>
             <Button onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}>
               <PencilLine />
-              Edit Course
+              Edit course
             </Button>
           </div>
-        </div>
-
-        <div className="mt-6 grid gap-3 md:grid-cols-4">
-          <Card className="bg-background/90">
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <Card className="bg-muted/20">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Course runs</p>
                 <p className="mt-1 text-2xl font-semibold text-foreground">{course.courseRuns.length}</p>
               </div>
-              <CalendarRange className="size-5 text-secondary" />
+              <CalendarRange className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-background/90">
+          <Card className="bg-muted/20">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Lessons</p>
                 <p className="mt-1 text-2xl font-semibold text-foreground">{totalLessons}</p>
               </div>
-              <Layers3 className="size-5 text-secondary" />
+              <Layers3 className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-background/90">
+          <Card className="bg-muted/20">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Order index</p>
                 <p className="mt-1 text-2xl font-semibold text-foreground">{course.orderIndex}</p>
               </div>
-              <BookCopy className="size-5 text-secondary" />
+              <BookCopy className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-background/90">
-            <CardContent className="flex items-center justify-between py-1">
-              <div>
-                <p className="text-sm text-muted-foreground">Tags</p>
-                <p className="mt-1 text-base font-semibold text-foreground">
-                  {course.tags.length ? course.tags.join(", ") : "No tags"}
-                </p>
-              </div>
+          <Card className="bg-muted/20">
+            <CardContent className="py-1">
+              <p className="text-sm text-muted-foreground">Tags</p>
+              <p className="mt-1 text-base font-semibold text-foreground">
+                {course.tags.length ? course.tags.join(", ") : "-"}
+              </p>
             </CardContent>
           </Card>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Course run flow</CardTitle>
-            <CardDescription>
-              This is the next level in the LMS hierarchy. Each run has its own chapters and lessons.
-            </CardDescription>
+            <CardTitle>Course runs</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-0">
             {course.courseRuns.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
-                This course does not have any course runs yet.
+              <div className="rounded-xl border border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                No course runs.
               </div>
             ) : (
-              course.courseRuns.map((run) => {
-                const lessonCount = run.chapters.reduce((total, chapter) => total + chapter.lessons.length, 0)
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Run</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Schedule</TableHead>
+                    <TableHead>Chapters</TableHead>
+                    <TableHead>Lessons</TableHead>
+                    <TableHead className="w-[140px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {course.courseRuns.map((run) => {
+                    const lessonCount = run.chapters.reduce((total, chapter) => total + chapter.lessons.length, 0)
 
-                return (
-                  <Card key={run.id} className="border-border/80">
-                    <CardContent className="space-y-4 py-1">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">{run.code}</p>
-                            <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDateRange(run.startsAt, run.endsAt)}
-                          </p>
-                        </div>
-
-                        <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
-                          Open Run
-                          <ChevronRight />
-                        </Button>
-                      </div>
-
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Chapters</p>
-                          <p className="mt-2 font-medium text-foreground">{run.chapters.length}</p>
-                        </div>
-                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Lessons</p>
-                          <p className="mt-2 font-medium text-foreground">{lessonCount}</p>
-                        </div>
-                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Timezone</p>
-                          <p className="mt-2 font-medium text-foreground">{run.timezone || "Not set"}</p>
-                        </div>
-                        <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
-                          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Capacity</p>
-                          <p className="mt-2 font-medium text-foreground">{run.capacity ?? "Unlimited"}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
+                    return (
+                      <TableRow key={run.id}>
+                        <TableCell className="font-medium">{run.code}</TableCell>
+                        <TableCell>
+                          <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{formatDateRange(run.startsAt, run.endsAt)}</TableCell>
+                        <TableCell>{run.chapters.length}</TableCell>
+                        <TableCell>{lessonCount}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger>
+                              <Button variant="outline" size="sm">
+                                Actions
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
+                                Open run
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
@@ -261,23 +253,22 @@ export default function CourseDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Course metadata</CardTitle>
-            <CardDescription>Summary of the parent course in the LMS.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-0">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Program</span>
-                <span className="font-medium text-foreground">{course.programCode || "Unassigned"}</span>
+                <span className="font-medium text-foreground">{course.programCode || "-"}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Category</span>
-                <span className="font-medium text-foreground">{course.category || "Not set"}</span>
+                <span className="font-medium text-foreground">{course.category || "-"}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">Level</span>
-                <span className="font-medium text-foreground">{course.level || "Not set"}</span>
+                <span className="font-medium text-foreground">{course.level || "-"}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between gap-3">
@@ -303,15 +294,6 @@ export default function CourseDetailPage() {
               </div>
             </div>
 
-            <Separator />
-
-            <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-              <p className="font-medium text-foreground">Flow note</p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Course is still only the middle layer. Operational learning content is actually attached to each
-                course run.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

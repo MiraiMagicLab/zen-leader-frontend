@@ -1,0 +1,62 @@
+.markdown-editor-container {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+}
+
+.markdown-editor-container .w-md-editor {
+  border: none;
+  box-shadow: none;
+  background-color: transparent !important;
+}
+
+.markdown-editor-container .w-md-editor-toolbar {
+  border-bottom: 1px solid var(--border);
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.markdown-editor-container .w-md-editor-toolbar ul li button {
+  color: var(--muted-foreground) !important;
+}
+
+.markdown-editor-container .w-md-editor-toolbar ul li button:hover {
+  color: var(--foreground) !important;
+  background-color: var(--accent) !important;
+}
+
+.markdown-editor-container .w-md-editor-content {
+  background-color: transparent !important;
+}
+
+.markdown-editor-container .w-md-editor-text {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--foreground) !important;
+}
+
+.markdown-editor-container .w-md-editor-preview {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+  border-left: 1px solid var(--border);
+}
+
+/* Scrollbar styling for a premium feel */
+.markdown-editor-container .w-md-editor-text-input::-webkit-scrollbar,
+.markdown-editor-container .w-md-editor-preview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.markdown-editor-container .w-md-editor-text-input::-webkit-scrollbar-thumb,
+.markdown-editor-container .w-md-editor-preview::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 10px;
+  border: 2px solid transparent;
+}
+
+/* Fix for full screen mode */
+.w-md-editor-fullscreen {
+  z-index: 1000 !important;
+  background-color: var(--background) !important;
+}
