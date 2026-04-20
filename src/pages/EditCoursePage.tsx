@@ -955,14 +955,11 @@ export default function EditCoursePage() {
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Category</label>
-                  <div className="relative">
-                    <Select value={category} onChange={(e) => setCategory(e.target.value)} className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20">
-                      <option value="STRATEGIC MASTERY">Strategic Mastery</option>
-                      <option value="HUMAN CENTRICITY">Human Centricity</option>
-                      <option value="FINANCE & OPS">Finance &amp; Ops</option>
-                    </Select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
-                  </div>
+                  <Select value={category} onChange={(e) => setCategory(e.target.value)} className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20">
+                    <option value="STRATEGIC MASTERY">Strategic Mastery</option>
+                    <option value="HUMAN CENTRICITY">Human Centricity</option>
+                    <option value="FINANCE & OPS">Finance &amp; Ops</option>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -1213,23 +1210,20 @@ export default function EditCoursePage() {
               {/* Program */}
               <div>
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Program</label>
-                <div className="relative">
-                  <Select
-                    value={selectedProgramId ?? ""}
-                    aria-invalid={Boolean(formErrors.selectedProgramId)}
-                    onChange={(e) => {
-                      setSelectedProgramId(e.target.value || null)
-                      if (formErrors.selectedProgramId) setFormErrors((prev) => ({ ...prev, selectedProgramId: undefined }))
-                    }}
-                    className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
-                  >
-                    <option value="">No Program</option>
-                    {allPrograms.map((p) => (
-                      <option key={p.id} value={p.id}>{p.code} — {p.title}</option>
-                    ))}
-                  </Select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
-                </div>
+                <Select
+                  value={selectedProgramId ?? ""}
+                  aria-invalid={Boolean(formErrors.selectedProgramId)}
+                  onChange={(e) => {
+                    setSelectedProgramId(e.target.value || null)
+                    if (formErrors.selectedProgramId) setFormErrors((prev) => ({ ...prev, selectedProgramId: undefined }))
+                  }}
+                  className="h-11 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
+                >
+                  <option value="">No Program</option>
+                  {allPrograms.map((p) => (
+                    <option key={p.id} value={p.id}>{p.code} — {p.title}</option>
+                  ))}
+                </Select>
                 {formErrors.selectedProgramId ? <p className="text-[11px] text-error mt-1">{formErrors.selectedProgramId}</p> : null}
               </div>
 

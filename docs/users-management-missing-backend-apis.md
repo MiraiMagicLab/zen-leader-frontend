@@ -1,55 +1,78 @@
-# Users Management - Missing Backend APIs
+# Users Management - API Mapping Hien Tai Va API Con Thieu
 
-Tai lieu nay tong hop cac API backend con thieu de hoan tat cac thao tac tai trang `Dashboard > Users` (`/dashboard/users`).
+Tai lieu nay ghi dung theo implementation hien tai cua frontend `UsersPage` (`/dashboard/users`) de ban giao cho backend dev.
 
-## 1) Hien trang backend da co
+## 1) Backend APIs dang ton tai (frontend dang goi that)
 
 Base URL: `/api/v1`
 
-- `GET /users` - Lay danh sach user co phan trang
-- `GET /users/{userId}` - Lay chi tiet user
-- `GET /users/me` - Lay thong tin user hien tai
-- `PUT /users/me` - Cap nhat user hien tai
+- `GET /users?page={page}&size={size}&field={field}&direction={direction}`
+  - Dang duoc goi trong `userApi.getUsers()` de load list.
+- `GET /users/{userId}`
+  - Dang duoc goi trong:
+    - `View details`
+    - `Refresh user`
+    - `Refresh data` trong details dialog
+- `GET /users/me`
+- `PUT /users/me`
 
-## 2) API con thieu can bo sung
+## 2) Mapping dung theo UI hien tai (as-is)
 
-## 2.1 Update user status (active/verified/ban)
+Tu dropdown `User actions` trong moi row:
+
+- `View details`
+  - Goi: `GET /api/v1/users/{userId}`
+  - Hanh vi: mo dialog chi tiet va hien data moi nhat.
+
+- `Refresh user`
+  - Goi: `GET /api/v1/users/{userId}`
+  - Hanh vi: cap nhat lai row user trong table.
+
+- `Manage access`
+  - Hien tai: chi mo dialog UI (roles + verified + active), **chua goi API**.
+  - Nut `Save changes`: hien notice backend chua co endpoint.
+
+- `Copy email`
+  - Hien tai: clipboard local, **khong goi API**.
+
+- `Copy user ID`
+  - Hien tai: clipboard local, **khong goi API**.
+
+- `Deactivate user`
+  - Hien tai: mo confirm dialog, **khong goi API**.
+
+## 3) APIs backend con thieu de bat full flow hien tai
+
+Duoi day la danh sach API toi thieu de dung voi UI da map san:
+
+### 3.1 Update status user (active/verified)
 
 - **Method + URL**: `PATCH /api/v1/users/{userId}/status`
-- **Muc dich**:
-  - Khoa/mo khoa user (`active`)
-  - Danh dau xac minh (`verified`)
-  - (Tuy chon) set thoi diem het han cam (`bannedUntil`)
+- **Dung cho action**:
+  - `Deactivate user`
+  - toggle `Verified account` trong `Manage access`
+  - toggle `Active account` trong `Manage access`
 
-### Request body de xuat
+#### Request body de xuat
 
 ```json
 {
-  "active": true,
-  "verified": true,
-  "bannedUntil": null
+  "active": false,
+  "verified": true
 }
 ```
 
-### Validation de xuat
-
-- `userId` phai ton tai
-- Khong cho admin tu khoa chinh minh (neu co rule)
-- `bannedUntil` phai la ISO 8601 va >= now neu khong null
-
-### Response de xuat
+#### Response de xuat
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "f0f58535-5c00-4bc4-bef7-048140e7f580",
-    "email": "admin",
+    "id": "uuid",
+    "email": "admin@gmail.com",
     "displayName": "admin",
-    "active": true,
+    "active": false,
     "verified": true,
-    "verifiedAt": "2026-04-12T08:46:01.701386Z",
-    "bannedUntil": null,
     "roles": ["admin"],
     "createdAt": "2026-04-12T08:46:01.778556Z",
     "updatedAt": "2026-04-20T09:00:00.000000Z"
@@ -59,12 +82,12 @@ Base URL: `/api/v1`
 
 ---
 
-## 2.2 Replace user roles
+### 3.2 Replace roles cua user
 
 - **Method + URL**: `PUT /api/v1/users/{userId}/roles`
-- **Muc dich**: Gan lai danh sach role cho 1 user (replace toan bo roles)
+- **Dung cho action**: `Manage access` (phan roles)
 
-### Request body de xuat
+#### Request body de xuat
 
 ```json
 {
@@ -72,24 +95,18 @@ Base URL: `/api/v1`
 }
 ```
 
-### Validation de xuat
-
-- Role phai ton tai trong he thong
-- Khong de user khong co role nao (neu business rule yeu cau)
-- Khong cho phep xoa role `admin` cua chinh tai khoan dang dang nhap (neu co rule)
-
-### Response de xuat
+#### Response de xuat
 
 ```json
 {
   "success": true,
   "data": {
-    "id": "f0f58535-5c00-4bc4-bef7-048140e7f580",
-    "email": "admin",
+    "id": "uuid",
+    "email": "admin@gmail.com",
     "displayName": "admin",
-    "roles": ["admin", "mentor"],
     "active": true,
     "verified": true,
+    "roles": ["admin", "mentor"],
     "createdAt": "2026-04-12T08:46:01.778556Z",
     "updatedAt": "2026-04-20T09:00:00.000000Z"
   }
@@ -98,101 +115,48 @@ Base URL: `/api/v1`
 
 ---
 
-## 2.3 Get roles list (de render UI role picker)
+### 3.3 (Khuyen nghi) API lay role options dong
 
 - **Method + URL**: `GET /api/v1/roles`
-- **Muc dich**: Lay danh sach role hop le de frontend render options
+- **Dung cho action**: render options trong `Manage access`.
+- Hien tai frontend dang hard-code: `["admin", "mentor", "member"]`.
 
-### Response de xuat
+#### Response de xuat
 
 ```json
 {
   "success": true,
   "data": [
-    {
-      "name": "admin",
-      "description": "System administrator"
-    },
-    {
-      "name": "mentor",
-      "description": "Mentor role"
-    },
-    {
-      "name": "member",
-      "description": "Default member role"
-    }
+    { "name": "admin", "description": "System administrator" },
+    { "name": "mentor", "description": "Mentor role" },
+    { "name": "member", "description": "Default member role" }
   ]
 }
 ```
 
----
+## 4) Contract field name hien tai can thong nhat
 
-## 2.4 Optional - Deactivate shortcut endpoint (neu muon endpoint rieng)
-
-Neu team backend muon endpoint ro nghia thay vi dung status patch:
-
-- **Method + URL**: `PATCH /api/v1/users/{userId}/deactivate`
-- **Request body**: co the rong hoac:
-
-```json
-{
-  "reason": "Manual moderation"
-}
-```
-
-- **Hanh vi**: set `active=false`
-
-> Khuyen nghi: Chi can `PATCH /users/{id}/status` la du, endpoint nay la optional.
-
----
-
-## 3) Luu y contract field name (quan trong)
-
-Frontend dang su dung model:
-
-- `isActive`
-- `isVerified`
-
-Trong khi backend hien tai response dang la:
+Backend response hien tai dang tra:
 
 - `active`
 - `verified`
 
-De tranh mismatch lan nua, de xuat backend thong nhat 1 trong 2 cach:
+Frontend model dang su dung:
 
-1. **Cach A (khuyen nghi)**: backend tra `isActive`, `isVerified` dung theo DTO ten boolean Java.
-2. **Cach B**: giu `active`, `verified` va document ro contract trong OpenAPI.
+- `isActive`
+- `isVerified`
 
-> Hien frontend da co normalize tam thoi, nhung van nen thong nhat contract chinh thuc.
+Frontend da co normalize tam thoi trong `userApi`:
 
----
+- `isActive = isActive ?? active ?? false`
+- `isVerified = isVerified ?? verified ?? false`
 
-## 4) Yeu cau phan quyen de xuat
+De tranh sai lech ve sau, de nghi backend chot 1 contract ro rang trong OpenAPI (giu `active/verified` hoac doi sang `isActive/isVerified`).
 
-Nhung API quan tri tren nen yeu cau role `ADMIN`:
+## 5) Goi y quyen han
+
+Cac endpoint quan tri users nen yeu cau role `ADMIN`:
 
 - `PATCH /users/{id}/status`
 - `PUT /users/{id}/roles`
 - `GET /roles`
-
-Va can audit log cho cac thao tac:
-
-- thay doi status
-- thay doi role
-
----
-
-## 5) Frontend se goi API nhu the nao sau khi backend xong
-
-- Tu menu row user:
-  - `Manage access` -> goi:
-    1) `PUT /users/{id}/roles`
-    2) `PATCH /users/{id}/status`
-  - `Deactivate user` -> goi:
-    - `PATCH /users/{id}/status` voi `{ "active": false }`
-
-Neu backend muon, co the gop role + status vao **1 endpoint duy nhat**:
-
-- `PATCH /api/v1/users/{userId}` voi body gom `roles`, `active`, `verified`, `bannedUntil`.
-
-Khi do frontend chi can 1 request/save.
