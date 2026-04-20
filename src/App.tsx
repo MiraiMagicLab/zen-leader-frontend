@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import { DashboardLayout } from "./components/layout/DashboardLayout"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/sonner"
 import { authStorage } from "@/lib/storage"
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage"))
@@ -16,7 +17,7 @@ const EditCoursePage = lazy(() => import("./pages/EditCoursePage"))
 const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage"))
 const CourseRunDetailPage = lazy(() => import("./pages/CourseRunDetailPage"))
 const ProgramManagementPage = lazy(() => import("./pages/ProgramManagementPage"))
-const CreateProgramPage = lazy(() => import("./pages/CreateProgramPage"))
+const ProfilePage = lazy(() => import("./pages/ProfilePage"))
 const UsersPage = lazy(() => import("./pages/UsersPage"))
 
 function RouteLoader() {
@@ -75,14 +76,14 @@ function App() {
             <Route path="runs/:runId" element={<CourseRunDetailPage />} />
             <Route path="courses/:id/edit" element={<EditCoursePage />} />
             <Route path="programs" element={<ProgramManagementPage />} />
-            <Route path="programs/create" element={<CreateProgramPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="profile" element={<div className="p-8"><h2 className="text-2xl font-bold">Profile Page</h2><p className="text-slate-500">Feature coming soon...</p></div>} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </Suspense>
+      <Toaster richColors position="top-right" />
     </TooltipProvider>
   )
 }

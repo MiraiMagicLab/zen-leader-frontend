@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { z } from "zod"
+import { toast } from "sonner"
 import { courseApi, courseRunApi, chapterApi, lessonApi, programApi, assetApi, type CourseResponse, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 import FileActionLinks from "@/components/FileActionLinks"
@@ -41,6 +43,41 @@ interface Run {
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error"
+type EditCourseFormErrors = Partial<Record<"courseCode" | "title" | "selectedProgramId" | "orderIndex", string>>
+
+const editCourseSchema = z.object({
+  courseCode: z
+    .string()
+    .trim()
+    .min(2, "Course code must be at least 2 characters.")
+    .max(50, "Course code must be at most 50 characters.")
+    .regex(/^[A-Z0-9_-]+$/, "Course code can contain only uppercase letters, numbers, '-' and '_'."),
+  title: z.string().trim().min(3, "Course title must be at least 3 characters.").max(160, "Course title must be at most 160 characters."),
+  selectedProgramId: z.string().trim().min(1, "Please select a program."),
+  orderIndex: z.number().int("Order index must be an integer.").min(1, "Order index must be 1 or greater."),
+})
+
+function validateEditCourseForm(input: {
+  courseCode: string
+  title: string
+  selectedProgramId: string | null
+  orderIndex: number
+}): EditCourseFormErrors {
+  const result = editCourseSchema.safeParse({
+    courseCode: input.courseCode,
+    title: input.title,
+    selectedProgramId: input.selectedProgramId ?? "",
+    orderIndex: input.orderIndex,
+  })
+  if (result.success) return {}
+  const flattened = result.error.flatten().fieldErrors
+  return {
+    courseCode: flattened.courseCode?.[0],
+    title: flattened.title?.[0],
+    selectedProgramId: flattened.selectedProgramId?.[0],
+    orderIndex: flattened.orderIndex?.[0],
+  }
+}
 
 // ─── Modal backdrop ───────────────────────────────────────────────────────────
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
@@ -84,7 +121,7 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert(error instanceof Error ? error.message : "Video upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "Video upload failed. Please check your connection and try again.")
       setFile(null)
       setFileUrl("")
       // Reset the file input
@@ -153,7 +190,7 @@ function AddVideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Omi
         <Button 
           onClick={() => { 
             if (!title.trim() || !fileUrl) {
-              if (!fileUrl) alert("Please upload a video file first.")
+              if (!fileUrl) toast.error("Please upload a video file first.")
               return
             }
             const durationText = duration ? `Video Lesson • ${duration} mins` : "Video Lesson"
@@ -191,7 +228,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setFile(null)
       setFileUrl("")
       // Reset the file input
@@ -262,7 +299,7 @@ function AddResourceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: 
         <Button 
           onClick={() => { 
             if (!file || !fileUrl) {
-              if (!fileUrl) alert("Please upload a file first.")
+              if (!fileUrl) toast.error("Please upload a file first.")
               return
             }
             const title = getFileTitle(file.name)
@@ -372,7 +409,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setDisplayFileName(lesson.fileName || (lesson.fileUrl ? lesson.fileUrl.split('/').pop() || "Uploaded file" : ""))
       // Reset the file input
       if (fileRef.current) {
@@ -515,6 +552,7 @@ export default function EditCoursePage() {
   const [tagInput, setTagInput] = useState("")
   const [orderIndex, setOrderIndex] = useState(1)
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null)
+  const [formErrors, setFormErrors] = useState<EditCourseFormErrors>({})
 
   // ── Thumbnail ──
   const thumbnailInputRef = useRef<HTMLInputElement>(null)
@@ -590,7 +628,7 @@ export default function EditCoursePage() {
       setThumbnailPreview(response.url)
     } catch (error) {
       console.error("Thumbnail upload failed:", error)
-      alert(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
       if (thumbnailInputRef.current) {
         thumbnailInputRef.current.value = ""
       }
@@ -601,8 +639,20 @@ export default function EditCoursePage() {
 
   const handleSave = useCallback(async () => {
     if (saveState === "saving" || !apiCourse) return
+    const validationErrors = validateEditCourseForm({
+      courseCode,
+      title,
+      selectedProgramId: selectedProgramId ?? apiCourse.programId,
+      orderIndex,
+    })
+    if (Object.keys(validationErrors).length > 0) {
+      setFormErrors(validationErrors)
+      toast.error("Please fix form errors before saving.")
+      return
+    }
+    setFormErrors({})
     if (isThumbnailUploading) {
-      alert("Please wait for the thumbnail upload to finish.")
+      toast.error("Please wait for the thumbnail upload to finish.")
       return
     }
     setSaveState("saving")
@@ -868,19 +918,29 @@ export default function EditCoursePage() {
                     <Input
                       type="text"
                       value={courseCode}
-                      onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
+                      aria-invalid={Boolean(formErrors.courseCode)}
+                      onChange={(e) => {
+                        setCourseCode(e.target.value.toUpperCase())
+                        if (formErrors.courseCode) setFormErrors((prev) => ({ ...prev, courseCode: undefined }))
+                      }}
                       placeholder="e.g. STRAT-001"
                       className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-mono text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     />
+                    {formErrors.courseCode ? <p className="text-[11px] text-error mt-1">{formErrors.courseCode}</p> : null}
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Course Title <span className="text-error">*</span></label>
                     <Input
                       type="text"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      aria-invalid={Boolean(formErrors.title)}
+                      onChange={(e) => {
+                        setTitle(e.target.value)
+                        if (formErrors.title) setFormErrors((prev) => ({ ...prev, title: undefined }))
+                      }}
                       className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                     />
+                    {formErrors.title ? <p className="text-[11px] text-error mt-1">{formErrors.title}</p> : null}
                   </div>
                 </div>
                 <div>
@@ -889,7 +949,7 @@ export default function EditCoursePage() {
                     id="course-desc-edit"
                     value={description}
                     onChange={setDescription}
-                    placeholder="Mô tả nội dung khóa học...&#10;&#10;## Highlights&#10;- Điểm nổi bật 1&#10;- Điểm nổi bật 2"
+                    placeholder="Describe what learners will achieve...&#10;&#10;## Highlights&#10;- Key point 1&#10;- Key point 2"
                     rows={8}
                   />
                 </div>
@@ -1140,9 +1200,14 @@ export default function EditCoursePage() {
                   type="number"
                   min={1}
                   value={orderIndex}
-                  onChange={(e) => setOrderIndex(Number(e.target.value))}
+                  aria-invalid={Boolean(formErrors.orderIndex)}
+                  onChange={(e) => {
+                    setOrderIndex(Number(e.target.value))
+                    if (formErrors.orderIndex) setFormErrors((prev) => ({ ...prev, orderIndex: undefined }))
+                  }}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                 />
+                {formErrors.orderIndex ? <p className="text-[11px] text-error mt-1">{formErrors.orderIndex}</p> : null}
               </div>
 
               {/* Program */}
@@ -1151,7 +1216,11 @@ export default function EditCoursePage() {
                 <div className="relative">
                   <Select
                     value={selectedProgramId ?? ""}
-                    onChange={(e) => setSelectedProgramId(e.target.value || null)}
+                    aria-invalid={Boolean(formErrors.selectedProgramId)}
+                    onChange={(e) => {
+                      setSelectedProgramId(e.target.value || null)
+                      if (formErrors.selectedProgramId) setFormErrors((prev) => ({ ...prev, selectedProgramId: undefined }))
+                    }}
                     className="w-full appearance-none bg-surface-container-low rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20 pr-9"
                   >
                     <option value="">No Program</option>
@@ -1161,6 +1230,7 @@ export default function EditCoursePage() {
                   </Select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
                 </div>
+                {formErrors.selectedProgramId ? <p className="text-[11px] text-error mt-1">{formErrors.selectedProgramId}</p> : null}
               </div>
 
               {/* Tags */}

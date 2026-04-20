@@ -1,6 +1,26 @@
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+import { MoreVertical } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { eventApi, type EventResponse, type SpringPage } from "../lib/api"
 
 const typeStyles: Record<string, string> = {
@@ -11,6 +31,19 @@ const typeStyles: Record<string, string> = {
 }
 
 const DAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
+
+type PendingAction =
+  | {
+      kind: "delete"
+      eventId: string
+      title: string
+    }
+  | {
+      kind: "publish" | "unpublish"
+      eventId: string
+      title: string
+    }
+  | null
 
 
 export default function EventsPage() {
@@ -29,6 +62,8 @@ export default function EventsPage() {
   const [selectedCategory, setSelectedCategory] = useState("ALL")
   const [selectedStatus, setSelectedStatus] = useState("ALL")
   const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [isActionSubmitting, setIsActionSubmitting] = useState(false)
 
   useEffect(() => {
     fetchEvents(currentPage)
@@ -47,14 +82,38 @@ export default function EventsPage() {
   }
 
   const handleDeleteEvent = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
-      try {
-        await eventApi.remove(id)
+    try {
+      await eventApi.remove(id)
+      fetchEvents(currentPage)
+    } catch (err) {
+      console.error("Failed to delete event", err)
+      toast.error("Failed to delete event. Please try again.")
+    }
+  }
+
+  const executePendingAction = async () => {
+    if (!pendingAction) return
+    setIsActionSubmitting(true)
+    try {
+      if (pendingAction.kind === "delete") {
+        await handleDeleteEvent(pendingAction.eventId)
+      } else if (pendingAction.kind === "publish") {
+        await eventApi.publish(pendingAction.eventId)
         fetchEvents(currentPage)
-      } catch (err) {
-        console.error("Failed to delete event", err)
-        alert("Failed to delete event. Please try again.")
+      } else if (pendingAction.kind === "unpublish") {
+        await eventApi.unpublish(pendingAction.eventId)
+        fetchEvents(currentPage)
       }
+      setPendingAction(null)
+    } catch (err) {
+      console.error(err)
+      if (pendingAction.kind === "publish") {
+        toast.error("Failed to publish event.")
+      } else if (pendingAction.kind === "unpublish") {
+        toast.error("Failed to unpublish event.")
+      }
+    } finally {
+      setIsActionSubmitting(false)
     }
   }
 
@@ -210,11 +269,11 @@ export default function EventsPage() {
               <tbody className="divide-y divide-surface-container/20">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-8 text-center text-slate-400">Loading events...</td>
+                    <td colSpan={7} className="px-8 py-8 text-center text-slate-400">Loading events...</td>
                   </tr>
                 ) : filteredEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-8 py-8 text-center text-slate-400">No events found</td>
+                    <td colSpan={7} className="px-8 py-8 text-center text-slate-400">No events found</td>
                   </tr>
                 ) : filteredEvents.map((ev) => {
                   const registered = ev.engagementStats?.interested || 0;
@@ -294,53 +353,51 @@ export default function EventsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2 text-slate-400">
-                          {isDraft ? (
-                            <button 
-                              onClick={async () => {
-                                if (window.confirm("Publish this event? It will become visible on the public feed.")) {
-                                  try {
-                                    await eventApi.publish(ev.id);
-                                    fetchEvents(currentPage);
-                                  } catch (err) {
-                                    console.error(err);
-                                    alert("Failed to publish");
-                                  }
-                                }
-                              }}
-                              className="p-1.5 hover:text-primary hover:bg-primary-fixed/10 rounded-lg transition-colors" 
-                              title="Publish Event"
+                      <td className="px-8 py-5 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger nativeButton className="inline-flex w-full justify-end sm:w-auto">
+                            <span className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-foreground shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+                              <MoreVertical className="size-4" />
+                            </span>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuLabel>Event actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {isDraft ? (
+                              <DropdownMenuItem
+                                className="gap-2"
+                                onClick={() => setPendingAction({ kind: "publish", eventId: ev.id, title: ev.title })}
+                              >
+                                <span className="material-symbols-outlined text-[16px]">publish</span>
+                                Publish
+                              </DropdownMenuItem>
+                            ) : ev.status === "PUBLISHED" ? (
+                              <DropdownMenuItem
+                                className="gap-2"
+                                onClick={() => setPendingAction({ kind: "unpublish", eventId: ev.id, title: ev.title })}
+                              >
+                                <span className="material-symbols-outlined text-[16px]">drafts</span>
+                                Unpublish
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() => navigate(`/dashboard/events/edit/${ev.id}`)}
                             >
-                              <span className="material-symbols-outlined text-[18px]">publish</span>
-                            </button>
-                          ) : ev.status === "PUBLISHED" ? (
-                            <button 
-                               onClick={async () => {
-                                if (window.confirm("Unpublish this event? It will be hidden from the public feed.")) {
-                                  try {
-                                    await eventApi.unpublish(ev.id);
-                                    fetchEvents(currentPage);
-                                  } catch (err) {
-                                    console.error(err);
-                                    alert("Failed to unpublish");
-                                  }
-                                }
-                              }}
-                              className="p-1.5 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
-                              title="Unpublish (Return to Draft)"
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              className="gap-2"
+                              onClick={() => setPendingAction({ kind: "delete", eventId: ev.id, title: ev.title })}
                             >
-                              <span className="material-symbols-outlined text-[18px]">drafts</span>
-                            </button>
-                          ) : null}
-
-                          <button onClick={() => navigate(`/dashboard/events/edit/${ev.id}`)} className="p-1.5 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors" title="Edit Event">
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                          </button>
-                          <button onClick={() => handleDeleteEvent(ev.id)} className="p-1.5 hover:text-error hover:bg-error/10 rounded-lg transition-colors" title="Delete Event">
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                          </button>
-                        </div>
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   )
@@ -563,6 +620,46 @@ export default function EventsPage() {
           </motion.div>
         </div>
       )}
+
+      <AlertDialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.kind === "delete"
+                ? "Delete event?"
+                : pendingAction?.kind === "publish"
+                ? "Publish event?"
+                : "Unpublish event?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.kind === "delete"
+                ? `This will permanently delete "${pendingAction.title}". This action cannot be undone.`
+                : pendingAction?.kind === "publish"
+                ? `This will publish "${pendingAction.title}" and make it visible to users.`
+                : `This will move "${pendingAction?.title ?? ""}" back to draft and hide it from users.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isActionSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void executePendingAction()
+              }}
+              disabled={isActionSubmitting}
+              className={pendingAction?.kind === "delete" ? "bg-destructive hover:bg-destructive/90 text-white" : undefined}
+            >
+              {isActionSubmitting
+                ? "Processing..."
+                : pendingAction?.kind === "delete"
+                ? "Delete"
+                : pendingAction?.kind === "publish"
+                ? "Publish"
+                : "Unpublish"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   )
 }

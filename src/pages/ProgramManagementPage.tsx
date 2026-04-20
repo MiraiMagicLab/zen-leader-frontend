@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { z } from "zod"
 import {
+  BookOpen,
   CalendarRange,
   FolderKanban,
   Layers3,
+  MoreVertical,
   Plus,
   Search,
-  Settings2,
   Trash2,
 } from "lucide-react"
 
@@ -41,18 +43,24 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  courseApi,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   assetApi,
   programApi,
-  type CourseResponse,
   type ProgramResponse,
   type ProgramUpsertRequest,
 } from "@/lib/api"
 
 type Program = ProgramResponse
-type Course = CourseResponse
-type ProgramSheetMode = "create" | "settings" | "add-course" | null
+type ProgramSheetMode = "create" | "settings" | null
 type ProgramFilterStatus = "ALL" | "PUBLISHED" | "DRAFT"
+type ProgramFormErrors = Partial<Record<"code" | "title" | "description" | "thumbnailFile", string>>
 
 type ProgramFormState = {
   code: string
@@ -70,6 +78,35 @@ const EMPTY_PROGRAM_FORM: ProgramFormState = {
   thumbnailUrl: "",
   thumbnailFile: null,
   isPublished: false,
+}
+
+const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024
+const programFormSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Program code must be at least 2 characters.")
+    .max(50, "Program code must be at most 50 characters.")
+    .regex(/^[A-Z0-9_-]+$/, "Program code can contain only uppercase letters, numbers, '-' and '_'"),
+  title: z.string().trim().min(3, "Program title must be at least 3 characters.").max(120, "Program title must be at most 120 characters."),
+  description: z.string().trim().max(2000, "Description must be at most 2000 characters."),
+  thumbnailFile: z
+    .instanceof(File)
+    .refine((file) => file.size <= MAX_THUMBNAIL_SIZE, "Thumbnail file size must be 5MB or smaller.")
+    .nullable(),
+})
+
+function validateProgramForm(form: ProgramFormState): ProgramFormErrors {
+  const result = programFormSchema.safeParse(form)
+  if (result.success) return {}
+
+  const flattened = result.error.flatten().fieldErrors
+  return {
+    code: flattened.code?.[0],
+    title: flattened.title?.[0],
+    description: flattened.description?.[0],
+    thumbnailFile: flattened.thumbnailFile?.[0],
+  }
 }
 
 function countCourseRuns(program: Program) {
@@ -104,11 +141,13 @@ function ProgramForm({
   onChange,
   onSubmit,
   submitLabel,
+  errors,
 }: {
   form: ProgramFormState
   onChange: (next: ProgramFormState) => void
   onSubmit: () => void
   submitLabel: string
+  errors: ProgramFormErrors
 }) {
   const isInvalid = !form.code.trim() || !form.title.trim()
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
@@ -138,9 +177,11 @@ function ProgramForm({
           <Input
             id="program-code"
             value={form.code}
+            aria-invalid={Boolean(errors.code)}
             onChange={(event) => onChange({ ...form, code: event.target.value.toUpperCase() })}
             placeholder="EXEC-LEAD-2026"
           />
+          {errors.code ? <p className="text-xs text-destructive">{errors.code}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -148,9 +189,11 @@ function ProgramForm({
           <Input
             id="program-title"
             value={form.title}
+            aria-invalid={Boolean(errors.title)}
             onChange={(event) => onChange({ ...form, title: event.target.value })}
             placeholder="Zenith Executive Leadership"
           />
+          {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -166,7 +209,7 @@ function ProgramForm({
               </div>
             ) : (
               <div className="flex aspect-[16/9] w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
-                Chua co thumbnail
+                No thumbnail uploaded yet
               </div>
             )}
 
@@ -190,9 +233,10 @@ function ProgramForm({
                 Clear
               </Button>
               <p className="text-xs text-muted-foreground self-center">
-                Upload 1 anh. Neu khong upload, se giu thumbnail hien tai (khi edit).
+                Upload one image file. If you do not upload a new file, the existing thumbnail is kept in edit mode.
               </p>
             </div>
+            {errors.thumbnailFile ? <p className="text-xs text-destructive">{errors.thumbnailFile}</p> : null}
           </div>
         </div>
 
@@ -201,10 +245,12 @@ function ProgramForm({
           <Textarea
             id="program-description"
             value={form.description}
+            aria-invalid={Boolean(errors.description)}
             onChange={(event) => onChange({ ...form, description: event.target.value })}
             placeholder="Describe the program, audience, and expected outcomes."
             className="min-h-28"
           />
+          {errors.description ? <p className="text-xs text-destructive">{errors.description}</p> : null}
         </div>
 
         <div className="rounded-xl border border-border bg-muted/40 p-4">
@@ -237,28 +283,25 @@ export default function ProgramManagementPage() {
   const navigate = useNavigate()
 
   const [programs, setPrograms] = useState<Program[]>([])
-  const [allCourses, setAllCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [expandedProgramId, setExpandedProgramId] = useState("")
+  const [editingProgramId, setEditingProgramId] = useState("")
   const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
 
   const [filterSearch, setFilterSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<ProgramFilterStatus>("ALL")
-  const [courseSearch, setCourseSearch] = useState("")
 
   const [programForm, setProgramForm] = useState<ProgramFormState>(EMPTY_PROGRAM_FORM)
+  const [programFormErrors, setProgramFormErrors] = useState<ProgramFormErrors>({})
 
   async function loadData() {
     setLoading(true)
     setError(null)
 
     try {
-      const [programList, courseList] = await Promise.all([programApi.getAll(), courseApi.getAll()])
+      const programList = await programApi.getAll()
       setPrograms(programList)
-      setAllCourses(courseList)
-      setExpandedProgramId((current) => current || programList[0]?.id || "")
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load LMS program flow.")
     } finally {
@@ -287,35 +330,6 @@ export default function ProgramManagementPage() {
     })
   }, [filterSearch, filterStatus, programs])
 
-  const expandedProgram = useMemo(
-    () => filteredPrograms.find((program) => program.id === expandedProgramId) ?? programs.find((program) => program.id === expandedProgramId) ?? null,
-    [expandedProgramId, filteredPrograms, programs],
-  )
-
-  const availableCourses = useMemo(() => {
-    if (!expandedProgram) return []
-
-    const existingIds = new Set(expandedProgram.courses.map((course) => course.id))
-    const search = courseSearch.trim().toLowerCase()
-
-    return allCourses.filter((course) => {
-      if (existingIds.has(course.id)) return false
-      if (!search) return true
-
-      return (
-        course.title.toLowerCase().includes(search) ||
-        course.code.toLowerCase().includes(search) ||
-        (course.category ?? "").toLowerCase().includes(search)
-      )
-    })
-  }, [allCourses, courseSearch, expandedProgram])
-
-  useEffect(() => {
-    if (!expandedProgramId && filteredPrograms[0]) {
-      setExpandedProgramId(filteredPrograms[0].id)
-    }
-  }, [expandedProgramId, filteredPrograms])
-
   const totalCourses = programs.reduce((total, program) => total + program.courses.length, 0)
   const totalCourseRuns = programs.reduce((total, program) => total + countCourseRuns(program), 0)
   const publishedPrograms = programs.filter((program) => program.isPublished).length
@@ -330,36 +344,45 @@ export default function ProgramManagementPage() {
   }
 
   async function handleCreateProgram() {
+    const nextErrors = validateProgramForm(programForm)
+    if (Object.keys(nextErrors).length > 0) {
+      setProgramFormErrors(nextErrors)
+      return
+    }
+    setProgramFormErrors({})
+
     const thumbnailUrl = await resolveProgramThumbnailUrl()
     const created = await programApi.create(toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }))
     setPrograms((current) => [created, ...current])
-    setExpandedProgramId(created.id)
     setProgramForm(EMPTY_PROGRAM_FORM)
     setSheetMode(null)
   }
 
   async function handleSaveProgramSettings() {
-    if (!expandedProgram) return
+    if (!editingProgramId) return
+    const editingProgram = programs.find((program) => program.id === editingProgramId)
+    if (!editingProgram) return
+    const nextErrors = validateProgramForm(programForm)
+    if (Object.keys(nextErrors).length > 0) {
+      setProgramFormErrors(nextErrors)
+      return
+    }
+    setProgramFormErrors({})
 
     const thumbnailUrl = await resolveProgramThumbnailUrl()
     const updated = await programApi.update(
-      expandedProgram.id,
-      toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }, expandedProgram.publishedAt),
+      editingProgram.id,
+      toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }, editingProgram.publishedAt),
     )
 
     setPrograms((current) => current.map((program) => (program.id === updated.id ? updated : program)))
+    setEditingProgramId("")
     setSheetMode(null)
   }
 
   async function handleDeleteProgram(programId: string) {
     await programApi.remove(programId)
-    setPrograms((current) => {
-      const next = current.filter((program) => program.id !== programId)
-      if (expandedProgramId === programId) {
-        setExpandedProgramId(next[0]?.id ?? "")
-      }
-      return next
-    })
+    setPrograms((current) => current.filter((program) => program.id !== programId))
   }
 
   async function handleTogglePublished(program: Program) {
@@ -375,29 +398,10 @@ export default function ProgramManagementPage() {
     setPrograms((current) => current.map((item) => (item.id === updated.id ? updated : item)))
   }
 
-  async function handleAddCourse(course: Course) {
-    if (!expandedProgram) return
-
-    const nextOrderIndex = expandedProgram.courses.length
-    await courseApi.update(course.id, {
-      code: course.code,
-      title: course.title,
-      description: course.description,
-      level: course.level,
-      thumbnailUrl: course.thumbnailUrl,
-      category: course.category,
-      programId: expandedProgram.id,
-      orderIndex: nextOrderIndex,
-      tags: course.tags,
-    })
-
-    setCourseSearch("")
-    setSheetMode(null)
-    await loadData()
-  }
-
   function openCreateSheet() {
     setProgramForm(EMPTY_PROGRAM_FORM)
+    setProgramFormErrors({})
+    setEditingProgramId("")
     setSheetMode("create")
   }
 
@@ -437,16 +441,16 @@ export default function ProgramManagementPage() {
                   Program → Course → Course Run
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                  Danh sach program theo dang bang. Mo tung program de xem course ben trong, sau do di tiep vao
-                  chi tiet course va course run.
+                  Manage programs in a clean table view. Open the dedicated detail page to manage related
+                  courses and course runs.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={openCreateSheet}>
-                <Plus />
-                New Program
+              <Button onClick={openCreateSheet} className="gap-2">
+                <Plus className="size-4 shrink-0" />
+                New program
               </Button>
             </div>
           </div>
@@ -494,7 +498,7 @@ export default function ProgramManagementPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle>Programs</CardTitle>
-                  <CardDescription>Program list table. Click a row to expand course list.</CardDescription>
+                  <CardDescription>Program list table. Open detail page to manage courses of each program.</CardDescription>
                 </div>
                 <Badge variant="outline">{publishedPrograms} published</Badge>
               </div>
@@ -524,14 +528,14 @@ export default function ProgramManagementPage() {
             <CardContent className="pt-0">
               <div className="overflow-hidden rounded-xl border border-border/70">
                 <div className="overflow-x-auto">
-                  <Table className="min-w-[560px] sm:min-w-[640px] lg:min-w-[680px] text-left text-sm">
+                  <Table className="min-w-[720px] text-left text-sm sm:min-w-[800px]">
                     <TableHeader className="bg-muted/60 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                      <TableRow>
+                      <TableRow className="border-b border-border/60 hover:bg-transparent">
                         <TableHead className="px-4 py-3 font-medium">Program</TableHead>
-                        <TableHead className="px-4 py-3 font-medium">Courses</TableHead>
-                        <TableHead className="px-4 py-3 font-medium">Course runs</TableHead>
-                        <TableHead className="px-4 py-3 font-medium">Status</TableHead>
-                        <TableHead className="px-4 py-3 font-medium text-right">Actions</TableHead>
+                        <TableHead className="px-4 py-3 font-medium text-center sm:text-left">Courses</TableHead>
+                        <TableHead className="px-4 py-3 font-medium text-center sm:text-left">Course runs</TableHead>
+                        <TableHead className="px-4 py-3 font-medium">Visibility</TableHead>
+                        <TableHead className="px-4 py-3 text-right font-medium">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -543,25 +547,15 @@ export default function ProgramManagementPage() {
                         </TableRow>
                       ) : (
                         filteredPrograms.map((program) => {
-                          const isExpanded = expandedProgramId === program.id
-                          const courseRows = program.courses ?? []
                           return (
-                            <>
-                              <TableRow
-                                key={program.id}
-                                className="cursor-pointer border-t border-border/60 transition-colors hover:bg-muted/40"
-                                onClick={() => setExpandedProgramId((current) => (current === program.id ? "" : program.id))}
-                              >
+                            <TableRow key={program.id} className="border-t border-border/60 transition-colors hover:bg-muted/40">
                                 <TableCell className="px-4 py-4">
                                   <div className="flex items-start gap-3">
                                     <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary/12 text-secondary">
                                       <FolderKanban className="size-5" />
                                     </div>
                                     <div className="min-w-0 space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <p className="truncate font-medium text-foreground">{program.title}</p>
-                                        {isExpanded ? <Badge variant="secondary">Expanded</Badge> : null}
-                                      </div>
+                                      <p className="truncate font-medium text-foreground">{program.title}</p>
                                       <p className="font-mono text-xs text-muted-foreground">{program.code}</p>
                                       {program.description ? (
                                         <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
@@ -571,134 +565,78 @@ export default function ProgramManagementPage() {
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="px-4 py-4 font-medium text-foreground">{program.courses.length}</TableCell>
-                                <TableCell className="px-4 py-4 font-medium text-foreground">{countCourseRuns(program)}</TableCell>
+                                <TableCell className="px-4 py-4 text-center font-medium text-foreground sm:text-left">
+                                  {program.courses.length}
+                                </TableCell>
+                                <TableCell className="px-4 py-4 text-center font-medium text-foreground sm:text-left">
+                                  {countCourseRuns(program)}
+                                </TableCell>
                                 <TableCell className="px-4 py-4">
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      void runAsyncAction(async () => {
-                                        await handleTogglePublished(program)
-                                      })
-                                    }}
-                                  >
+                                  <div className="flex items-start">
                                     <Badge variant={program.isPublished ? "secondary" : "outline"}>
                                       {program.isPublished ? "Published" : "Draft"}
                                     </Badge>
-                                  </button>
-                                </TableCell>
-                                <TableCell className="px-4 py-4">
-                                  <div className="flex justify-end gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        setExpandedProgramId(program.id)
-                                        setProgramForm(toProgramFormState(program))
-                                        setSheetMode("settings")
-                                      }}
-                                    >
-                                      <Settings2 />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        void runAsyncAction(async () => {
-                                          await handleDeleteProgram(program.id)
-                                        })
-                                      }}
-                                    >
-                                      <Trash2 />
-                                    </Button>
                                   </div>
                                 </TableCell>
+                                <TableCell className="px-4 py-4 text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger nativeButton className="inline-flex w-full justify-end sm:w-auto">
+                                      <span className="inline-flex size-9 items-center justify-center rounded-md border border-input bg-background text-foreground shadow-xs transition-[color,box-shadow] hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+                                        <MoreVertical className="size-4" />
+                                      </span>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-52">
+                                      <DropdownMenuLabel>Program actions</DropdownMenuLabel>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="gap-2"
+                                        onClick={() =>
+                                          navigate(`/dashboard/courses?programId=${encodeURIComponent(program.id)}`)
+                                        }
+                                      >
+                                        <BookOpen className="size-4 shrink-0" />
+                                        Manage courses
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="gap-2"
+                                        onClick={() => {
+                                          setEditingProgramId(program.id)
+                                          setProgramForm(toProgramFormState(program))
+                                          setProgramFormErrors({})
+                                          setSheetMode("settings")
+                                        }}
+                                      >
+                                        <Layers3 className="size-4 shrink-0" />
+                                        Edit program
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="gap-2"
+                                        onClick={() => {
+                                          void runAsyncAction(async () => {
+                                            await handleTogglePublished(program)
+                                          })
+                                        }}
+                                      >
+                                        <CalendarRange className="size-4 shrink-0" />
+                                        {program.isPublished ? "Unpublish program" : "Publish program"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        variant="destructive"
+                                        className="gap-2"
+                                        onClick={() => {
+                                          void runAsyncAction(async () => {
+                                            await handleDeleteProgram(program.id)
+                                          })
+                                        }}
+                                      >
+                                        <Trash2 className="size-4 shrink-0" />
+                                        Delete program
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
                               </TableRow>
-
-                              {isExpanded ? (
-                                <TableRow key={`${program.id}-courses`} className="bg-muted/20">
-                                  <TableCell colSpan={5} className="px-4 py-4">
-                                    <div className="space-y-3">
-                                      <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div>
-                                          <p className="text-sm font-medium text-foreground">Courses</p>
-                                          <p className="text-xs text-muted-foreground">Chon course de vao course detail va course runs.</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={(event) => {
-                                              event.stopPropagation()
-                                              setExpandedProgramId(program.id)
-                                              setProgramForm(toProgramFormState(program))
-                                              setSheetMode("add-course")
-                                            }}
-                                          >
-                                            <Plus className="size-4" />
-                                            Add Course
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      {courseRows.length === 0 ? (
-                                        <div className="rounded-xl border border-dashed border-border bg-background/60 p-6 text-sm text-muted-foreground">
-                                          Program nay chua co course.
-                                        </div>
-                                      ) : (
-                                        <div className="overflow-hidden rounded-xl border border-border bg-background">
-                                          <Table>
-                                            <TableHeader>
-                                              <TableRow>
-                                                <TableHead>Course</TableHead>
-                                                <TableHead className="w-[120px]">Runs</TableHead>
-                                                <TableHead className="w-[140px] text-right">Action</TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {courseRows.map((course) => (
-                                                <TableRow
-                                                  key={course.id}
-                                                  className="cursor-pointer hover:bg-muted/30"
-                                                  onClick={(event) => {
-                                                    event.stopPropagation()
-                                                    navigate(`/dashboard/courses/${course.id}`)
-                                                  }}
-                                                >
-                                                  <TableCell>
-                                                    <div className="space-y-0.5">
-                                                      <p className="font-medium text-foreground">{course.title}</p>
-                                                      <p className="text-xs text-muted-foreground font-mono">{course.code}</p>
-                                                    </div>
-                                                  </TableCell>
-                                                  <TableCell className="font-medium text-foreground">{course.courseRuns.length}</TableCell>
-                                                  <TableCell className="text-right">
-                                                    <Button
-                                                      variant="outline"
-                                                      size="sm"
-                                                      onClick={(event) => {
-                                                        event.stopPropagation()
-                                                        navigate(`/dashboard/courses/${course.id}`)
-                                                      }}
-                                                    >
-                                                      Open
-                                                    </Button>
-                                                  </TableCell>
-                                                </TableRow>
-                                              ))}
-                                            </TableBody>
-                                          </Table>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ) : null}
-                            </>
                           )
                         })
                       )}
@@ -724,6 +662,7 @@ export default function ProgramManagementPage() {
               <ProgramForm
                 form={programForm}
                 onChange={setProgramForm}
+                errors={programFormErrors}
                 onSubmit={() => {
                   void runAsyncAction(handleCreateProgram)
                 }}
@@ -732,7 +671,7 @@ export default function ProgramManagementPage() {
             </>
           ) : null}
 
-          {sheetMode === "settings" && expandedProgram ? (
+          {sheetMode === "settings" && editingProgramId ? (
             <>
               <SheetHeader>
                 <SheetTitle>Edit Program</SheetTitle>
@@ -743,74 +682,12 @@ export default function ProgramManagementPage() {
               <ProgramForm
                 form={programForm}
                 onChange={setProgramForm}
+                errors={programFormErrors}
                 onSubmit={() => {
                   void runAsyncAction(handleSaveProgramSettings)
                 }}
                 submitLabel="Save Changes"
               />
-            </>
-          ) : null}
-
-          {sheetMode === "add-course" && expandedProgram ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>Add Course To Program</SheetTitle>
-                <SheetDescription>
-                  Reassign a course into <span className="font-medium text-foreground">{expandedProgram.title}</span>.
-                  Each selected course keeps its existing course runs.
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="flex min-h-0 flex-1 flex-col">
-                <div className="space-y-4 px-4 pb-4">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={courseSearch}
-                      onChange={(event) => setCourseSearch(event.target.value)}
-                      placeholder="Search by course title, code, or category"
-                      className="pl-8"
-                    />
-                  </div>
-
-                  <div className="min-h-0 space-y-2 overflow-y-auto">
-                    {availableCourses.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                        No available course matches this search.
-                      </div>
-                    ) : (
-                      availableCourses.map((course) => (
-                        <button
-                          key={course.id}
-                          type="button"
-                          onClick={() => {
-                            void runAsyncAction(async () => {
-                              await handleAddCourse(course)
-                            })
-                          }}
-                          className="flex w-full items-start justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
-                        >
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-medium text-foreground">{course.title}</p>
-                              <Badge variant="outline">{course.code}</Badge>
-                              {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
-                            </div>
-                            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                              {course.description || "No description"}
-                            </p>
-                          </div>
-
-                          <div className="ml-4 shrink-0 text-right">
-                            <p className="text-xs text-muted-foreground">Runs</p>
-                            <p className="font-medium text-foreground">{course.courseRuns.length}</p>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
             </>
           ) : null}
         </SheetContent>

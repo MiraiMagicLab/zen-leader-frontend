@@ -173,9 +173,9 @@ export default function CourseManagementPage() {
               </div>
             </div>
 
-            <Button onClick={() => navigate("/dashboard/courses/create")}>
-              <Plus />
-              New Course
+            <Button onClick={() => navigate("/dashboard/courses/create")} className="gap-2">
+              <Plus className="size-4 shrink-0" />
+              New course
             </Button>
           </div>
 
@@ -281,20 +281,29 @@ export default function CourseManagementPage() {
                       </div>
 
                       <div className="flex shrink-0 flex-wrap gap-2">
-                        <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}>
-                          <PencilLine />
-                          Edit
-                        </Button>
-                        <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
-                          View Detail
-                          <ChevronRight />
+                        <Button
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}
+                        >
+                          <PencilLine className="size-4 shrink-0" />
+                          Edit course
                         </Button>
                         <Button
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => navigate(`/dashboard/courses/${course.id}`)}
+                        >
+                          View course detail
+                          <ChevronRight className="size-4 shrink-0" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => setDeletingCourse(course)}
                         >
-                          <Trash2 />
+                          <Trash2 className="size-4 shrink-0" />
+                          Delete course
                         </Button>
                       </div>
                     </div>
@@ -337,7 +346,7 @@ export default function CourseManagementPage() {
                               key={run.id}
                               type="button"
                               onClick={() => navigate(`/dashboard/runs/${run.id}`)}
-                              className="flex items-center justify-between rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                              className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background px-4 py-3 text-left transition-colors hover:bg-muted/30"
                             >
                               <div>
                                 <div className="flex items-center gap-2">
@@ -348,7 +357,10 @@ export default function CourseManagementPage() {
                                   {run.chapters.length} chapters
                                 </p>
                               </div>
-                              <ChevronRight className="size-4 text-muted-foreground" />
+                              <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+                                Open run
+                                <ChevronRight className="size-4" />
+                              </span>
                             </button>
                           ))}
                         </div>

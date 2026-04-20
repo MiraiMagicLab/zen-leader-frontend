@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useNavigate, Link, useSearchParams } from "react-router-dom"
+import { z } from "zod"
+import { toast } from "sonner"
 import { programApi, courseApi, courseRunApi, chapterApi, lessonApi, assetApi, type ProgramResponse } from "@/lib/api"
 import MarkdownEditor from "@/components/MarkdownEditor"
 import ReactMarkdown from "react-markdown"
@@ -38,6 +40,42 @@ interface CourseRun {
   status: "DRAFT" | "PUBLISHED"
   chapters: Chapter[]
   collapsed: boolean
+}
+
+type CourseFormErrors = Partial<Record<"courseCode" | "courseTitle" | "selectedProgramId" | "orderIndex", string>>
+
+const createCourseSchema = z.object({
+  courseCode: z
+    .string()
+    .trim()
+    .min(2, "Course code must be at least 2 characters.")
+    .max(50, "Course code must be at most 50 characters.")
+    .regex(/^[A-Z0-9_-]+$/, "Course code can contain only uppercase letters, numbers, '-' and '_'."),
+  courseTitle: z.string().trim().min(3, "Course title must be at least 3 characters.").max(160, "Course title must be at most 160 characters."),
+  selectedProgramId: z.string().trim().min(1, "Please select a program."),
+  orderIndex: z.number().int("Order index must be an integer.").min(0, "Order index must be 0 or greater."),
+})
+
+function validateCreateCourseForm(input: {
+  courseCode: string
+  courseTitle: string
+  selectedProgramId: string | null
+  orderIndex: number
+}): CourseFormErrors {
+  const result = createCourseSchema.safeParse({
+    courseCode: input.courseCode,
+    courseTitle: input.courseTitle,
+    selectedProgramId: input.selectedProgramId ?? "",
+    orderIndex: input.orderIndex,
+  })
+  if (result.success) return {}
+  const flattened = result.error.flatten().fieldErrors
+  return {
+    courseCode: flattened.courseCode?.[0],
+    courseTitle: flattened.courseTitle?.[0],
+    selectedProgramId: flattened.selectedProgramId?.[0],
+    orderIndex: flattened.orderIndex?.[0],
+  }
 }
 
 // ─── Initial Curriculum Data ──────────────────────────────────────────────────
@@ -153,7 +191,7 @@ function AddContentModal({
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       clearSelectedFile()
     } finally {
       setIsUploading(false)
@@ -249,7 +287,7 @@ function AddContentModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. 12:45 • High Definition"
-            className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
+            className="h-12 rounded-xl border-border bg-muted/40 px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
           />
         </div>
       </div>
@@ -262,7 +300,7 @@ function AddContentModal({
           onClick={() => {
             if (!title.trim()) return
             if (type !== "text" && !fileUrl) {
-              alert("Please upload a file first.")
+              toast.error("Please upload a file first.")
               return
             }
             onAdd({ type, title: title.trim(), description, fileUrl, fileName: file?.name })
@@ -325,7 +363,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
       setFileUrl(response.url)
     } catch (error) {
       console.error("Upload failed:", error)
-      alert(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "File upload failed. Please check your connection and try again.")
       setFileUrl(lesson.fileUrl)
       setFileName(lesson.fileName ?? null)
       setImagePreview(lesson.type === "photo" ? (lesson.fileUrl ?? null) : null)
@@ -404,7 +442,7 @@ function EditLessonModal({ lesson, onClose, onSave }: { lesson: LessonItem; onCl
           onClick={() => {
             if (!title.trim()) return
             if (hasFileUpload && !fileUrl) {
-              alert("Please upload a file first.")
+              toast.error("Please upload a file first.")
               return
             }
             onSave(title.trim(), description, fileUrl, fileName ?? undefined)
@@ -658,6 +696,7 @@ export default function CreateCoursePage() {
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [isBannerUploading, setIsBannerUploading] = useState(false)
+  const [formErrors, setFormErrors] = useState<CourseFormErrors>({})
 
   // ── Step 2 state ──
   const [courseRuns, setCourseRuns] = useState<CourseRun[]>(initialCourseRuns)
@@ -673,13 +712,24 @@ export default function CreateCoursePage() {
   // ── Save via API cascade ──
   const saveCourse = useCallback(async () => {
     if (saving) return
+    const validationErrors = validateCreateCourseForm({
+      courseCode,
+      courseTitle,
+      selectedProgramId: selectedProgramId ?? programIdParam,
+      orderIndex,
+    })
+    if (Object.keys(validationErrors).length > 0) {
+      setFormErrors(validationErrors)
+      toast.error("Please fix form errors before saving.")
+      return
+    }
     if (isBannerUploading) {
-      alert("Please wait for the thumbnail upload to finish.")
+      toast.error("Please wait for the thumbnail upload to finish.")
       return
     }
     const targetProgramId = selectedProgramId ?? programIdParam
     if (!targetProgramId) {
-      alert("Please select a program before saving.")
+      toast.error("Please select a program before saving.")
       return
     }
     setSaving(true)
@@ -742,7 +792,7 @@ export default function CreateCoursePage() {
       navigate(programIdParam ? "/dashboard/programs" : "/dashboard/courses")
     } catch (e) {
       console.error("Failed to save course:", e)
-      alert("Failed to save course. Please try again.")
+      toast.error("Failed to save course. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -825,7 +875,7 @@ export default function CreateCoursePage() {
       setBannerPreview(response.url)
     } catch (error) {
       console.error("Thumbnail upload failed:", error)
-      alert(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
+      toast.error(error instanceof Error ? error.message : "Thumbnail upload failed. Please check your connection and try again.")
       if (bannerInputRef.current) {
         bannerInputRef.current.value = ""
       }
@@ -869,11 +919,16 @@ export default function CreateCoursePage() {
                   <Input
                     type="text"
                     value={courseCode}
-                    onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
+                    aria-invalid={Boolean(formErrors.courseCode)}
+                    onChange={(e) => {
+                      setCourseCode(e.target.value.toUpperCase())
+                      if (formErrors.courseCode) setFormErrors((prev) => ({ ...prev, courseCode: undefined }))
+                    }}
                     placeholder="e.g. STRAT-001"
                     className="h-12 rounded-xl border-slate-200 bg-background px-5 text-sm font-mono text-slate-700 placeholder:text-slate-300 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">Unique identifier — must be unique across all courses.</p>
+                  {formErrors.courseCode ? <p className="text-[11px] text-error mt-1">{formErrors.courseCode}</p> : null}
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">
@@ -882,10 +937,15 @@ export default function CreateCoursePage() {
                   <Input
                     type="text"
                     value={courseTitle}
-                    onChange={(e) => setCourseTitle(e.target.value)}
+                    aria-invalid={Boolean(formErrors.courseTitle)}
+                    onChange={(e) => {
+                      setCourseTitle(e.target.value)
+                      if (formErrors.courseTitle) setFormErrors((prev) => ({ ...prev, courseTitle: undefined }))
+                    }}
                     placeholder="e.g. Strategic Leadership for the AI Era"
                     className="h-14 rounded-xl border-slate-200 bg-background px-5 text-base text-slate-700 placeholder:text-slate-300 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
+                  {formErrors.courseTitle ? <p className="text-[11px] text-error mt-1">{formErrors.courseTitle}</p> : null}
                 </div>
               </div>
 
@@ -934,20 +994,17 @@ export default function CreateCoursePage() {
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">
                     Level <span className="text-slate-400 font-normal normal-case tracking-normal">· CourseResponse.level</span>
                   </label>
-                  <div className="relative">
-                    <Select
-                      value={courseLevel}
-                      onChange={(e) => setCourseLevel(e.target.value)}
-                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
-                    >
-                      <option value="">— Select Level —</option>
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                      <option value="Expert">Expert</option>
-                    </Select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
-                  </div>
+                  <Select
+                    value={courseLevel}
+                    onChange={(e) => setCourseLevel(e.target.value)}
+                    className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
+                  >
+                    <option value="">— Select Level —</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Expert">Expert</option>
+                  </Select>
                 </div>
 
                 {/* Category — maps to CourseUpsertRequest.category */}
@@ -955,37 +1012,36 @@ export default function CreateCoursePage() {
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">
                     Category <span className="text-slate-400 font-normal normal-case tracking-normal">· CourseResponse.category</span>
                   </label>
-                  <div className="relative">
-                    <Select
-                      value={courseCategory}
-                      onChange={(e) => setCourseCategory(e.target.value)}
-                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
-                    >
-                      <option value="">— Select Category —</option>
-                      <option value="STRATEGIC MASTERY">Strategic Mastery</option>
-                      <option value="HUMAN CENTRICITY">Human Centricity</option>
-                      <option value="FINANCE & OPS">Finance &amp; Ops</option>
-                    </Select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
-                  </div>
+                  <Select
+                    value={courseCategory}
+                    onChange={(e) => setCourseCategory(e.target.value)}
+                    className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
+                  >
+                    <option value="">— Select Category —</option>
+                    <option value="STRATEGIC MASTERY">Strategic Mastery</option>
+                    <option value="HUMAN CENTRICITY">Human Centricity</option>
+                    <option value="FINANCE & OPS">Finance &amp; Ops</option>
+                  </Select>
                 </div>
 
                 {/* Program */}
                 <div>
                   <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Program</label>
-                  <div className="relative">
-                    <Select
-                      value={selectedProgramId ?? ""}
-                      onChange={(e) => setSelectedProgramId(e.target.value || null)}
-                      className="h-12 appearance-none rounded-xl border-slate-200 bg-background px-4 pr-10 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
-                    >
-                      <option value="">— No Program —</option>
-                      {allPrograms.map((p) => (
-                        <option key={p.id} value={p.id}>{p.title} ({p.code})</option>
-                      ))}
-                    </Select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
-                  </div>
+                  <Select
+                    value={selectedProgramId ?? ""}
+                    aria-invalid={Boolean(formErrors.selectedProgramId)}
+                    onChange={(e) => {
+                      setSelectedProgramId(e.target.value || null)
+                      if (formErrors.selectedProgramId) setFormErrors((prev) => ({ ...prev, selectedProgramId: undefined }))
+                    }}
+                    className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm font-semibold text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
+                  >
+                    <option value="">— No Program —</option>
+                    {allPrograms.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title} ({p.code})</option>
+                    ))}
+                  </Select>
+                  {formErrors.selectedProgramId ? <p className="text-[11px] text-error mt-1">{formErrors.selectedProgramId}</p> : null}
                 </div>
 
                 {/* Order Index */}
@@ -995,10 +1051,15 @@ export default function CreateCoursePage() {
                     type="number"
                     min={0}
                     value={orderIndex}
-                    onChange={(e) => setOrderIndex(Number(e.target.value))}
+                    aria-invalid={Boolean(formErrors.orderIndex)}
+                    onChange={(e) => {
+                      setOrderIndex(Number(e.target.value))
+                      if (formErrors.orderIndex) setFormErrors((prev) => ({ ...prev, orderIndex: undefined }))
+                    }}
                     className="h-12 rounded-xl border-slate-200 bg-background px-4 text-sm text-slate-700 focus-visible:border-secondary focus-visible:ring-secondary/20"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">Position of this course within the program.</p>
+                  {formErrors.orderIndex ? <p className="text-[11px] text-error mt-1">{formErrors.orderIndex}</p> : null}
                 </div>
 
                 {/* Tags — maps to CourseUpsertRequest.tags / CourseResponse.tags */}
@@ -1063,7 +1124,7 @@ export default function CreateCoursePage() {
         </motion.div>
 
         {/* Sticky Footer */}
-        <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between z-30">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 sm:px-6 flex items-center justify-between z-30">
           <Button
             onClick={() => navigate(programIdParam ? "/dashboard/programs" : "/dashboard/courses")}
             variant="ghost"
@@ -1073,7 +1134,20 @@ export default function CreateCoursePage() {
             Discard Changes
           </Button>
           <Button
-            onClick={() => setStep(2)}
+            onClick={() => {
+              const validationErrors = validateCreateCourseForm({
+                courseCode,
+                courseTitle,
+                selectedProgramId: selectedProgramId ?? programIdParam,
+                orderIndex,
+              })
+              if (Object.keys(validationErrors).length > 0) {
+                setFormErrors(validationErrors)
+                return
+              }
+              setFormErrors({})
+              setStep(2)
+            }}
             variant="default"
             size="sm"
             className="h-9 gap-1.5 bg-primary-fixed px-4 text-xs font-bold text-on-primary-fixed shadow-md hover:shadow-lg"
@@ -1240,7 +1314,7 @@ export default function CreateCoursePage() {
         </motion.div>
 
         {/* Sticky Footer */}
-        <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between z-30">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-4 sm:px-8 flex items-center justify-between z-30">
           <Button
             onClick={() => setStep(2)}
             variant="ghost"
@@ -1545,7 +1619,7 @@ export default function CreateCoursePage() {
       </motion.div>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between z-30">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-4 sm:px-8 flex items-center justify-between z-30">
         <Button onClick={() => setStep(1)} variant="ghost" size="sm" className="h-9 gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Back to Basic Info

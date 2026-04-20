@@ -1,6 +1,8 @@
 import { motion } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { z } from "zod"
+import { toast } from "sonner"
 import { eventApi, assetApi } from "../lib/api"
 import MarkdownEditor from "../components/MarkdownEditor"
 
@@ -12,6 +14,25 @@ const TIMEZONES = [
   "GMT+0 (UTC)",
   "GMT+7 (Indochina Time)",
 ]
+
+type EventFormErrors = Partial<Record<"eventName" | "eventDate" | "startTime" | "endTime" | "venue", string>>
+
+const editEventSchema = z.object({
+  eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
+  eventDate: z.string().min(1, "Please select an event date."),
+  startTime: z.string().min(1, "Please select a start time."),
+  endTime: z.string().min(1, "Please select an end time."),
+  locationType: z.enum(["Physical", "Online"]),
+  venue: z.string(),
+}).superRefine((value, ctx) => {
+  if (value.locationType === "Physical" && !value.venue.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["venue"],
+      message: "Please enter a venue for physical events.",
+    })
+  }
+})
 
 export default function EditEventPage() {
   const { id } = useParams<{ id: string }>()
@@ -44,6 +65,7 @@ export default function EditEventPage() {
 
   // Registration
   const [capacity, setCapacity] = useState(50)
+  const [formErrors, setFormErrors] = useState<EventFormErrors>({})
 
   useEffect(() => {
     if (!id) return
@@ -96,7 +118,7 @@ export default function EditEventPage() {
         }
       } catch (err) {
         console.error(err)
-        alert("Failed to load event details")
+        toast.error("Failed to load event details.")
         navigate("/dashboard/events")
       } finally {
         setIsLoading(false)
@@ -121,10 +143,27 @@ export default function EditEventPage() {
 
 
   const saveEvent = async (status: "open" | "draft") => {
-    if (!eventName.trim() || !eventDate || !startTime || !endTime) {
-      alert("Please fill in event name, date, start and end times.")
+    const validation = editEventSchema.safeParse({
+      eventName,
+      eventDate,
+      startTime,
+      endTime,
+      locationType,
+      venue,
+    })
+    if (!validation.success) {
+      const fieldErrors = validation.error.flatten().fieldErrors
+      setFormErrors({
+        eventName: fieldErrors.eventName?.[0],
+        eventDate: fieldErrors.eventDate?.[0],
+        startTime: fieldErrors.startTime?.[0],
+        endTime: fieldErrors.endTime?.[0],
+        venue: fieldErrors.venue?.[0],
+      })
+      toast.error("Please fix form errors before saving.")
       return
     }
+    setFormErrors({})
 
     if (!id) return;
     setIsSubmitting(true)
@@ -161,7 +200,7 @@ export default function EditEventPage() {
       navigate("/dashboard/events")
     } catch (err) {
       console.error(err)
-      alert("Failed to update event")
+      toast.error("Failed to update event.")
     } finally {
       setIsSubmitting(false)
     }
@@ -214,10 +253,15 @@ export default function EditEventPage() {
                 <label className="text-[11px] font-bold text-secondary uppercase tracking-widest block mb-2">Event Name</label>
                 <input
                   value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
+                  aria-invalid={Boolean(formErrors.eventName)}
+                  onChange={(e) => {
+                    setEventName(e.target.value)
+                    if (formErrors.eventName) setFormErrors((prev) => ({ ...prev, eventName: undefined }))
+                  }}
                   placeholder="e.g. Q4 Executive Leadership Summit"
                   className="w-full border-b-2 border-slate-200 focus:border-secondary bg-transparent px-0 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none transition-colors"
                 />
+                {formErrors.eventName ? <p className="text-[11px] text-error mt-1">{formErrors.eventName}</p> : null}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
@@ -330,9 +374,14 @@ export default function EditEventPage() {
                 <input
                   type="date"
                   value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
+                  aria-invalid={Boolean(formErrors.eventDate)}
+                  onChange={(e) => {
+                    setEventDate(e.target.value)
+                    if (formErrors.eventDate) setFormErrors((prev) => ({ ...prev, eventDate: undefined }))
+                  }}
                   className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                 />
+                {formErrors.eventDate ? <p className="text-[11px] text-error mt-1">{formErrors.eventDate}</p> : null}
               </div>
               <div className="space-y-3">
                 <div>
@@ -340,18 +389,28 @@ export default function EditEventPage() {
                   <input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    aria-invalid={Boolean(formErrors.startTime)}
+                    onChange={(e) => {
+                      setStartTime(e.target.value)
+                      if (formErrors.startTime) setFormErrors((prev) => ({ ...prev, startTime: undefined }))
+                    }}
                     className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                   />
+                  {formErrors.startTime ? <p className="text-[11px] text-error mt-1">{formErrors.startTime}</p> : null}
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">End Time</label>
                   <input
                     type="time"
                     value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    aria-invalid={Boolean(formErrors.endTime)}
+                    onChange={(e) => {
+                      setEndTime(e.target.value)
+                      if (formErrors.endTime) setFormErrors((prev) => ({ ...prev, endTime: undefined }))
+                    }}
                     className="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                   />
+                  {formErrors.endTime ? <p className="text-[11px] text-error mt-1">{formErrors.endTime}</p> : null}
                 </div>
               </div>
               <div>
@@ -395,11 +454,16 @@ export default function EditEventPage() {
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">place</span>
                   <input
                     value={venue}
-                    onChange={(e) => setVenue(e.target.value)}
+                    aria-invalid={Boolean(formErrors.venue)}
+                    onChange={(e) => {
+                      setVenue(e.target.value)
+                      if (formErrors.venue) setFormErrors((prev) => ({ ...prev, venue: undefined }))
+                    }}
                     placeholder="Enter venue address..."
                     className="w-full bg-surface-container-low rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/20"
                   />
                 </div>
+                {formErrors.venue ? <p className="text-[11px] text-error mt-1">{formErrors.venue}</p> : null}
               </div>
             ) : (
               <div className="flex items-center gap-3 bg-primary-fixed/10 rounded-xl px-4 py-4">

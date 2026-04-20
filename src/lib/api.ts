@@ -107,6 +107,7 @@ export interface UserResponse {
   email: string
   displayName: string
   avatarUrl: string | null
+  backgroundUrl: string | null
   isActive: boolean
   isVerified: boolean
   verifiedAt: string | null
@@ -117,6 +118,19 @@ export interface UserResponse {
   roles: string[]
   createdAt: string
   updatedAt: string
+}
+
+type RawUserResponse = UserResponse & {
+  active?: boolean
+  verified?: boolean
+}
+
+function normalizeUserResponse(user: RawUserResponse): UserResponse {
+  return {
+    ...user,
+    isActive: user.isActive ?? user.active ?? false,
+    isVerified: user.isVerified ?? user.verified ?? false,
+  }
 }
 
 export interface LessonFileAttachmentResponse {
@@ -302,6 +316,19 @@ export interface RegisterRequest {
   passwordHash: string
 }
 
+export interface UserUpdateRequest {
+  displayName?: string
+  avatarUrl?: string
+  backgroundUrl?: string
+  appMetadata?: Record<string, unknown>
+  userMetadata?: Record<string, unknown>
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 export interface ProgramUpsertRequest {
   code: string
   title: string
@@ -382,11 +409,16 @@ export const authApi = {
 
   register: (data: RegisterRequest) =>
     reqPublic<void>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    req<void>("/auth/change-password", { method: "PUT", body: JSON.stringify(data) }),
 }
 
 // ─── User API ──────────────────────────────────────────────────────────────────
 export const userApi = {
-  getMe: () => req<UserResponse>("/users/me"),
+  getMe: async () => normalizeUserResponse(await req<RawUserResponse>("/users/me")),
+  updateMe: (data: UserUpdateRequest) =>
+    req<RawUserResponse>("/users/me", { method: "PUT", body: JSON.stringify(data) }).then(normalizeUserResponse),
   getAll: (page = 1, size = 10, field = "createdAt", direction = "DESC") =>
     req<PagingResponse<UserResponse>>(`/users?page=${page}&size=${size}&field=${field}&direction=${direction}`),
   getUsers: (paging: {
@@ -404,9 +436,12 @@ export const userApi = {
     if (paging.field) params.set("field", paging.field)
     if (paging.direction) params.set("direction", paging.direction)
     if (paging.keyword) params.set("keyword", paging.keyword)
-    return req<PagingResponse<UserResponse>>(`/users?${params.toString()}`)
+    return req<PagingResponse<RawUserResponse>>(`/users?${params.toString()}`).then((response) => ({
+      ...response,
+      data: response.data.map(normalizeUserResponse),
+    }))
   },
-  getById: (id: string) => req<UserResponse>(`/users/${id}`),
+  getById: (id: string) => req<RawUserResponse>(`/users/${id}`).then(normalizeUserResponse),
 }
 
 // ─── Program API ───────────────────────────────────────────────────────────────
