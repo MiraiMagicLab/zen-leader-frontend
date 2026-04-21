@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEventHandler, type FormEvent } from "react"
 import { z } from "zod"
 import { toast } from "sonner"
+import { User, Shield, Key, BadgeCheck, Mail, Camera, Save, RefreshCw, Loader2 } from "lucide-react"
 
 import { authApi, assetApi, userApi, type UserResponse } from "@/lib/api"
 import { authStorage } from "@/lib/storage"
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLoading } from "@/components/common/PageLoading"
+import { PageHeader } from "@/components/common/PageHeader"
 
 type ProfileFormState = {
   displayName: string
@@ -145,8 +147,7 @@ export default function ProfilePage() {
     }
   }, [avatarPreview])
 
-  const accountStatusText = user?.isVerified ? "Verified account" : "Not verified"
-  const roleText = user?.roles?.join(", ") || "User"
+  const accountStatusText = user?.isVerified ? "Verified" : "Unverified"
 
   if (loading) {
     return <PageLoading />
@@ -196,9 +197,9 @@ export default function ProfilePage() {
         roles: updated.roles,
         appMetadata: updated.appMetadata,
       })
-      toast.success("Profile updated successfully.")
+      toast.success("Profile updated.")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update profile."
+      const message = error instanceof Error ? error.message : "Update failed."
       toast.error(message)
     } finally {
       setIsSavingProfile(false)
@@ -223,9 +224,9 @@ export default function ProfilePage() {
         confirmPassword: "",
       })
       setPasswordErrors({})
-      toast.success("Password changed successfully.")
+      toast.success("Password secured.")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to change password."
+      const message = error instanceof Error ? error.message : "Update failed."
       toast.error(message)
     } finally {
       setIsChangingPassword(false)
@@ -233,140 +234,162 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">Manage your account information and security settings.</p>
-      </div>
+    <div className="flex flex-col gap-8 max-w-5xl">
+      <PageHeader
+        title="Profile Settings"
+        subtitle="Control your personal presence and security preferences."
+        stats={[
+          { label: "Status", value: accountStatusText },
+          { label: "Privileges", value: user?.roles?.[0] || "User" }
+        ]}
+      />
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList>
-          <TabsTrigger value="details">Profile details</TabsTrigger>
-          <TabsTrigger value="password">Change password</TabsTrigger>
+        <TabsList className="mb-6 h-12 justify-start gap-1 p-1 bg-muted/40">
+          <TabsTrigger value="details" className="px-8 font-semibold data-[state=active]:bg-background">
+            <User className="mr-2 size-4" />
+            General Information
+          </TabsTrigger>
+          <TabsTrigger value="password" className="px-8 font-semibold data-[state=active]:bg-background">
+            <Key className="mr-2 size-4" />
+            Change Password
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account details</CardTitle>
-              <CardDescription>Update your display information and avatar.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-16 w-16 border">
-                        <AvatarImage src={avatarPreview ?? (profileForm.avatarUrl || undefined)} alt="User avatar" />
-                        <AvatarFallback>{initials(profileForm.displayName)}</AvatarFallback>
+        <div className="mt-4">
+          <TabsContent value="details" className="focus-visible:outline-none">
+            <Card className="overflow-hidden border shadow-sm">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="relative group">
+                      <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+                        <AvatarImage src={avatarPreview ?? (profileForm.avatarUrl || undefined)} className="object-cover" />
+                        <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">{initials(profileForm.displayName)}</AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{user?.email ?? "-"}</p>
-                        <p className="text-xs text-muted-foreground">Your login email cannot be changed here.</p>
+                      <Label htmlFor="avatar-upload" className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform ring-4 ring-background">
+                        <Camera className="size-4" />
+                        <Input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                      </Label>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight">{user?.displayName}</h2>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Mail className="size-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">{user?.email}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={user?.isVerified ? "default" : "secondary"}>{accountStatusText}</Badge>
-                      <Badge variant="outline">{roleText}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={user?.isVerified ? "default" : "secondary"} className="h-7 px-3 font-bold uppercase tracking-wide text-[10px]">
+                      {user?.isVerified && <BadgeCheck className="mr-1.5 size-3.5" />}
+                      {accountStatusText}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleProfileSubmit} className="space-y-8 max-w-2xl">
+                  <div className="grid gap-6">
+                    <div className="space-y-2">
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Display Name</Label>
+                      <Input
+                        value={profileForm.displayName}
+                        onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })}
+                        className="h-11 rounded-xl bg-muted/30 border-transparent focus:bg-background font-semibold"
+                        placeholder="e.g. Aris Thorne"
+                      />
+                      {profileErrors.displayName && <p className="text-xs font-bold text-destructive ml-1">{profileErrors.displayName}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Email Address</Label>
+                      <Input
+                        value={user?.email}
+                        disabled
+                        className="h-11 rounded-xl bg-muted/60 border-transparent font-medium opacity-70"
+                      />
+                      <p className="text-[10px] text-muted-foreground font-medium italic ml-1">Contact administrators to modify primary security email.</p>
                     </div>
                   </div>
 
-                  <Separator />
+                  <div className="flex items-center justify-between pt-6 border-t">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      <Shield className="size-4" />
+                      Encrypted Profile Data
+                    </div>
+                    <Button type="submit" size="lg" disabled={isSavingProfile} className="min-w-[160px] font-bold shadow-lg shadow-primary/10">
+                      {isSavingProfile ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+                      Save Profile
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                  <form className="space-y-5" onSubmit={handleProfileSubmit}>
+          <TabsContent value="password" className="focus-visible:outline-none">
+            <Card className="overflow-hidden border shadow-sm max-w-2xl">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                <div className="flex items-center gap-4">
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Key className="size-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Credentials Security</CardTitle>
+                    <CardDescription>Update your login credentials to a unique, strong password.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleChangePassword} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Current Password</Label>
+                    <Input
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                      className="h-11 rounded-xl font-medium"
+                    />
+                    {passwordErrors.currentPassword && <p className="text-xs font-bold text-destructive ml-1">{passwordErrors.currentPassword}</p>}
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div className="grid gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="profile-display-name">Display name</Label>
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">New Password</Label>
                       <Input
-                        id="profile-display-name"
-                        value={profileForm.displayName}
-                        aria-invalid={Boolean(profileErrors.displayName)}
-                        onChange={(event) => {
-                          setProfileErrors((prev) => ({ ...prev, displayName: undefined }))
-                          setProfileForm((prev) => ({ ...prev, displayName: event.target.value }))
-                        }}
-                        placeholder="Your display name"
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className="h-11 rounded-xl font-medium"
                       />
-                      {profileErrors.displayName ? <p className="text-xs text-destructive">{profileErrors.displayName}</p> : null}
+                      {passwordErrors.newPassword && <p className="text-xs font-bold text-destructive ml-1">{passwordErrors.newPassword}</p>}
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="profile-avatar-upload">Avatar image</Label>
-                      <Input id="profile-avatar-upload" type="file" accept="image/*" onChange={handleAvatarChange} />
-                      <p className="text-xs text-muted-foreground">Upload a new avatar image (max 5MB).</p>
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Confirm Selection</Label>
+                      <Input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className="h-11 rounded-xl font-medium"
+                      />
+                      {passwordErrors.confirmPassword && <p className="text-xs font-bold text-destructive ml-1">{passwordErrors.confirmPassword}</p>}
                     </div>
+                  </div>
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isSavingProfile}>
-                        {isSavingProfile ? "Saving..." : "Save profile"}
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="password" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change password</CardTitle>
-              <CardDescription>Use a strong password that you do not use elsewhere.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-5" onSubmit={handleChangePassword}>
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current password</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    aria-invalid={Boolean(passwordErrors.currentPassword)}
-                    onChange={(event) => {
-                      setPasswordErrors((prev) => ({ ...prev, currentPassword: undefined }))
-                      setPasswordForm((prev) => ({ ...prev, currentPassword: event.target.value }))
-                    }}
-                  />
-                  {passwordErrors.currentPassword ? <p className="text-xs text-destructive">{passwordErrors.currentPassword}</p> : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={passwordForm.newPassword}
-                    aria-invalid={Boolean(passwordErrors.newPassword)}
-                    onChange={(event) => {
-                      setPasswordErrors((prev) => ({ ...prev, newPassword: undefined }))
-                      setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))
-                    }}
-                  />
-                  {passwordErrors.newPassword ? <p className="text-xs text-destructive">{passwordErrors.newPassword}</p> : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm new password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    aria-invalid={Boolean(passwordErrors.confirmPassword)}
-                    onChange={(event) => {
-                      setPasswordErrors((prev) => ({ ...prev, confirmPassword: undefined }))
-                      setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
-                    }}
-                  />
-                  {passwordErrors.confirmPassword ? <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p> : null}
-                </div>
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isChangingPassword}>
-                    {isChangingPassword ? "Updating..." : "Update password"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <div className="pt-6">
+                    <Button type="submit" size="lg" disabled={isChangingPassword} className="w-full font-bold">
+                      {isChangingPassword ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
+                      Establish New Password
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

@@ -1,52 +1,56 @@
-import { useState, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useRef, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { z } from "zod"
 import { toast } from "sonner"
 import {
   ChevronDown,
-  Clock3,
   FileText,
   Info,
   MapPin,
-  Rocket,
+  Save,
   Upload,
   User,
   Users,
   Video,
   Loader2,
-  CalendarDays
+  CalendarDays,
 } from "lucide-react"
-import { eventApi, assetApi } from "../lib/api"
-import MarkdownEditor from "../components/MarkdownEditor"
+import { eventApi, assetApi } from "@/lib/api"
+import MarkdownEditor from "@/components/MarkdownEditor"
 import { Button } from "@/components/ui/button"
+import { PageLoading } from "@/components/common/PageLoading"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
-
 type EventFormErrors = Partial<Record<"eventName" | "eventDate" | "startTime" | "endTime" | "venue", string>>
 
-const createEventSchema = z.object({
-  eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
-  eventDate: z.string().min(1, "Please select an event date."),
-  startTime: z.string().min(1, "Please select a start time."),
-  endTime: z.string().min(1, "Please select an end time."),
-  locationType: z.enum(["Physical", "Online"]),
-  venue: z.string(),
-}).superRefine((value, ctx) => {
-  if (value.locationType === "Physical" && !value.venue.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["venue"],
-      message: "Please enter a venue for physical events.",
-    })
-  }
-})
+const editEventSchema = z
+  .object({
+    eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
+    eventDate: z.string().min(1, "Please select an event date."),
+    startTime: z.string().min(1, "Please select a start time."),
+    endTime: z.string().min(1, "Please select an end time."),
+    locationType: z.enum(["Physical", "Online"]),
+    venue: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.locationType === "Physical" && !value.venue.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["venue"],
+        message: "Please enter a venue for physical events.",
+      })
+    }
+  })
 
-export default function CreateEventPage() {
+export default function EditEventSheet() {
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [open, setOpen] = useState(true)
 
@@ -75,6 +79,62 @@ export default function CreateEventPage() {
   const [capacity, setCapacity] = useState(50)
   const [formErrors, setFormErrors] = useState<EventFormErrors>({})
 
+  useEffect(() => {
+    if (!id) return
+    const loadEvent = async () => {
+      try {
+        const ev = await eventApi.getById(id)
+        setEventName(ev.title)
+        setSummary(ev.description || "")
+
+        const startDt = new Date(ev.startTime)
+        const endDt = new Date(ev.endTime)
+
+        const pDate = startDt.toLocaleDateString("en-CA")
+        setEventDate(pDate)
+
+        const pStart = startDt.toTimeString().slice(0, 5)
+        const pEnd = endDt.toTimeString().slice(0, 5)
+        setStartTime(pStart)
+        setEndTime(pEnd)
+
+        setBannerPreview(ev.thumbnailUrl)
+
+        if (ev.content) {
+          setDescription(ev.content)
+        }
+
+        if (ev.metadata?.category) {
+          const c = String(ev.metadata.category)
+          setCategory(c.charAt(0).toUpperCase() + c.slice(1).toLowerCase())
+        }
+
+        if (ev.metadata?.speaker) {
+          setSpeaker(String(ev.metadata.speaker))
+        }
+
+        if (ev.metadata?.capacity) {
+          setCapacity(Number(ev.metadata.capacity))
+        }
+
+        if (ev.metadata?.locationType) {
+          setLocationType(String(ev.metadata.locationType) as "Physical" | "Online")
+        }
+
+        if (ev.metadata?.venue) {
+          setVenue(String(ev.metadata.venue))
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error("Failed to load event details.")
+        navigate("/dashboard/events")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    void loadEvent()
+  }, [id, navigate])
+
   const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -89,7 +149,7 @@ export default function CreateEventPage() {
   }
 
   const saveEvent = async (status: "open" | "draft") => {
-    const validation = createEventSchema.safeParse({
+    const validation = editEventSchema.safeParse({
       eventName,
       eventDate,
       startTime,
@@ -111,9 +171,11 @@ export default function CreateEventPage() {
     }
     setFormErrors({})
 
+    if (!id) return
     setIsSubmitting(true)
     try {
-      let finalThumbnailUrl = undefined
+      let finalThumbnailUrl = bannerPreview || undefined
+
       if (bannerFile) {
         const uploadRes = await assetApi.upload(bannerFile)
         finalThumbnailUrl = uploadRes.url
@@ -133,21 +195,25 @@ export default function CreateEventPage() {
           locationType,
           venue: locationType === "Physical" ? venue : "Online",
           capacity,
-          speaker
+          speaker,
         },
         publishImmediately: status === "open",
-        thumbnailUrl: finalThumbnailUrl
+        thumbnailUrl: finalThumbnailUrl,
       }
 
-      await eventApi.create(payload)
-      toast.success(status === "open" ? "Event published successfully." : "Event saved as draft.")
+      await eventApi.update(id, payload)
+      toast.success("Event configurations synchronized.")
       navigate("/dashboard/events")
     } catch (err) {
       console.error(err)
-      toast.error("Failed to launch event.")
+      toast.error("Synchronization failed.")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isLoading) {
+    return <PageLoading />
   }
 
   return (
@@ -160,34 +226,32 @@ export default function CreateEventPage() {
     >
       <SheetContent className="!w-full sm:!max-w-[900px] max-h-screen p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
-          <SheetTitle>Create event</SheetTitle>
-          <SheetDescription>Configure and publish a new event.</SheetDescription>
+          <SheetTitle>Edit event</SheetTitle>
+          <SheetDescription>Update event details and synchronize changes.</SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               <div className="lg:col-span-2 space-y-6">
-                {/* Main Info */}
                 <div className="rounded-xl border bg-card p-6 shadow-sm">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                       <Info className="size-5 text-primary" />
                     </div>
-                    <h3 className="text-lg font-bold text-foreground tracking-tight">Event Identity</h3>
+                    <h3 className="text-lg font-bold text-foreground tracking-tight">Event Context</h3>
                   </div>
                   <div className="space-y-8">
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Designation</Label>
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Title</Label>
                       <input
                         value={eventName}
                         aria-invalid={Boolean(formErrors.eventName)}
-                        placeholder="Mastering Agility: Leadership in 2026"
                         onChange={(e) => {
                           setEventName(e.target.value)
                           if (formErrors.eventName) setFormErrors((prev) => ({ ...prev, eventName: undefined }))
                         }}
-                        className="w-full border-b border-border bg-transparent px-1 py-3 text-2xl font-bold text-foreground placeholder:text-muted-foreground/40 focus:border-primary focus:outline-none transition-colors"
+                        className="w-full border-b border-border bg-transparent px-1 py-3 text-lg font-bold text-foreground focus:border-primary focus:outline-none transition-colors"
                       />
                       {formErrors.eventName && <p className="text-xs font-bold text-destructive mt-2 ml-1">{formErrors.eventName}</p>}
                     </div>
@@ -199,7 +263,7 @@ export default function CreateEventPage() {
                           <select
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
-                            className="w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2.5 pr-8 text-sm font-semibold text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                            className="w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2.5 pr-8 text-sm font-semibold text-foreground cursor-pointer focus:ring-2 focus:ring-primary/20"
                           >
                             <option>Workshop</option>
                             <option>Talk</option>
@@ -213,40 +277,37 @@ export default function CreateEventPage() {
                         <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Brief Abstract</Label>
                         <input
                           value={summary}
-                          placeholder="Concise summary for catalogs..."
                           onChange={(e) => setSummary(e.target.value)}
-                          className="w-full h-11 rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                          className="w-full h-11 rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Speaker and Content */}
                 <div className="rounded-xl border bg-card p-6 shadow-sm">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                       <FileText className="size-5 text-primary" />
                     </div>
-                    <h3 className="text-lg font-bold text-foreground tracking-tight">Narrative & Expert</h3>
+                    <h3 className="text-lg font-bold text-foreground tracking-tight">Curriculum & Media</h3>
                   </div>
                   <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Prime Expert</Label>
+                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Expert/Speaker</Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
                           <input
                             type="text"
                             value={speaker}
-                            placeholder="Who is delivering?"
                             onChange={(e) => setSpeaker(e.target.value)}
-                            className="w-full h-11 bg-muted/20 border border-input rounded-xl py-2 pl-9 pr-3 text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                            className="w-full h-11 bg-muted/20 border border-input rounded-xl py-2 pl-9 pr-3 text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Banner Visual</Label>
+                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Banner Resource</Label>
                         <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
                         <Button
                           type="button"
@@ -264,7 +325,7 @@ export default function CreateEventPage() {
                           ) : (
                             <div className="flex items-center gap-2">
                               <Upload className="size-4 text-muted-foreground" />
-                              <span className="text-xs font-bold text-muted-foreground">Select Resource</span>
+                              <span className="text-xs font-bold text-muted-foreground">Select New Banner</span>
                             </div>
                           )}
                         </Button>
@@ -272,8 +333,8 @@ export default function CreateEventPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Full Exposition</Label>
-                      <div className="rounded-xl overflow-hidden border border-input focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Global Narrative</Label>
+                      <div className="rounded-xl overflow-hidden border border-input">
                         <MarkdownEditor value={description} onChange={setDescription} />
                       </div>
                     </div>
@@ -281,10 +342,8 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
-              {/* Sidebar Info */}
               <div className="space-y-6">
-                {/* Scheduling */}
-                <div className="rounded-xl border bg-secondary/30 p-6 shadow-sm backdrop-blur-sm">
+                <div className="rounded-xl border bg-card p-6 shadow-sm">
                   <div className="flex items-center gap-2 mb-6 text-primary">
                     <CalendarDays className="size-5" />
                     <h3 className="text-base font-bold text-foreground">Timeline</h3>
@@ -296,44 +355,37 @@ export default function CreateEventPage() {
                         type="date"
                         value={eventDate}
                         onChange={(e) => setEventDate(e.target.value)}
-                        className="w-full rounded-xl border border-input bg-background/50 px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+                        className="w-full rounded-xl border border-input bg-muted/40 px-3 py-2.5 text-sm font-semibold"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Start</Label>
-                        <div className="relative">
-                          <Clock3 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
-                          <input
-                            type="time"
-                            value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            className="w-full rounded-xl border border-input bg-background/50 px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-8"
-                          />
-                        </div>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full rounded-xl border border-input bg-muted/40 px-3 py-2.5 text-sm font-semibold"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">End</Label>
-                        <div className="relative">
-                          <Clock3 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
-                          <input
-                            type="time"
-                            value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            className="w-full rounded-xl border border-input bg-background/50 px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-8"
-                          />
-                        </div>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full rounded-xl border border-input bg-muted/40 px-3 py-2.5 text-sm font-semibold"
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Location */}
                 <div className="rounded-xl border bg-card p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2 text-primary">
                       <MapPin className="size-5" />
-                      <h3 className="text-base font-bold text-foreground">Presence</h3>
+                      <h3 className="text-base font-bold text-foreground">Location</h3>
                     </div>
                     <div className="flex rounded-lg bg-muted p-1">
                       {(["Physical", "Online"] as const).map((t) => (
@@ -343,7 +395,7 @@ export default function CreateEventPage() {
                           variant="ghost"
                           onClick={() => setLocationType(t)}
                           className={cn(
-                            "h-7 px-3 text-[10px] uppercase font-bold transition-all",
+                            "h-7 px-3 text-[10px] uppercase font-bold",
                             locationType === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground"
                           )}
                         >
@@ -354,64 +406,40 @@ export default function CreateEventPage() {
                   </div>
                   {locationType === "Physical" ? (
                     <div className="space-y-4">
-                      <div className="relative group">
-                        <MapPin className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <input
-                          value={venue}
-                          onChange={(e) => setVenue(e.target.value)}
-                          placeholder="Exact geo location..."
-                          className="w-full rounded-xl border border-input bg-muted/40 px-3 py-2.5 pl-9 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                        />
-                      </div>
+                      <input
+                        value={venue}
+                        onChange={(e) => setVenue(e.target.value)}
+                        placeholder="Secure venue details..."
+                        className="w-full rounded-xl border border-input bg-muted/40 px-3 py-2.5 text-xs font-bold"
+                      />
                     </div>
                   ) : (
                     <div className="rounded-xl bg-primary/5 p-4 border border-primary/20 flex gap-3 items-center">
                       <Video className="size-5 text-primary" />
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-tight">Virtual Stream Link to be generated</p>
+                      <p className="text-[10px] font-bold text-primary uppercase">Virtual Session Active</p>
                     </div>
                   )}
                 </div>
 
-                {/* Registration */}
                 <div className="rounded-xl border bg-card p-6 shadow-sm">
                   <div className="flex items-center gap-2 mb-6 text-primary">
                     <Users className="size-5" />
-                    <h3 className="text-base font-bold text-foreground">Attendance</h3>
+                    <h3 className="text-base font-bold text-foreground">Registration</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Max Capacity</Label>
-                      <Badge variant="secondary" className="px-3 py-0.5 font-bold">{capacity} Seats</Badge>
+                      <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Capacity</Label>
+                      <Badge className="font-bold">{capacity} Seats</Badge>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCapacity(Math.max(10, capacity - 10))}
-                        className="h-8 w-8 hover:bg-muted"
-                      >
-                        −
-                      </Button>
-                      <div className="flex-1">
-                        <input
-                          type="range"
-                          min={10} max={1000} step={10}
-                          value={capacity}
-                          onChange={(e) => setCapacity(Number(e.target.value))}
-                          className="w-full accent-primary cursor-pointer mt-1"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCapacity(capacity + 10)}
-                        className="h-8 w-8 hover:bg-muted"
-                      >
-                        +
-                      </Button>
-                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={1000}
+                      step={10}
+                      value={capacity}
+                      onChange={(e) => setCapacity(Number(e.target.value))}
+                      className="w-full accent-primary"
+                    />
                   </div>
                 </div>
               </div>
@@ -428,11 +456,12 @@ export default function CreateEventPage() {
             Save draft
           </Button>
           <Button type="button" onClick={() => saveEvent("open")} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Rocket className="mr-2 size-4" />}
-            Publish
+            {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+            Save changes
           </Button>
         </div>
       </SheetContent>
     </Sheet>
   )
 }
+

@@ -1,7 +1,6 @@
-import { useState } from "react"
-import { motion } from "framer-motion"
+import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import { authApi, userApi } from "@/lib/api"
 import { authStorage } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
@@ -9,6 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ThemeToggle } from "@/components/ui/ThemeToggle"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { Spinner } from "@/components/ui/spinner"
 import zenleaderLogo from "@/assets/logo-zenleader.png"
 
 export default function LoginPage() {
@@ -19,7 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
@@ -50,139 +52,110 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background p-6">
-      {/* Background Orbs */}
-      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-primary/15 dark:bg-primary/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-primary/15 dark:bg-primary/20 blur-3xl" />
-
-      <div className="absolute top-6 right-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center mb-10 text-center"
-        >
-          <div className="mb-6">
-            <img src={zenleaderLogo} alt="Zenleader" className="h-12 w-auto" />
-          </div>
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">Zenleader</h1>
-          <p className="text-muted-foreground font-medium tracking-tight">Learning management platform</p>
-        </motion.div>
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex flex-col items-center text-center">
+          <img src={zenleaderLogo} alt="Zenleader" className="mb-2 h-16 w-auto object-contain" />
+          <h1 className="text-lg font-semibold">Zenleader Admin</h1>
+          <p className="text-sm text-muted-foreground">System management portal</p>
+        </div>
 
-        {/* Login Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="w-full rounded-xl border border-border bg-card p-8 shadow-sm md:p-12"
-        >
-          <div className="mb-10 text-center sm:text-left">
-            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">Welcome Back</h2>
-            <p className="font-medium text-muted-foreground">Sign in to continue.</p>
-          </div>
-
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 flex items-start gap-3 rounded-xl border border-error/20 bg-error/10 p-4 text-error"
-            >
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <p className="text-sm font-bold leading-relaxed">{error}</p>
-            </motion.div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="ml-1 text-xs font-medium text-muted-foreground">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/80" />
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle>Sign in</CardTitle>
+            <CardDescription>Enter your account details to access the admin system.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Field>
+                <FieldLabel htmlFor="email" className="text-sm font-semibold">
+                  Email
+                </FieldLabel>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="executive@zenleader.com"
-                  className="h-10 rounded-xl border-input bg-card pl-10 font-medium dark:border-border dark:bg-input/50"
+                  placeholder="admin@zenleader.com"
+                  autoComplete="email"
                   required
                 />
-              </div>
-            </div>
+              </Field>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between ml-1">
-                <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
-                <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/80" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-10 rounded-xl border-input bg-card pl-10 pr-10 font-medium dark:border-border dark:bg-input/50"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </Button>
-              </div>
-            </div>
+              <Field>
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="password" className="text-sm font-semibold">
+                    Password
+                  </FieldLabel>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    onClick={() => navigate("/forgot-password")}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </Button>
+                </div>
+              </Field>
 
-            <div className="flex items-center space-x-3 ml-1">
-              <Checkbox id="remember" className="rounded-md data-[state=checked]:bg-primary" />
-              <label
-                htmlFor="remember"
-                className="cursor-pointer text-xs font-medium leading-none text-muted-foreground"
-              >
-                Keep me signed in
-              </label>
-            </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="remember" />
+                <Label htmlFor="remember" className="font-normal">
+                  Keep me signed in
+                </Label>
+              </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="h-10 w-full rounded-xl border border-primary/45 bg-primary px-4 text-sm font-semibold text-primary-foreground ring-1 ring-primary/45 shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/35 focus-visible:ring-2 focus-visible:ring-primary/55 dark:border-primary/70 dark:bg-[#6f9bff] dark:text-white dark:ring-primary/70 dark:shadow-[0_12px_28px_-10px_rgba(99,145,255,0.82)] dark:hover:bg-[#7ea6ff] dark:hover:shadow-[0_14px_32px_-10px_rgba(99,145,255,0.9)]"
-            >
-              {isLoading ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} />
-                  Signing in...
-                </span>
-              ) : (
-                "Sign in"
+              {error && (
+                <FieldError className="rounded-md bg-destructive/10 p-3 font-medium text-destructive">
+                  {error}
+                </FieldError>
               )}
-            </Button>
-          </form>
 
-          <div className="mt-10 border-t border-border/50 pt-8 text-center">
-            <p className="text-sm font-medium text-muted-foreground">
-              New to the platform?{" "}
-              <Link to="/signup" className="font-semibold text-primary hover:underline">
-                Create account
-              </Link>
-            </p>
-          </div>
-        </motion.div>
+              <Button type="submit" size="lg" className="w-full text-base font-semibold" disabled={isLoading}>
+                {isLoading && <Spinner className="mr-2" />}
+                Sign in
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="justify-center text-xs text-muted-foreground">
+            Don&apos;t have admin access? Contact your system administrator.
+          </CardFooter>
+        </Card>
 
-        {/* Footer Section */}
-        <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs font-medium text-muted-foreground">
-          <Link to="/privacy" className="hover:text-primary">Privacy</Link>
-          <Link to="/terms" className="hover:text-primary">Terms</Link>
-          <Link to="/support" className="hover:text-primary">Support</Link>
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:text-primary">
+            Privacy
+          </Link>
+          <Link to="/terms" className="hover:text-primary">
+            Terms
+          </Link>
+          <Link to="/support" className="hover:text-primary">
+            Support
+          </Link>
         </div>
       </div>
     </div>

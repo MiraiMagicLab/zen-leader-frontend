@@ -317,6 +317,21 @@ export interface UserUpdateRequest {
   userMetadata?: Record<string, unknown>
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface VerifyOtpRequest {
+  email: string
+  otp: string
+}
+
+export interface ResetPasswordRequest {
+  email: string
+  otp: string
+  newPassword: string
+}
+
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
@@ -403,6 +418,15 @@ export const authApi = {
   register: (data: RegisterRequest) =>
     reqPublic<void>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
 
+  forgotPassword: (data: ForgotPasswordRequest) =>
+    reqPublic<void>("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
+
+  verifyOtp: (data: VerifyOtpRequest) =>
+    reqPublic<void>("/auth/verify-otp", { method: "POST", body: JSON.stringify(data) }),
+
+  resetPassword: (data: ResetPasswordRequest) =>
+    reqPublic<void>("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
+
   changePassword: (data: ChangePasswordRequest) =>
     req<void>("/auth/change-password", { method: "PUT", body: JSON.stringify(data) }),
 }
@@ -414,7 +438,7 @@ export const userApi = {
     req<RawUserResponse>("/users/me", { method: "PUT", body: JSON.stringify(data) }).then(normalizeUserResponse),
   getAll: (page = 1, size = 10, field = "createdAt", direction = "DESC") =>
     req<PagingResponse<UserResponse>>(`/users?page=${page}&size=${size}&field=${field}&direction=${direction}`),
-  getUsers: (paging: {
+  getUsers: async (paging: {
     page: number
     pageSize?: number
     size?: number
@@ -429,10 +453,11 @@ export const userApi = {
     if (paging.field) params.set("field", paging.field)
     if (paging.direction) params.set("direction", paging.direction)
     if (paging.keyword) params.set("keyword", paging.keyword)
-    return req<PagingResponse<RawUserResponse>>(`/users?${params.toString()}`).then((response) => ({
+    const response = await req<PagingResponse<RawUserResponse>>(`/users?${params.toString()}`)
+    return {
       ...response,
       data: response.data.map(normalizeUserResponse),
-    }))
+    }
   },
   getById: (id: string) => req<RawUserResponse>(`/users/${id}`).then(normalizeUserResponse),
 }
@@ -612,5 +637,5 @@ export const assetApi = {
       url: presigned.downloadUrl,
       publicId: presigned.publicId,
     } satisfies AssetResponse
-  }
+  },
 }

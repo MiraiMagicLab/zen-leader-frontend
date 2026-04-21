@@ -1,302 +1,125 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import {
-  ArrowLeft,
-  BookCopy,
-  CalendarRange,
-  ChevronRight,
-  Layers3,
-  PencilLine,
-  Workflow,
-} from "lucide-react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { ArrowLeft, BookCopy, CalendarRange, ChevronRight, Layers3, Workflow, ExternalLink } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { courseApi, type CourseResponse } from "@/lib/api"
 import { PageLoading } from "@/components/common/PageLoading"
+import { PageHeader } from "@/components/common/PageHeader"
+import { formatNumber } from "@/lib/utils"
 
 function countLessons(course: CourseResponse) {
-  return course.courseRuns.reduce(
-    (total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0),
-    0,
-  )
+  return course.courseRuns.reduce((total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0), 0)
 }
 
 function formatDateRange(startsAt: string | null, endsAt: string | null) {
-  if (!startsAt && !endsAt) return "-"
-
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-
-  const startText = startsAt ? formatter.format(new Date(startsAt)) : "TBD"
-  const endText = endsAt ? formatter.format(new Date(endsAt)) : "TBD"
-  return `${startText} - ${endText}`
-}
-
-function getRunBadgeVariant(status: string) {
-  switch (status.toUpperCase()) {
-    case "PUBLISHED":
-    case "ACTIVE":
-    case "OPEN":
-      return "secondary" as const
-    default:
-      return "outline" as const
-  }
+  if (!startsAt && !endsAt) return "Not scheduled"
+  const formatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" })
+  return `${startsAt ? formatter.format(new Date(startsAt)) : "TBD"} - ${endsAt ? formatter.format(new Date(endsAt)) : "TBD"}`
 }
 
 export default function CourseDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const courseId = id ?? ""
-
   const [course, setCourse] = useState<CourseResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!courseId) return
-
-    courseApi.getById(courseId)
-      .then((data) => {
-        setCourse(data)
-        setError(null)
-      })
-      .catch((loadError) => {
-        setCourse(null)
-        setError(loadError instanceof Error ? loadError.message : "Failed to load course detail.")
-      })
-      .finally(() => setLoading(false))
+    courseApi.getById(courseId).then(setCourse).finally(() => setLoading(false))
   }, [courseId])
 
   const totalLessons = useMemo(() => (course ? countLessons(course) : 0), [course])
 
-  if (loading) {
-    return <PageLoading />
-  }
-
-  if (!course) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate("/dashboard/programs")}>
-          <ArrowLeft />
-          Back to programs
-        </Button>
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="py-1 text-sm text-destructive">
-            {error || "Course not found."}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const programCoursesPath = `/dashboard/programs/${course.programId}/courses`
+  if (loading) return <PageLoading />
+  if (!course) return <div className="p-10 text-center">Course not found.</div>
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <button onClick={() => navigate("/dashboard/programs")} className="transition-colors hover:text-foreground">
-          Programs
-        </button>
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to="/dashboard/programs" className="hover:text-primary">Programs</Link>
         <ChevronRight className="size-4" />
-        <button onClick={() => navigate(programCoursesPath)} className="transition-colors hover:text-foreground">
-          Courses
-        </button>
+        <Link to={`/dashboard/programs/${course.programId}`} className="hover:text-primary">{course.programCode || "Program"}</Link>
         <ChevronRight className="size-4" />
         <span className="font-medium text-foreground">{course.title}</span>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{course.code}</Badge>
-              {course.programCode ? <Badge variant="outline">{course.programCode}</Badge> : null}
-              {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
-              {course.level ? <Badge variant="outline">{course.level}</Badge> : null}
-            </div>
-            <div className="space-y-2">
-              <CardTitle className="text-2xl">{course.title}</CardTitle>
-              {course.description ? <CardDescription className="max-w-2xl">{course.description}</CardDescription> : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(programCoursesPath)}>
-              <ArrowLeft />
-              Back
-            </Button>
-            <Button variant="outline" onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}>
-              <Workflow />
-              Create runs
-            </Button>
-            <Button onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}>
-              <PencilLine />
-              Edit course
-            </Button>
-          </div>
+      <PageHeader
+        title={course.title}
+        subtitle={course.description || "Course overview and run management."}
+        stats={[
+          { label: "Code", value: course.code },
+          { label: "Runs", value: formatNumber(course.courseRuns.length) },
+          { label: "Lessons", value: formatNumber(totalLessons) },
+        ]}
+        actions={<div className="flex gap-3"><Button variant="outline" onClick={() => navigate(`/dashboard/programs/${course.programId}`)}><ArrowLeft className="mr-2 size-4" /> Back</Button><Button onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}><Workflow className="mr-2 size-4" /> Create Run</Button></div>}
+      />
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {[
+          { label: "Course Runs", value: course.courseRuns.length, icon: CalendarRange },
+          { label: "Total Lessons", value: totalLessons, icon: Layers3 },
+          { label: "Tags", value: course.tags.length || "-", icon: BookCopy },
+        ].map((stat) => (
+          <Card key={stat.label} className="border shadow-sm">
+            <CardContent className="flex items-center justify-between p-6">
+              <div>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+              </div>
+              <div className="rounded-xl bg-primary/10 p-3 text-primary"><stat.icon className="size-5" /></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/30">
+          <CardTitle className="text-base">Course Runs</CardTitle>
+          <CardDescription>Manage each run from this course.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          <Card className="bg-muted/50">
-            <CardContent className="flex items-center justify-between py-1">
-              <div>
-                <p className="text-sm text-muted-foreground">Course runs</p>
-                <p className="mt-1 text-2xl font-semibold text-foreground">{course.courseRuns.length}</p>
-              </div>
-              <CalendarRange className="size-5 text-primary" />
-            </CardContent>
-          </Card>
-          <Card className="bg-muted/50">
-            <CardContent className="flex items-center justify-between py-1">
-              <div>
-                <p className="text-sm text-muted-foreground">Lessons</p>
-                <p className="mt-1 text-2xl font-semibold text-foreground">{totalLessons}</p>
-              </div>
-              <Layers3 className="size-5 text-primary" />
-            </CardContent>
-          </Card>
-          <Card className="bg-muted/50">
-            <CardContent className="flex items-center justify-between py-1">
-              <div>
-                <p className="text-sm text-muted-foreground">Order index</p>
-                <p className="mt-1 text-2xl font-semibold text-foreground">{course.orderIndex}</p>
-              </div>
-              <BookCopy className="size-5 text-primary" />
-            </CardContent>
-          </Card>
-          <Card className="bg-muted/50">
-            <CardContent className="py-1">
-              <p className="text-sm text-muted-foreground">Tags</p>
-              <p className="mt-1 text-base font-semibold text-foreground">
-                {course.tags.length ? course.tags.join(", ") : "-"}
-              </p>
-            </CardContent>
-          </Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/20">
+              <TableRow><TableHead>Run</TableHead><TableHead>Status</TableHead><TableHead>Schedule</TableHead><TableHead>Chapters</TableHead><TableHead className="text-right">Action</TableHead></TableRow>
+            </TableHeader>
+            <TableBody>
+              {course.courseRuns.length ? course.courseRuns.map((run) => (
+                <TableRow key={run.id} className="hover:bg-muted/40">
+                  <TableCell>
+                    <div>
+                      <div className="font-semibold">{run.code}</div>
+                      <div className="text-xs text-muted-foreground">{run.id}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell><Badge variant={run.status === "PUBLISHED" ? "default" : "outline"}>{run.status}</Badge></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDateRange(run.startsAt, run.endsAt)}</TableCell>
+                  <TableCell><Badge variant="secondary">{run.chapters.length}</Badge></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
+                      <ExternalLink className="mr-2 size-4" /> Open
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )) : <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No runs created yet.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Course runs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
-            {course.courseRuns.length === 0 ? (
-              <div className="rounded-xl border border-border bg-muted/50 p-8 text-center text-sm text-muted-foreground">
-                No course runs.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Run</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead>Chapters</TableHead>
-                    <TableHead>Lessons</TableHead>
-                    <TableHead className="w-[140px] text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {course.courseRuns.map((run) => {
-                    const lessonCount = run.chapters.reduce((total, chapter) => total + chapter.lessons.length, 0)
-
-                    return (
-                      <TableRow key={run.id}>
-                        <TableCell className="font-medium">{run.code}</TableCell>
-                        <TableCell>
-                          <Badge variant={getRunBadgeVariant(run.status)}>{run.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{formatDateRange(run.startsAt, run.endsAt)}</TableCell>
-                        <TableCell>{run.chapters.length}</TableCell>
-                        <TableCell>{lessonCount}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger>
-                              <Button variant="outline" size="sm">
-                                Actions
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
-                                Open run
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Course metadata</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Program</span>
-                <span className="font-medium text-foreground">{course.programCode || "-"}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Category</span>
-                <span className="font-medium text-foreground">{course.category || "-"}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Level</span>
-                <span className="font-medium text-foreground">{course.level || "-"}</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Created</span>
-                <span className="font-medium text-foreground">
-                  {new Intl.DateTimeFormat("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  }).format(new Date(course.createdAt))}
-                </span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Updated</span>
-                <span className="font-medium text-foreground">
-                  {new Intl.DateTimeFormat("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  }).format(new Date(course.updatedAt))}
-                </span>
-              </div>
-            </div>
-
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border shadow-sm">
+        <CardHeader className="bg-muted/30"><CardTitle className="text-base">Metadata</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Category</p><p className="mt-1 font-medium">{course.category || "—"}</p></div>
+          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Level</p><p className="mt-1 font-medium">{course.level || "—"}</p></div>
+          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Order index</p><p className="mt-1 font-medium">{course.orderIndex}</p></div>
+          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Program</p><p className="mt-1 font-medium">{course.programCode || course.programId}</p></div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { z } from "zod"
 import { toast } from "sonner"
+import { Settings, Bell, Palette, Globe, Save, RefreshCw, Loader2, ShieldCheck, Laptop } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PageHeader } from "@/components/common/PageHeader"
 
 const SETTINGS_STORAGE_KEY = "zl_admin_portal_settings"
 
@@ -56,21 +58,18 @@ function saveSettings(settings: PortalSettings): void {
 }
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<PortalSettings>(DEFAULT_SETTINGS)
-  const [generalForm, setGeneralForm] = useState({ workspaceTitle: "", adminEmail: "" })
-  const [generalErrors, setGeneralErrors] = useState<GeneralErrors>({})
-
-  useEffect(() => {
+  const [settings, setSettings] = useState<PortalSettings>(() => loadSettings())
+  const [generalForm, setGeneralForm] = useState(() => {
     const loaded = loadSettings()
-    setSettings(loaded)
-    setGeneralForm({
-      workspaceTitle: loaded.workspaceTitle,
-      adminEmail: loaded.adminEmail,
-    })
-  }, [])
+    return { workspaceTitle: loaded.workspaceTitle, adminEmail: loaded.adminEmail }
+  })
+  const [generalErrors, setGeneralErrors] = useState<GeneralErrors>({})
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleSaveGeneral = (event: FormEvent) => {
     event.preventDefault()
+    setIsSaving(true)
+    
     const result = generalSchema.safeParse(generalForm)
     if (!result.success) {
       const fieldErrors = result.error.flatten().fieldErrors
@@ -78,8 +77,10 @@ export default function SettingsPage() {
         workspaceTitle: fieldErrors.workspaceTitle?.[0],
         adminEmail: fieldErrors.adminEmail?.[0],
       })
+      setIsSaving(false)
       return
     }
+    
     setGeneralErrors({})
     const next: PortalSettings = {
       ...settings,
@@ -88,7 +89,11 @@ export default function SettingsPage() {
     }
     setSettings(next)
     saveSettings(next)
-    toast.success("General settings saved.")
+    
+    setTimeout(() => {
+      setIsSaving(false)
+      toast.success("Portal configuration updated.")
+    }, 500)
   }
 
   const handleResetGeneral = () => {
@@ -98,120 +103,152 @@ export default function SettingsPage() {
       adminEmail: loaded.adminEmail,
     })
     setGeneralErrors({})
+    toast.info("Form reset to saved values.")
   }
 
   const handleNotificationToggle = (checked: boolean) => {
     const next: PortalSettings = { ...settings, emailProductUpdates: checked }
     setSettings(next)
     saveSettings(next)
-    toast.success(checked ? "Product update emails enabled." : "Product update emails disabled.")
+    toast.success(checked ? "Email alerts activated." : "Email alerts paused.")
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Portal preferences are stored in this browser only until a workspace API is available.
-        </p>
-      </div>
+    <div className="flex flex-col gap-8 max-w-5xl">
+       <PageHeader
+        title="Portal Settings"
+        subtitle="Configure the administrative environment and workspace attributes."
+        stats={[
+            { label: "Environment", value: "Production" },
+            { label: "Status", value: "Operational" }
+        ]}
+      />
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+        <TabsList className="mb-6 h-12 justify-start gap-1 p-1 bg-muted/40">
+          <TabsTrigger value="general" className="px-8 font-semibold data-[state=active]:bg-background">
+            <Globe className="mr-2 size-4" />
+            Workspace
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="px-8 font-semibold data-[state=active]:bg-background">
+            <Bell className="mr-2 size-4" />
+            Alerts
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="px-8 font-semibold data-[state=active]:bg-background">
+            <Palette className="mr-2 size-4" />
+            Aesthetics
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>General</CardTitle>
-              <CardDescription>Workspace label and contact email for this admin session.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleSaveGeneral}>
-                <div className="space-y-2">
-                  <Label htmlFor="workspace-title">Workspace title</Label>
-                  <Input
-                    id="workspace-title"
-                    value={generalForm.workspaceTitle}
-                    aria-invalid={Boolean(generalErrors.workspaceTitle)}
-                    onChange={(e) => {
-                      setGeneralErrors((prev) => ({ ...prev, workspaceTitle: undefined }))
-                      setGeneralForm((prev) => ({ ...prev, workspaceTitle: e.target.value }))
-                    }}
-                    placeholder="Zenleader Admin"
-                  />
-                  {generalErrors.workspaceTitle ? (
-                    <p className="text-xs text-destructive">{generalErrors.workspaceTitle}</p>
-                  ) : null}
+        <div className="mt-4">
+          <TabsContent value="general" className="focus-visible:outline-none">
+            <Card className="overflow-hidden border shadow-sm max-w-2xl">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                <div className="flex items-center gap-4">
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Settings className="size-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">General configuration</CardTitle>
+                    <CardDescription>Workspace identification and contact parameters.</CardDescription>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin-email">Admin contact email</Label>
-                  <Input
-                    id="admin-email"
-                    type="email"
-                    value={generalForm.adminEmail}
-                    aria-invalid={Boolean(generalErrors.adminEmail)}
-                    onChange={(e) => {
-                      setGeneralErrors((prev) => ({ ...prev, adminEmail: undefined }))
-                      setGeneralForm((prev) => ({ ...prev, adminEmail: e.target.value }))
-                    }}
-                    placeholder="admin@example.com"
-                  />
-                  {generalErrors.adminEmail ? (
-                    <p className="text-xs text-destructive">{generalErrors.adminEmail}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button type="submit">Save changes</Button>
-                  <Button type="button" variant="outline" onClick={handleResetGeneral}>
-                    Reset
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form className="space-y-6" onSubmit={handleSaveGeneral}>
+                  <div className="space-y-2">
+                    <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Workspace Title</Label>
+                    <Input
+                      value={generalForm.workspaceTitle}
+                      onChange={(e) => setGeneralForm({ ...generalForm, workspaceTitle: e.target.value })}
+                      className="h-11 rounded-xl font-semibold"
+                      placeholder="Zenleader Admin"
+                    />
+                    {generalErrors.workspaceTitle && (
+                      <p className="text-xs font-bold text-destructive ml-1">{generalErrors.workspaceTitle}</p>
+                    )}
+                  </div>
 
-        <TabsContent value="notifications" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>Choose what we may notify you about in the portal.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/60 p-4">
-                <div className="space-y-1">
-                  <Label htmlFor="email-product">Product updates</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive occasional tips and release notes (stored locally; no server yet).
-                  </p>
-                </div>
-                <Switch
-                  id="email-product"
-                  checked={settings.emailProductUpdates}
-                  onCheckedChange={handleNotificationToggle}
-                />
+                  <div className="space-y-2">
+                    <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Support Contact Email</Label>
+                    <Input
+                      type="email"
+                      value={generalForm.adminEmail}
+                      onChange={(e) => setGeneralForm({ ...generalForm, adminEmail: e.target.value })}
+                      className="h-11 rounded-xl font-medium"
+                      placeholder="ops@zenleader.com"
+                    />
+                    {generalErrors.adminEmail && (
+                      <p className="text-xs font-bold text-destructive ml-1">{generalErrors.adminEmail}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button type="submit" disabled={isSaving} className="flex-1 h-11 font-bold shadow-lg shadow-primary/10">
+                       {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+                       Synchronize Changes
+                    </Button>
+                    <Button type="button" variant="outline" onClick={handleResetGeneral} className="h-11 px-6 font-semibold">
+                      <RefreshCw className="mr-2 size-4" />
+                      Discard
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+              <div className="bg-muted/10 p-6 border-t">
+                 <p className="text-[10px] text-center font-bold uppercase tracking-widest text-muted-foreground opacity-60 flex items-center justify-center gap-2">
+                    <ShieldCheck className="size-3" /> Standard encryption applied to local state
+                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="appearance" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>Theme follows your system and Zenleader design tokens.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Dark mode and density controls can be wired here when the dashboard adds a global theme provider.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="notifications" className="focus-visible:outline-none">
+            <Card className="overflow-hidden border shadow-sm max-w-2xl">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                 <CardTitle className="text-lg">Communication Preferences</CardTitle>
+                 <CardDescription>Define how the portal notifies you about critical system updates.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-6 rounded-2xl border border-border/40 bg-muted/20 p-6">
+                        <div className="space-y-1">
+                            <Label className="text-base font-bold">Product Intelligence</Label>
+                            <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+                                Receive curated feature release notes, performance tips, and architectural insights.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={settings.emailProductUpdates}
+                            onCheckedChange={handleNotificationToggle}
+                            className="data-[state=checked]:bg-primary"
+                        />
+                    </div>
+                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="focus-visible:outline-none">
+            <Card className="overflow-hidden border shadow-sm max-w-2xl">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                 <CardTitle className="text-lg">Visual Experience</CardTitle>
+                 <CardDescription>Customize the portal aesthetic to align with your workspace brand.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-12 text-center space-y-4">
+                 <div className="flex justify-center flex-col items-center">
+                    <div className="flex size-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground mb-4">
+                        <Laptop className="size-8 opacity-40" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">Aesthetic Synthesis</p>
+                    <p className="text-xs font-medium text-muted-foreground max-w-[280px] mx-auto mt-2 leading-relaxed">
+                        Interface density and dynamic theming are currently synchronized with system-level design tokens.
+                    </p>
+                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

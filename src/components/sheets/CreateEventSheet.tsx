@@ -14,10 +14,10 @@ import {
   Users,
   Video,
   Loader2,
-  CalendarDays
+  CalendarDays,
 } from "lucide-react"
-import { eventApi, assetApi } from "../lib/api"
-import MarkdownEditor from "../components/MarkdownEditor"
+import { eventApi, assetApi } from "@/lib/api"
+import MarkdownEditor from "@/components/MarkdownEditor"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -25,27 +25,28 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
-
 type EventFormErrors = Partial<Record<"eventName" | "eventDate" | "startTime" | "endTime" | "venue", string>>
 
-const createEventSchema = z.object({
-  eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
-  eventDate: z.string().min(1, "Please select an event date."),
-  startTime: z.string().min(1, "Please select a start time."),
-  endTime: z.string().min(1, "Please select an end time."),
-  locationType: z.enum(["Physical", "Online"]),
-  venue: z.string(),
-}).superRefine((value, ctx) => {
-  if (value.locationType === "Physical" && !value.venue.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["venue"],
-      message: "Please enter a venue for physical events.",
-    })
-  }
-})
+const createEventSchema = z
+  .object({
+    eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
+    eventDate: z.string().min(1, "Please select an event date."),
+    startTime: z.string().min(1, "Please select a start time."),
+    endTime: z.string().min(1, "Please select an end time."),
+    locationType: z.enum(["Physical", "Online"]),
+    venue: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.locationType === "Physical" && !value.venue.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["venue"],
+        message: "Please enter a venue for physical events.",
+      })
+    }
+  })
 
-export default function CreateEventPage() {
+export default function CreateEventSheet() {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [open, setOpen] = useState(true)
@@ -133,10 +134,10 @@ export default function CreateEventPage() {
           locationType,
           venue: locationType === "Physical" ? venue : "Online",
           capacity,
-          speaker
+          speaker,
         },
         publishImmediately: status === "open",
-        thumbnailUrl: finalThumbnailUrl
+        thumbnailUrl: finalThumbnailUrl,
       }
 
       await eventApi.create(payload)
@@ -381,7 +382,9 @@ export default function CreateEventPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Max Capacity</Label>
-                      <Badge variant="secondary" className="px-3 py-0.5 font-bold">{capacity} Seats</Badge>
+                      <Badge variant="secondary" className="px-3 py-0.5 font-bold">
+                        {capacity} Seats
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-4">
                       <Button
@@ -396,7 +399,9 @@ export default function CreateEventPage() {
                       <div className="flex-1">
                         <input
                           type="range"
-                          min={10} max={1000} step={10}
+                          min={10}
+                          max={1000}
+                          step={10}
                           value={capacity}
                           onChange={(e) => setCapacity(Number(e.target.value))}
                           className="w-full accent-primary cursor-pointer mt-1"
@@ -436,3 +441,4 @@ export default function CreateEventPage() {
     </Sheet>
   )
 }
+
