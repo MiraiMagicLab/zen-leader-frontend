@@ -36,14 +36,14 @@ export function LessonMediaUploader({
       const result = await uploadMutation.mutateAsync(file)
       clearInterval(interval)
       setProgress(100)
-      
+
       onChange(result.url, {
         fileName: file.name,
         mimeType: file.type,
         size: file.size,
         publicId: result.publicId
       })
-      
+
       toast.success("File uploaded successfully")
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Upload failed"
@@ -69,7 +69,7 @@ export function LessonMediaUploader({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <Upload className="size-4" />
           </div>
           <div>
@@ -79,7 +79,7 @@ export function LessonMediaUploader({
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {value && (
             <Button
@@ -118,11 +118,11 @@ export function LessonMediaUploader({
         <div className="p-3 rounded-xl bg-muted border border-border">
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <BadgeCheck className="size-4" />
-            Available at: 
-            <a 
-              href={value} 
-              target="_blank" 
-              rel="noreferrer" 
+            Available at:
+            <a
+              href={value}
+              target="_blank"
+              rel="noreferrer"
               className="text-primary truncate hover:underline"
             >
               {value}

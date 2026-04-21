@@ -182,7 +182,7 @@ export default function SettingsPage() {
               <CardDescription>Choose what we may notify you about in the portal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/60 p-4">
                 <div className="space-y-1">
                   <Label htmlFor="email-product">Product updates</Label>
                   <p className="text-sm text-muted-foreground">

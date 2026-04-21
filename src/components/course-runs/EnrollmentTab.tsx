@@ -9,11 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
-import { 
-  enrollmentApi, 
-  type EnrollmentResponse, 
-  type UserResponse, 
-  type EnrollmentImportResponse 
+import {
+  enrollmentApi,
+  type EnrollmentResponse,
+  type UserResponse,
+  type EnrollmentImportResponse
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -42,12 +42,12 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importResult, setImportResult] = useState<EnrollmentImportResponse | null>(null)
-  
+
   const filteredUsers = users.filter((user) => {
     if (!query.trim()) return true
     const q = query.trim().toLowerCase()
     return (
-      (user.displayName || "").toLowerCase().includes(q) || 
+      (user.displayName || "").toLowerCase().includes(q) ||
       (user.email || "").toLowerCase().includes(q)
     )
   })
@@ -120,16 +120,16 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground/30">
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground/70">
                   <Loader2 className="size-8 animate-spin" />
                   <p className="text-xs font-medium uppercase">Updating roster...</p>
                 </div>
               ) : enrollments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
-                    <UserX className="size-7 text-muted-foreground/30" />
+                    <UserX className="size-7 text-muted-foreground/70" />
                   </div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/50">No active enrollments</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">No active enrollments</p>
                 </div>
               ) : (
                 <Table>
@@ -143,7 +143,7 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
                   </TableHeader>
                   <TableBody>
                     {enrollments.map((en) => (
-                      <TableRow key={en.id} className="hover:bg-muted/30 border-border/50 transition-colors group">
+                      <TableRow key={en.id} className="hover:bg-muted/50 border-border/50 transition-colors group">
                         <TableCell className="px-8 py-4">
                           <div className="flex items-center gap-4">
                             <Avatar className="h-10 w-10 rounded-xl ring-2 ring-background">
@@ -182,7 +182,7 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
         <div className="lg:col-span-4 space-y-6">
           <Card className="overflow-hidden border-border bg-card text-card-foreground shadow-sm rounded-xl">
             <CardHeader className="p-8 pb-4">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
                 <UserPlus className="size-4" />
               </div>
               <CardTitle className="text-lg font-semibold tracking-tight">Direct Access</CardTitle>
@@ -192,64 +192,64 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
               <div className="space-y-2">
                 <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">User search</Label>
                 <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/30 transition-colors group-hover:text-primary group-focus-within:text-primary" />
-                  <Input 
-                    placeholder="Name or email..." 
+                  <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60 transition-colors group-hover:text-primary group-focus-within:text-primary" />
+                  <Input
+                    placeholder="Name or email..."
                     className="h-10 rounded-xl border-border bg-muted/50 pl-10 text-sm font-medium focus:bg-background"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
                 {query.trim() && (
-                   <div className="custom-scrollbar mt-2 max-h-48 overflow-y-auto rounded-xl border border-border bg-background shadow-sm">
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.slice(0, 5).map(u => (
-                          <div 
-                            key={u.id} 
-                            onClick={() => { setSelectedUserId(u.id); setDirectEmail(u.email || ""); setQuery("") }}
-                            className="p-3 hover:bg-muted cursor-pointer flex items-center gap-3 border-b border-border/50 last:border-none"
-                          >
-                            <Avatar className="h-8 w-8 rounded-xl shrink-0">
-                               <AvatarImage src={u.avatarUrl ?? undefined} />
-                               <AvatarFallback className="text-xs">{getInitials(u.displayName)}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                               <p className="truncate text-xs font-semibold text-foreground">{u.displayName}</p>
-                               <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                            </div>
+                  <div className="custom-scrollbar mt-2 max-h-48 overflow-y-auto rounded-xl border border-border bg-background shadow-sm">
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.slice(0, 5).map(u => (
+                        <div
+                          key={u.id}
+                          onClick={() => { setSelectedUserId(u.id); setDirectEmail(u.email || ""); setQuery("") }}
+                          className="p-3 hover:bg-muted cursor-pointer flex items-center gap-3 border-b border-border/50 last:border-none"
+                        >
+                          <Avatar className="h-8 w-8 rounded-xl shrink-0">
+                            <AvatarImage src={u.avatarUrl ?? undefined} />
+                            <AvatarFallback className="text-xs">{getInitials(u.displayName)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-foreground">{u.displayName}</p>
+                            <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="p-4 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">No users found</p>
-                      )}
-                   </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">No users found</p>
+                    )}
+                  </div>
                 )}
               </div>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/50" /></div>
-                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wide"><span className="bg-card px-4 text-muted-foreground/30">Selected user</span></div>
+                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wide"><span className="bg-card px-4 text-muted-foreground/70">Selected user</span></div>
               </div>
 
               <div className="space-y-2">
                 <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selected Account</Label>
-                <Input 
-                  placeholder="Selection will appear here" 
+                <Input
+                  placeholder="Selection will appear here"
                   value={directEmail}
                   readOnly
                   className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium text-muted-foreground"
                 />
               </div>
 
-              <Button 
-                className="h-10 w-full gap-2 rounded-xl text-sm font-semibold" 
+              <Button
+                className="h-10 w-full gap-2 rounded-xl text-sm font-semibold"
                 onClick={handleManualEnroll}
                 disabled={isEnrolling || !targetSelected(selectedUserId, directEmail)}
               >
                 {isEnrolling ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                   <ShieldCheck className="size-4" />
+                  <ShieldCheck className="size-4" />
                 )}
                 {isEnrolling ? "Enrolling..." : "Enroll user"}
               </Button>
@@ -258,7 +258,7 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
 
           <Card className="overflow-hidden border-border bg-card text-card-foreground shadow-sm rounded-xl">
             <CardHeader className="p-8 pb-4">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
                 <Upload className="size-4" />
               </div>
               <CardTitle className="text-lg font-semibold tracking-tight">Bulk Pipeline</CardTitle>
@@ -267,13 +267,13 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
             <CardContent className="p-8 pt-4 space-y-6">
               <label className="group flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/50 hover:bg-muted">
                 <div className="flex flex-col items-center justify-center text-center px-4">
-                  <UploadCloud className="mb-2 size-7 text-muted-foreground/30 transition-colors group-hover:text-primary" />
+                  <UploadCloud className="mb-2 size-7 text-muted-foreground/60 transition-colors group-hover:text-primary" />
                   <p className="text-xs font-medium text-muted-foreground">Select manifest (.xlsx)</p>
                 </div>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept=".xlsx,.xls" 
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".xlsx,.xls"
                   onChange={(e) => handleImport(e.target.files?.[0] ?? null)}
                   disabled={isImporting}
                 />
@@ -288,12 +288,12 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
 
               {importResult && (
                 <AnimatePresence>
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-3 rounded-xl border border-border bg-muted/30 p-6"
+                    className="space-y-3 rounded-xl border border-border bg-muted/60 p-6"
                   >
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/40">Import Summary</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">Import Summary</p>
                     <div className="flex items-center justify-between rounded-xl border border-border/50 bg-background p-3 shadow-sm">
                       <span className="text-xs font-semibold text-muted-foreground">Total Rows</span>
                       <span className="text-xs font-semibold text-foreground">{importResult.totalRows}</span>

@@ -195,7 +195,7 @@ function ProgramForm({
           <Label htmlFor="program-thumbnail" className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program thumbnail</Label>
           <div className="space-y-4">
             {(thumbnailPreview || form.thumbnailUrl) ? (
-              <div className="overflow-hidden rounded-xl border border-border/40 bg-muted/20">
+              <div className="overflow-hidden rounded-xl border border-border/40 bg-muted/50">
                 <img
                   alt="Program thumbnail preview"
                   src={thumbnailPreview ?? form.thumbnailUrl}
@@ -203,24 +203,24 @@ function ProgramForm({
                 />
               </div>
             ) : (
-              <div className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/10 p-4 text-center text-sm">
-                <ImageOff className="mb-3 size-8 text-muted-foreground/40" />
+              <div className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40 p-4 text-center text-sm">
+                <ImageOff className="mb-3 size-8 text-muted-foreground/70" />
                 <p className="text-muted-foreground font-bold tracking-tight">No representation image.</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/60">Please upload a visual baseline.</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground/80">Please upload a visual baseline.</p>
               </div>
             )}
 
             <div className="relative">
-                <Input
+              <Input
                 id="program-thumbnail"
                 type="file"
                 accept="image/*"
                 onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null
-                    onChange({ ...form, thumbnailFile: file })
+                  const file = event.target.files?.[0] ?? null
+                  onChange({ ...form, thumbnailFile: file })
                 }}
                 className="h-10 cursor-pointer rounded-xl border-transparent bg-muted/50 file:mr-4 file:rounded-md file:border-none file:bg-primary file:px-3 file:py-1 file:text-xs file:font-semibold file:uppercase file:text-primary-foreground focus:border-primary/20 focus:bg-background"
-                />
+              />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -254,7 +254,7 @@ function ProgramForm({
           {errors.description ? <p className="text-xs text-error font-bold ml-1">{errors.description}</p> : null}
         </div>
 
-        <div className="mt-4 rounded-xl border border-border/40 bg-muted/30 p-5">
+        <div className="mt-4 rounded-xl border border-border/40 bg-muted/60 p-5">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
               <Label htmlFor="program-published" className="text-sm font-semibold text-foreground">Public Visibility</Label>
@@ -273,10 +273,10 @@ function ProgramForm({
       </div>
 
       <SheetFooter className="mt-8 border-t border-border pt-8">
-        <Button 
-            type="submit" 
-            disabled={isInvalid}
-            className="h-10 w-full rounded-xl text-xs font-semibold uppercase tracking-wide"
+        <Button
+          type="submit"
+          disabled={isInvalid}
+          className="h-10 w-full rounded-xl text-xs font-semibold uppercase tracking-wide"
         >
           {submitLabel}
         </Button>
@@ -433,7 +433,7 @@ export default function ProgramManagementPage() {
             </p>
           </div>
           <Button
-            onClick={openCreateSheet} 
+            onClick={openCreateSheet}
             size="lg"
             className="gap-2"
           >
@@ -445,8 +445,8 @@ export default function ProgramManagementPage() {
         {error ? (
           <Card className="border-error/20 bg-error/5 rounded-xl shadow-sm">
             <CardContent className="py-4 text-sm text-error font-bold flex items-center gap-3">
-                <AlertCircle className="size-4" />
-                {error}
+              <AlertCircle className="size-4" />
+              {error}
             </CardContent>
           </Card>
         ) : null}
@@ -457,13 +457,13 @@ export default function ProgramManagementPage() {
               <div className="space-y-1">
                 <CardTitle className="text-2xl font-semibold tracking-tight">Programs</CardTitle>
                 <CardDescription className="text-sm font-medium opacity-70">
-                    Manage program information and visibility.
+                  Manage program information and visibility.
                 </CardDescription>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 min-w-0 lg:min-w-[600px]">
                 <div className="relative flex-1 group">
-                  <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                  <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground/70 group-focus-within:text-primary transition-colors" />
                   <Input
                     value={filterSearch}
                     onChange={(event) => setFilterSearch(event.target.value)}
@@ -490,7 +490,7 @@ export default function ProgramManagementPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto no-scrollbar">
               <Table className="w-full text-left">
-                <TableHeader className="border-y border-border/40 bg-muted/30 text-xs uppercase text-muted-foreground">
+                <TableHeader className="border-y border-border/40 bg-muted/60 text-xs uppercase text-muted-foreground">
                   <TableRow className="border-none hover:bg-transparent">
                     <TableHead className="px-8 py-6 font-semibold">Program</TableHead>
                     <TableHead className="px-6 py-6 text-center font-semibold sm:text-left">Courses</TableHead>
@@ -503,122 +503,122 @@ export default function ProgramManagementPage() {
                   {filteredPrograms.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="px-8 py-24 text-center">
-                        <div className="flex flex-col items-center gap-4 opacity-50">
-                            <FolderKanban className="size-16 mb-2 text-muted-foreground/30" />
-                            <p className="text-xl font-semibold">No matching programs</p>
-                            <p className="text-sm text-muted-foreground">Try changing your search or filters.</p>
+                        <div className="flex flex-col items-center gap-4">
+                          <FolderKanban className="size-16 mb-2 text-muted-foreground/70" />
+                          <p className="text-xl font-semibold">No matching programs</p>
+                          <p className="text-sm text-muted-foreground">Try changing your search or filters.</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredPrograms.map((program) => {
                       return (
-                        <TableRow key={program.id} className="group border-none hover:bg-muted/10">
-                            <TableCell className="px-8 py-7">
-                              <div className="flex items-start gap-5">
-                                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary border border-primary/5">
-                                  <FolderKanban className="size-6 shrink-0" />
-                                </div>
-                                <div className="min-w-0 space-y-2">
-                                  <button
-                                    type="button"
-                                    className="truncate text-left text-base font-semibold text-foreground hover:text-primary transition-colors"
-                                    onClick={() => navigate(`/dashboard/programs/${program.id}/courses`)}
-                                  >
-                                    {program.title}
-                                  </button>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Badge variant="outline" className="rounded-md border-border/60 px-2 py-0 font-mono text-xs text-muted-foreground/80">{program.code}</Badge>
-                                    {program.isPublished ? (
-                                        <Badge className="rounded-sm border-none bg-primary/10 px-2 py-0.5 text-xs text-primary">Active</Badge>
-                                    ) : null}
-                                  </div>
-                                  {program.description ? (
-                                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground/70 font-medium font-body max-w-[400px]">
-                                      {program.description}
-                                    </p>
+                        <TableRow key={program.id} className="group border-none hover:bg-muted/40">
+                          <TableCell className="px-8 py-7">
+                            <div className="flex items-start gap-5">
+                              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary border border-primary/20">
+                                <FolderKanban className="size-6 shrink-0" />
+                              </div>
+                              <div className="min-w-0 space-y-2">
+                                <button
+                                  type="button"
+                                  className="truncate text-left text-base font-semibold text-foreground hover:text-primary transition-colors"
+                                  onClick={() => navigate(`/dashboard/programs/${program.id}/courses`)}
+                                >
+                                  {program.title}
+                                </button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline" className="rounded-md border-border/60 px-2 py-0 font-mono text-xs text-muted-foreground/80">{program.code}</Badge>
+                                  {program.isPublished ? (
+                                    <Badge className="rounded-sm border-none bg-primary/15 px-2 py-0.5 text-xs text-primary">Active</Badge>
                                   ) : null}
                                 </div>
+                                {program.description ? (
+                                  <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground/80 font-medium font-body max-w-[400px]">
+                                    {program.description}
+                                  </p>
+                                ) : null}
                               </div>
-                            </TableCell>
-                            <TableCell className="px-6 py-7 text-center sm:text-left">
-                                <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
-                                    {program.courses.length}
-                                </div>
-                            </TableCell>
-                            <TableCell className="px-6 py-7 text-center sm:text-left">
-                                <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
-                                    {countCourseRuns(program)}
-                                </div>
-                            </TableCell>
-                            <TableCell className="px-6 py-7">
-                              <div className="flex items-start">
-                                <Badge variant={program.isPublished ? "secondary" : "outline"} className={cn(
-                                    "rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-none",
-                                    program.isPublished ? "bg-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground/60 border-border"
-                                )}>
-                                  {program.isPublished ? "Published" : "Draft"}
-                                </Badge>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-8 py-7 text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger className="inline-flex size-10 items-center justify-center rounded-xl border border-transparent hover:bg-muted hover:border-border/40 transition-colors">
-                                  <span className="sr-only">Open actions</span>
-                                    <MoreVertical className="size-5" />
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-64 rounded-xl border-border p-2">
-                                  <DropdownMenuLabel className="px-4 py-3 text-xs text-muted-foreground/70">Actions</DropdownMenuLabel>
-                                  <DropdownMenuSeparator className="opacity-50" />
-                                  <DropdownMenuItem
-                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
-                                    onClick={() =>
-                                      navigate(`/dashboard/programs/${program.id}/courses`)
-                                    }
-                                  >
-                                    <BookOpen className="size-5 shrink-0" />
-                                    Open courses
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
-                                    onClick={() => {
-                                      setEditingProgramId(program.id)
-                                      setProgramForm(toProgramFormState(program))
-                                      setProgramFormErrors({})
-                                      setSheetMode("settings")
-                                    }}
-                                  >
-                                    <Layers3 className="size-5 shrink-0" />
-                                    Edit program
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/5 focus:text-primary"
-                                    onClick={() => {
-                                      void runAsyncAction(async () => {
-                                        await handleTogglePublished(program)
-                                      })
-                                    }}
-                                  >
-                                    <CalendarRange className="size-5 shrink-0" />
-                                    {program.isPublished ? "Move to draft" : "Publish"}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="my-2 opacity-50" />
-                                  <DropdownMenuItem
-                                    variant="destructive"
-                                    className="rounded-xl px-4 py-4 font-bold gap-4 cursor-pointer"
-                                    onClick={() => {
-                                      void runAsyncAction(async () => {
-                                        await handleDeleteProgram(program.id)
-                                      })
-                                    }}
-                                  >
-                                    <Trash2 className="size-5 shrink-0" />
-                                    Delete program
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-7 text-center sm:text-left">
+                            <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
+                              {program.courses.length}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-7 text-center sm:text-left">
+                            <div className="inline-flex size-10 rounded-xl bg-muted/40 items-center justify-center font-semibold text-foreground ring-1 ring-border/20">
+                              {countCourseRuns(program)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-7">
+                            <div className="flex items-start">
+                              <Badge variant={program.isPublished ? "secondary" : "outline"} className={cn(
+                                "rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide shadow-none",
+                                program.isPublished ? "bg-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground/80 border-border"
+                              )}>
+                                {program.isPublished ? "Published" : "Draft"}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-8 py-7 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="inline-flex size-10 items-center justify-center rounded-xl border border-transparent hover:bg-muted hover:border-border/40 transition-colors">
+                                <span className="sr-only">Open actions</span>
+                                <MoreVertical className="size-5" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-64 rounded-xl border-border p-2">
+                                <DropdownMenuLabel className="px-4 py-3 text-xs text-muted-foreground/80">Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator className="opacity-50" />
+                                <DropdownMenuItem
+                                  className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                  onClick={() =>
+                                    navigate(`/dashboard/programs/${program.id}/courses`)
+                                  }
+                                >
+                                  <BookOpen className="size-5 shrink-0" />
+                                  Open courses
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                  onClick={() => {
+                                    setEditingProgramId(program.id)
+                                    setProgramForm(toProgramFormState(program))
+                                    setProgramFormErrors({})
+                                    setSheetMode("settings")
+                                  }}
+                                >
+                                  <Layers3 className="size-5 shrink-0" />
+                                  Edit program
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="cursor-pointer gap-4 rounded-xl px-4 py-4 font-medium focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                  onClick={() => {
+                                    void runAsyncAction(async () => {
+                                      await handleTogglePublished(program)
+                                    })
+                                  }}
+                                >
+                                  <CalendarRange className="size-5 shrink-0" />
+                                  {program.isPublished ? "Move to draft" : "Publish"}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="my-2 opacity-50" />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  className="rounded-xl px-4 py-4 font-bold gap-4 cursor-pointer"
+                                  onClick={() => {
+                                    void runAsyncAction(async () => {
+                                      await handleDeleteProgram(program.id)
+                                    })
+                                  }}
+                                >
+                                  <Trash2 className="size-5 shrink-0" />
+                                  Delete program
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
                       )
                     })
                   )}
@@ -633,45 +633,45 @@ export default function ProgramManagementPage() {
         <SheetContent side="right" className="w-full sm:max-w-[540px] border-l-border bg-background p-0">
           <div className="h-full flex flex-col p-6 items-start">
             <div className="w-full mb-8">
-                <SheetHeader className="space-y-4">
-                    <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                        <FolderKanban className="size-8" />
-                    </div>
-                    <SheetTitle className="text-2xl font-semibold tracking-tight">
-                        {sheetMode === "create" ? "Create Program" : "Edit Program"}
-                    </SheetTitle>
-                    <SheetDescription className="text-sm font-medium leading-relaxed max-w-[420px]">
-                        {sheetMode === "create" 
-                            ? "Add a new program to organize courses and runs." 
-                            : "Update program details and visibility settings."}
-                    </SheetDescription>
-                </SheetHeader>
+              <SheetHeader className="space-y-4">
+                <div className="flex size-16 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/30">
+                  <FolderKanban className="size-8" />
+                </div>
+                <SheetTitle className="text-2xl font-semibold tracking-tight">
+                  {sheetMode === "create" ? "Create Program" : "Edit Program"}
+                </SheetTitle>
+                <SheetDescription className="text-sm font-medium leading-relaxed max-w-[420px]">
+                  {sheetMode === "create"
+                    ? "Add a new program to organize courses and runs."
+                    : "Update program details and visibility settings."}
+                </SheetDescription>
+              </SheetHeader>
             </div>
-            
-            <div className="flex-1 w-full no-scrollbar">
-                {sheetMode === "create" ? (
-                <ProgramForm
-                    form={programForm}
-                    onChange={setProgramForm}
-                    errors={programFormErrors}
-                    onSubmit={() => {
-                    void runAsyncAction(handleCreateProgram)
-                    }}
-                    submitLabel="Create Program"
-                />
-                ) : null}
 
-                {sheetMode === "settings" && editingProgramId ? (
+            <div className="flex-1 w-full no-scrollbar">
+              {sheetMode === "create" ? (
                 <ProgramForm
-                    form={programForm}
-                    onChange={setProgramForm}
-                    errors={programFormErrors}
-                    onSubmit={() => {
-                    void runAsyncAction(handleSaveProgramSettings)
-                    }}
-                    submitLabel="Save Changes"
+                  form={programForm}
+                  onChange={setProgramForm}
+                  errors={programFormErrors}
+                  onSubmit={() => {
+                    void runAsyncAction(handleCreateProgram)
+                  }}
+                  submitLabel="Create Program"
                 />
-                ) : null}
+              ) : null}
+
+              {sheetMode === "settings" && editingProgramId ? (
+                <ProgramForm
+                  form={programForm}
+                  onChange={setProgramForm}
+                  errors={programFormErrors}
+                  onSubmit={() => {
+                    void runAsyncAction(handleSaveProgramSettings)
+                  }}
+                  submitLabel="Save Changes"
+                />
+              ) : null}
             </div>
           </div>
         </SheetContent>

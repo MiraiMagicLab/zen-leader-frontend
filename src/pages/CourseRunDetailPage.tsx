@@ -14,14 +14,14 @@ import {
   Users,
   IdCard,
 } from "lucide-react"
-import { 
-  courseApi, 
-  userApi, 
-  enrollmentApi 
+import {
+  courseApi,
+  userApi,
+  enrollmentApi
 } from "@/lib/api"
-import { 
-  useCourseRun, 
-  useUpdateCourseRun 
+import {
+  useCourseRun,
+  useUpdateCourseRun
 } from "@/lib/api/services/lms"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SyllabusTab } from "@/components/course-runs/SyllabusTab"
@@ -40,7 +40,7 @@ export default function CourseRunDetailPage() {
   // TanStack Query Hooks
   const queryRun = useCourseRun(runId)
   const run = queryRun.data
-  
+
   const updateStatusMutation = useUpdateCourseRun()
 
   // Additional Queries (Enrollments, Course Info, Users)
@@ -185,9 +185,9 @@ export default function CourseRunDetailPage() {
             { value: "enrollment", icon: Users, label: "Students" },
             { value: "info", icon: Info, label: "Overview" },
           ].map(({ value, icon: TabIcon, label }) => (
-            <TabsTrigger 
+            <TabsTrigger
               key={value}
-              value={value} 
+              value={value}
               className="h-9 rounded-md px-4 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground"
             >
               <TabIcon className="size-4" />
@@ -202,12 +202,12 @@ export default function CourseRunDetailPage() {
           </TabsContent>
 
           <TabsContent value="enrollment" className="outline-none">
-            <EnrollmentTab 
-              runId={run.id} 
-              enrollments={queryEnrollments.data ?? []} 
-              users={queryUsers.data ?? []} 
-              loading={queryEnrollments.isLoading} 
-              onRefresh={() => queryEnrollments.refetch()} 
+            <EnrollmentTab
+              runId={run.id}
+              enrollments={queryEnrollments.data ?? []}
+              users={queryUsers.data ?? []}
+              loading={queryEnrollments.isLoading}
+              onRefresh={() => queryEnrollments.refetch()}
             />
           </TabsContent>
 
@@ -215,7 +215,7 @@ export default function CourseRunDetailPage() {
             <div className="grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="bg-muted/40">
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
                     <IdCard className="size-4" />
                   </div>
                   <CardTitle>Run Information</CardTitle>
@@ -224,7 +224,7 @@ export default function CourseRunDetailPage() {
                 <CardContent className="space-y-6 p-6">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Run ID</p>
-                      <p className="break-all rounded-md border bg-muted p-3 font-mono text-sm text-foreground/80">{run.id}</p>
+                    <p className="break-all rounded-md border bg-muted p-3 font-mono text-sm text-foreground/80">{run.id}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1">
@@ -241,29 +241,29 @@ export default function CourseRunDetailPage() {
 
               <Card>
                 <CardHeader className="bg-muted/40">
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
                     <Calendar className="size-4" />
                   </div>
                   <CardTitle>Schedule Timeline</CardTitle>
                   <CardDescription>Important milestones for this run.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 p-6">
-                   <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-2 h-10 rounded-full bg-primary/50 shadow-lg shadow-primary/10" />
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Launch Date</p>
-                          <p className="text-sm font-bold text-foreground">{formatDateTime(run.startsAt)}</p>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-2 h-10 rounded-full bg-primary/60 shadow-lg shadow-primary/30" />
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Launch Date</p>
+                        <p className="text-sm font-bold text-foreground">{formatDateTime(run.startsAt)}</p>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="w-2 h-10 rounded-full bg-destructive/50 shadow-lg shadow-destructive/10" />
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Completion Date</p>
-                          <p className="text-sm font-bold text-foreground">{formatDateTime(run.endsAt)}</p>
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-2 h-10 rounded-full bg-destructive/60 shadow-lg shadow-destructive/30" />
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Completion Date</p>
+                        <p className="text-sm font-bold text-foreground">{formatDateTime(run.endsAt)}</p>
                       </div>
-                   </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

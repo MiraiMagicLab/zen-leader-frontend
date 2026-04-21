@@ -71,14 +71,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  type ChapterResponse, 
-  type LessonResponse 
+import {
+  type ChapterResponse,
+  type LessonResponse
 } from "@/lib/api"
-import { 
-  useChapters, 
-  useCreateChapter, 
-  useUpdateChapter, 
+import {
+  useChapters,
+  useCreateChapter,
+  useUpdateChapter,
   useDeleteChapter,
   useCreateLesson,
   useUpdateLesson,
@@ -123,24 +123,24 @@ const typeIconMap = {
 
 // Minimalist type styling using semantic tokens
 const typeStyleMap: Record<string, string> = {
-  video: "text-primary bg-primary/10",
+  video: "text-primary bg-primary/15",
   article: "text-muted-foreground bg-muted",
-  photo: "text-primary bg-primary/5",
+  photo: "text-primary bg-primary/15",
   document: "text-muted-foreground bg-muted",
-  resource: "text-primary bg-primary/10",
+  resource: "text-primary bg-primary/15",
 }
 
 // ─── Sortable Components ───────────────────────────────────────────────────
 
-function SortableChapter({ 
-  chapter, 
-  isExpanded, 
-  onToggle, 
-  onEdit, 
-  onDelete, 
+function SortableChapter({
+  chapter,
+  isExpanded,
+  onToggle,
+  onEdit,
+  onDelete,
   onAddLesson,
-  children 
-}: { 
+  children
+}: {
   chapter: ChapterResponse
   isExpanded: boolean
   onToggle: () => void
@@ -149,11 +149,11 @@ function SortableChapter({
   onAddLesson: () => void
   children?: React.ReactNode
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `chapter-${chapter.id}`,
     data: { type: "chapter", chapter }
   })
-  
+
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -164,7 +164,7 @@ function SortableChapter({
       <Card className={cn("overflow-hidden border-border shadow-sm", isDragging && "ring-2 ring-primary")}>
         <div className="flex items-center justify-between p-4 bg-card hover:bg-muted/50 transition-colors border-b border-border/50">
           <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+            <div {...attributes} {...listeners} className="cursor-grab text-muted-foreground/60 hover:text-foreground transition-colors">
               <GripVertical className="size-4" />
             </div>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground">
@@ -177,9 +177,9 @@ function SortableChapter({
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 ml-4">
-            <Button variant="ghost" size="sm" onClick={onAddLesson} className="h-8 gap-1.5 text-primary font-bold hover:bg-primary/10">
+            <Button variant="ghost" size="sm" onClick={onAddLesson} className="h-8 gap-1.5 text-primary font-bold hover:bg-primary/15">
               <Plus className="size-4" />
               Lesson
             </Button>
@@ -213,10 +213,10 @@ function SortableChapter({
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <CardContent className="p-4 space-y-2 bg-muted/20">
+              <CardContent className="p-4 space-y-2 bg-muted/50">
                 {children}
                 {(!chapter.lessons || chapter.lessons.length === 0) && (
-                  <div className="rounded-xl border border-border/50 bg-background/50 py-8 text-center text-muted-foreground/50">
+                  <div className="rounded-xl border border-border/50 bg-background/70 py-8 text-center text-muted-foreground/80">
                     <Inbox className="mx-auto mb-2 size-8" />
                     <p className="text-xs font-semibold">No lessons in this chapter yet</p>
                   </div>
@@ -230,20 +230,20 @@ function SortableChapter({
   )
 }
 
-function SortableLesson({ 
-  lesson, 
-  onEdit, 
-  onDelete 
-}: { 
+function SortableLesson({
+  lesson,
+  onEdit,
+  onDelete
+}: {
   lesson: LessonResponse
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `lesson-${lesson.id}`,
     data: { type: "lesson", lesson }
   })
-  
+
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -253,9 +253,9 @@ function SortableLesson({
   const styleClass = typeStyleMap[lesson.type] || "text-muted-foreground bg-muted"
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
+    <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
         "group flex items-center justify-between rounded-xl border border-border bg-card p-3.5 shadow-sm transition-colors",
         isDragging && "z-50 opacity-50 ring-2 ring-primary"
@@ -271,15 +271,15 @@ function SortableLesson({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-foreground truncate">{lesson.title}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">{lesson.type}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{lesson.type}</span>
             {lesson.isHidden && <Badge variant="secondary" className="h-4 px-1.5 text-xs font-semibold opacity-70">HIDDEN</Badge>}
             {lesson.isOptional && <Badge variant="outline" className="h-4 px-1.5 text-xs font-semibold opacity-70">OPTIONAL</Badge>}
-            {Boolean(lesson.contentData?.fileAttachment) && <Paperclip className="size-3 text-primary/70" />}
+            {Boolean(lesson.contentData?.fileAttachment) && <Paperclip className="size-3 text-primary/90" />}
           </div>
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={onEdit}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/15" onClick={onEdit}>
           <Pencil className="size-4" />
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={onDelete}>
@@ -301,7 +301,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
   const deleteChapter = useDeleteChapter(runId)
   const createLesson = useCreateLesson()
   const updateLesson = useUpdateLesson()
-  const deleteLesson = useDeleteLesson("") 
+  const deleteLesson = useDeleteLesson("")
 
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({})
   const [editingChapter, setEditingChapter] = useState<ChapterResponse | null>(null)
@@ -309,7 +309,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
   const [editingLesson, setEditingLesson] = useState<LessonResponse | null>(null)
   const [lessonSheetOpen, setLessonSheetOpen] = useState(false)
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
-  
+
   const [chapterForm, setChapterForm] = useState({ title: "", description: "" })
   const [lessonForm, setLessonForm] = useState({
     title: "",
@@ -392,7 +392,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
   const handleSaveLesson = async () => {
     if (!lessonForm.title.trim()) return toast.error("Title is required")
     if (!activeChapterId) return
-    
+
     const chapter = chaptersData.find(c => c.id === activeChapterId)
     const orderIndex = editingLesson ? editingLesson.orderIndex : (chapter?.lessons?.length || 0)
 
@@ -436,9 +436,9 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
       const oldIndex = chaptersData.findIndex(c => `chapter-${c.id}` === active.id)
       const newIndex = chaptersData.findIndex(c => `chapter-${c.id}` === over.id)
       const newChapters = arrayMove(chaptersData, oldIndex, newIndex)
-      
+
       try {
-        await Promise.all(newChapters.map((c, idx) => 
+        await Promise.all(newChapters.map((c, idx) =>
           updateChapter.mutateAsync({
             id: c.id,
             data: { courseRunId: runId, title: c.title, description: c.description, orderIndex: idx }
@@ -461,14 +461,14 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
       const newLessons = arrayMove(chapter.lessons, oldIndex, newIndex)
 
       try {
-        await Promise.all(newLessons.map((l, idx) => 
+        await Promise.all(newLessons.map((l, idx) =>
           updateLesson.mutateAsync({
             id: l.id,
-            data: { 
-              chapterId: l.chapterId, 
-              title: l.title, 
-              type: l.type, 
-              description: l.description, 
+            data: {
+              chapterId: l.chapterId,
+              title: l.title,
+              type: l.type,
+              description: l.description,
               orderIndex: idx,
               isHidden: l.isHidden,
               isOptional: l.isOptional,
@@ -484,7 +484,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
 
   if (queryChapters.isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-3 text-muted-foreground/30">
+      <div className="flex flex-col items-center justify-center py-32 gap-3 text-muted-foreground/70">
         <Loader2 className="size-10 animate-spin" />
         <p className="text-sm font-semibold">Organizing syllabus...</p>
       </div>
@@ -495,7 +495,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <ClipboardList className="size-4" />
           </div>
           <div>
@@ -513,9 +513,9 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
         <SortableContext items={chaptersData.map(c => `chapter-${c.id}`)} strategy={verticalListSortingStrategy}>
           <div className="space-y-4">
             {chaptersData.map((chapter) => (
-              <SortableChapter 
-                key={chapter.id} 
-                chapter={chapter} 
+              <SortableChapter
+                key={chapter.id}
+                chapter={chapter}
                 isExpanded={!!expandedChapters[chapter.id]}
                 onToggle={() => setExpandedChapters(prev => ({ ...prev, [chapter.id]: !prev[chapter.id] }))}
                 onEdit={() => handleOpenChapterDialog(chapter)}
@@ -528,22 +528,22 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                 onAddLesson={() => handleOpenLessonSheet(chapter.id)}
               >
                 <SortableContext items={chapter.lessons?.map(l => `lesson-${l.id}`) || []} strategy={verticalListSortingStrategy}>
-                   <div className="space-y-2">
-                      {chapter.lessons?.map((lesson) => (
-                        <SortableLesson 
-                          key={lesson.id} 
-                          lesson={lesson} 
-                          onEdit={() => handleOpenLessonSheet(chapter.id, lesson)}
-                          onDelete={() => {
-                            if (confirm("Remove this lesson?")) {
-                              deleteLesson.mutate(lesson.id, {
-                                onSuccess: () => toast.success("Lesson removed")
-                              })
-                            }
-                          }}
-                        />
-                      ))}
-                   </div>
+                  <div className="space-y-2">
+                    {chapter.lessons?.map((lesson) => (
+                      <SortableLesson
+                        key={lesson.id}
+                        lesson={lesson}
+                        onEdit={() => handleOpenLessonSheet(chapter.id, lesson)}
+                        onDelete={() => {
+                          if (confirm("Remove this lesson?")) {
+                            deleteLesson.mutate(lesson.id, {
+                              onSuccess: () => toast.success("Lesson removed")
+                            })
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
                 </SortableContext>
               </SortableChapter>
             ))}
@@ -555,7 +555,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
       <Dialog open={chapterDialogOpen} onOpenChange={setChapterDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-xl border-border p-6">
           <DialogHeader>
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
               {editingChapter ? <Pencil className="size-4" /> : <PlusCircle className="size-4" />}
             </div>
             <DialogTitle className="text-xl font-semibold text-foreground tracking-tight">
@@ -568,19 +568,19 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
           <div className="space-y-5 py-4">
             <div className="space-y-2">
               <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chapter Title</Label>
-              <Input 
-                value={chapterForm.title} 
-                onChange={e => setChapterForm(prev => ({ ...prev, title: e.target.value }))} 
-                placeholder="e.g. Fundamental Concepts" 
+              <Input
+                value={chapterForm.title}
+                onChange={e => setChapterForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g. Fundamental Concepts"
                 className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
               />
             </div>
             <div className="space-y-2">
               <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</Label>
-              <Input 
-                value={chapterForm.description} 
-                onChange={e => setChapterForm(prev => ({ ...prev, description: e.target.value }))} 
-                placeholder="Brief summary (optional)" 
+              <Input
+                value={chapterForm.description}
+                onChange={e => setChapterForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief summary (optional)"
                 className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
               />
             </div>
@@ -597,17 +597,17 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
       {/* Lesson Sheet */}
       <Sheet open={lessonSheetOpen} onOpenChange={setLessonSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-[760px] flex flex-col overflow-hidden border-border p-0 rounded-l-xl">
-          <SheetHeader className="relative border-b border-border/10 bg-muted/20 p-6">
+          <SheetHeader className="relative border-b border-border/20 bg-muted/50 p-6">
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                   <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", typeStyleMap[lessonForm.type] ?? "bg-muted text-muted-foreground")}>
-                      {(() => {
-                        const LessonFormTypeIcon = typeIconMap[lessonForm.type as keyof typeof typeIconMap] ?? FileText
-                        return <LessonFormTypeIcon className="size-3.5" />
-                      })()}
-                   </div>
-                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{lessonForm.type} LESSON</span>
+                  <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", typeStyleMap[lessonForm.type] ?? "bg-muted text-muted-foreground")}>
+                    {(() => {
+                      const LessonFormTypeIcon = typeIconMap[lessonForm.type as keyof typeof typeIconMap] ?? FileText
+                      return <LessonFormTypeIcon className="size-3.5" />
+                    })()}
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{lessonForm.type} LESSON</span>
                 </div>
                 <SheetTitle className="text-2xl font-semibold text-foreground tracking-tight">
                   {editingLesson ? "Edit lesson" : "Create lesson"}
@@ -636,20 +636,20 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson Title</Label>
-                    <Input 
-                      value={lessonForm.title} 
-                      onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))} 
-                      placeholder="e.g. Introduction to Physics" 
+                    <Input
+                      value={lessonForm.title}
+                      onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))}
+                      placeholder="e.g. Introduction to Physics"
                       className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content Type</Label>
                     <div className="relative group">
-                       <select 
-                        value={lessonForm.type} 
+                      <select
+                        value={lessonForm.type}
                         onChange={e => setLessonForm(p => ({ ...p, type: e.target.value }))}
-                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-border bg-muted/50 px-4 pr-10 text-sm font-medium hover:bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-border bg-muted/50 px-4 pr-10 text-sm font-medium hover:bg-background focus:ring-2 focus:ring-primary/35 outline-none"
                       >
                         <option value="video">Video Lecture</option>
                         <option value="article">Article / Reading</option>
@@ -664,7 +664,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
 
                 <div className="space-y-3">
                   <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Primary Media</Label>
-                  <LessonMediaUploader 
+                  <LessonMediaUploader
                     value={lessonForm.fileAttachment?.url}
                     fileName={lessonForm.fileAttachment?.fileName}
                     onChange={(url, meta) => setLessonForm((p) => ({ ...p, fileAttachment: url ? toLessonAttachment(meta) : null }))}
@@ -672,72 +672,72 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                     label={lessonForm.type === "video" ? "Upload Video" : "Upload File"}
                   />
                 </div>
-                
+
                 <div className="space-y-3">
                   <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Written Content (Markdown)</Label>
                   <div className="overflow-hidden rounded-xl border border-border bg-background">
-                    <MarkdownEditor 
-                      value={lessonForm.markdownContent} 
-                      onChange={val => setLessonForm(p => ({ ...p, markdownContent: val || "" }))} 
-                      height={400} 
+                    <MarkdownEditor
+                      value={lessonForm.markdownContent}
+                      onChange={val => setLessonForm(p => ({ ...p, markdownContent: val || "" }))}
+                      height={400}
                     />
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="settings" className="mt-0 space-y-6 outline-none">
-                 <div className="space-y-2">
-                    <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Internal Description</Label>
-                    <Input 
-                      value={lessonForm.description} 
-                      onChange={e => setLessonForm(p => ({ ...p, description: e.target.value }))} 
-                      placeholder="Notes for instructors..." 
-                      className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Internal Description</Label>
+                  <Input
+                    value={lessonForm.description}
+                    onChange={e => setLessonForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Notes for instructors..."
+                    className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
+                  />
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div 
-                      className={cn(
-                        "cursor-pointer select-none rounded-xl border p-5 transition-colors",
-                        lessonForm.isHidden ? "bg-destructive/5 border-destructive/20" : "bg-card border-border hover:border-muted-foreground/30"
-                      )}
-                      onClick={() => setLessonForm(p => ({ ...p, isHidden: !p.isHidden }))}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isHidden ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground")}>
-                           {lessonForm.isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Private Lesson</p>
-                          <p className="text-xs font-medium leading-relaxed text-muted-foreground">Hidden from learner view.</p>
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    className={cn(
+                      "cursor-pointer select-none rounded-xl border p-5 transition-colors",
+                      lessonForm.isHidden ? "bg-destructive/10 border-destructive/30" : "bg-card border-border hover:border-muted-foreground/40"
+                    )}
+                    onClick={() => setLessonForm(p => ({ ...p, isHidden: !p.isHidden }))}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isHidden ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground")}>
+                        {lessonForm.isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </div>
-                    </div>
-
-                    <div 
-                      className={cn(
-                        "cursor-pointer select-none rounded-xl border p-5 transition-colors",
-                        lessonForm.isOptional ? "bg-primary/5 border-primary/20" : "bg-card border-border hover:border-muted-foreground/30"
-                      )}
-                      onClick={() => setLessonForm(p => ({ ...p, isOptional: !p.isOptional }))}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isOptional ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                           <Star className="size-4" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Elective Task</p>
-                          <p className="text-xs font-medium leading-relaxed text-muted-foreground">Does not affect completion.</p>
-                        </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Private Lesson</p>
+                        <p className="text-xs font-medium leading-relaxed text-muted-foreground">Hidden from learner view.</p>
                       </div>
                     </div>
                   </div>
+
+                  <div
+                    className={cn(
+                      "cursor-pointer select-none rounded-xl border p-5 transition-colors",
+                      lessonForm.isOptional ? "bg-primary/15 border-primary/30" : "bg-card border-border hover:border-muted-foreground/40"
+                    )}
+                    onClick={() => setLessonForm(p => ({ ...p, isOptional: !p.isOptional }))}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isOptional ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                        <Star className="size-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Elective Task</p>
+                        <p className="text-xs font-medium leading-relaxed text-muted-foreground">Does not affect completion.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border/10 bg-muted/30 p-6">
+          <div className="flex items-center justify-between border-t border-border/20 bg-muted/60 p-6">
             <Button variant="ghost" onClick={() => setLessonSheetOpen(false)} className="h-10 rounded-xl px-6 font-medium text-muted-foreground hover:text-foreground">Discard</Button>
             <Button onClick={handleSaveLesson} disabled={updateLesson.isPending || createLesson.isPending} className="h-10 gap-2 rounded-xl px-7 font-medium">
               <CheckCircle2 className="size-4" />

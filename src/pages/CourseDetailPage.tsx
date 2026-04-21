@@ -99,7 +99,7 @@ export default function CourseDetailPage() {
           <ArrowLeft />
           Back to programs
         </Button>
-        <Card className="border-destructive/30 bg-destructive/5">
+        <Card className="border-destructive/50 bg-destructive/10">
           <CardContent className="py-1 text-sm text-destructive">
             {error || "Course not found."}
           </CardContent>
@@ -154,7 +154,7 @@ export default function CourseDetailPage() {
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
-          <Card className="bg-muted/20">
+          <Card className="bg-muted/50">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Course runs</p>
@@ -163,7 +163,7 @@ export default function CourseDetailPage() {
               <CalendarRange className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-muted/20">
+          <Card className="bg-muted/50">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Lessons</p>
@@ -172,7 +172,7 @@ export default function CourseDetailPage() {
               <Layers3 className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-muted/20">
+          <Card className="bg-muted/50">
             <CardContent className="flex items-center justify-between py-1">
               <div>
                 <p className="text-sm text-muted-foreground">Order index</p>
@@ -181,7 +181,7 @@ export default function CourseDetailPage() {
               <BookCopy className="size-5 text-primary" />
             </CardContent>
           </Card>
-          <Card className="bg-muted/20">
+          <Card className="bg-muted/50">
             <CardContent className="py-1">
               <p className="text-sm text-muted-foreground">Tags</p>
               <p className="mt-1 text-base font-semibold text-foreground">
@@ -199,7 +199,7 @@ export default function CourseDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-0">
             {course.courseRuns.length === 0 ? (
-              <div className="rounded-xl border border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-xl border border-border bg-muted/50 p-8 text-center text-sm text-muted-foreground">
                 No course runs.
               </div>
             ) : (

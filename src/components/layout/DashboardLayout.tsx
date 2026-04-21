@@ -52,12 +52,12 @@ export function DashboardLayout() {
       >
         <SidebarHeader className="px-3 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/5 bg-primary/10 p-1">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/15 p-1">
               <img src={zenleaderLogo} alt="Zenleader" className="h-7 w-7 object-contain" />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <h1 className="font-headline text-xl font-extrabold text-foreground tracking-tight">Zenleader</h1>
-              <p className="text-xs font-medium text-primary/80">Admin Panel</p>
+              <p className="text-xs font-medium text-primary">Admin Panel</p>
             </div>
           </div>
         </SidebarHeader>
@@ -72,8 +72,8 @@ export function DashboardLayout() {
                       tooltip={item.label}
                       className={cn(
                         "h-10 rounded-xl px-3 text-sm font-medium",
-                        isActive 
-                          ? "bg-primary text-primary-foreground" 
+                        isActive
+                          ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -91,7 +91,7 @@ export function DashboardLayout() {
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="h-10 justify-start gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center"
+            className="h-10 justify-start gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground dark:text-foreground hover:bg-destructive/15 hover:text-destructive group-data-[collapsible=icon]:justify-center"
           >
             <span className="flex size-6 shrink-0 items-center justify-center">
               <LogOut className="size-4" />
@@ -106,14 +106,14 @@ export function DashboardLayout() {
           <div className="flex items-center gap-4">
             <SidebarTrigger className="h-10 w-10 rounded-xl bg-muted/50 hover:bg-muted" />
             <Separator orientation="vertical" className="h-6 opacity-30 hidden sm:block" />
-            <p className="hidden text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 sm:block">Zen Leader Dashboard</p>
+            <p className="hidden text-xs font-semibold uppercase tracking-wide text-muted-foreground/80 sm:block">Zen Leader Dashboard</p>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            
+
             <Separator orientation="vertical" className="h-6 opacity-30" />
-            
+
             <Button
               variant="ghost"
               className="h-auto gap-3 rounded-xl border border-transparent px-2 py-1.5 pr-3 hover:border-border/50"
@@ -121,9 +121,9 @@ export function DashboardLayout() {
             >
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-semibold leading-tight text-foreground">{displayName}</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">{roleLabel}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">{roleLabel}</p>
               </div>
-              <Avatar className="size-10 rounded-xl ring-2 ring-primary/10">
+              <Avatar className="size-10 rounded-xl ring-2 ring-primary/25">
                 <AvatarImage alt="User Profile" src={avatarUrl} />
                 <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>

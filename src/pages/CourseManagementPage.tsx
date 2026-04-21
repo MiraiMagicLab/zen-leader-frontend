@@ -67,13 +67,13 @@ function countLessons(course: CourseResponse) {
 function getLevelColor(level: string | null) {
   switch ((level ?? "").toUpperCase()) {
     case "BEGINNER":
-      return "bg-primary/10 text-primary border-primary/10"
+      return "bg-primary/15 text-primary border-primary/20"
     case "INTERMEDIATE":
-      return "bg-primary/10 text-primary border-primary/10"
+      return "bg-primary/15 text-primary border-primary/20"
     case "ADVANCED":
     case "EXPERT":
     case "MASTER":
-      return "bg-primary/10 text-primary border-primary/10"
+      return "bg-primary/15 text-primary border-primary/20"
     default:
       return "bg-muted text-muted-foreground border-border"
   }
@@ -163,17 +163,17 @@ export default function CourseManagementPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button 
-                variant="ghost" 
-                onClick={() => navigate("/dashboard/programs")} 
-                className="h-10 gap-2 px-4 font-medium"
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/dashboard/programs")}
+              className="h-10 gap-2 px-4 font-medium"
             >
               <ArrowLeft className="size-4" />
               Programs
             </Button>
             <Button
-                onClick={() => navigate(`/dashboard/programs/${programId}/courses/create`)} 
-                className="gap-2 h-10 px-4"
+              onClick={() => navigate(`/dashboard/programs/${programId}/courses/create`)}
+              className="gap-2 h-10 px-4"
             >
               <Plus className="size-5" />
               Create Course
@@ -183,28 +183,28 @@ export default function CourseManagementPage() {
 
         {/* Quick Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-                { label: "Active Runs", value: totalCourseRuns, icon: GitBranch, color: "text-primary", bg: "bg-primary/10" },
-                { label: "Total Lessons", value: totalLessons, icon: BookOpen, color: "text-primary", bg: "bg-primary/10" },
-                { label: "Active Hierarchy", value: courses.length, icon: Layers3, color: "text-primary", bg: "bg-primary/10" }
-            ].map((stat, i) => (
-                <div key={i} className="flex items-center gap-4 rounded-xl border border-border/40 bg-card p-4">
-                    <div className={cn("size-10 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
-                        <stat.icon className="size-4" />
-                    </div>
-                    <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-                        <p className="text-xl font-semibold text-foreground">{stat.value}</p>
-                    </div>
-                </div>
-            ))}
+          {[
+            { label: "Active Runs", value: totalCourseRuns, icon: GitBranch, color: "text-primary", bg: "bg-primary/15" },
+            { label: "Total Lessons", value: totalLessons, icon: BookOpen, color: "text-primary", bg: "bg-primary/15" },
+            { label: "Active Hierarchy", value: courses.length, icon: Layers3, color: "text-primary", bg: "bg-primary/15" }
+          ].map((stat, i) => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-border/40 bg-card p-4">
+              <div className={cn("size-10 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
+                <stat.icon className="size-4" />
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                <p className="text-xl font-semibold text-foreground">{stat.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {error ? (
-          <Card className="rounded-xl border-error/20 bg-error/5">
+          <Card className="rounded-xl border-error/30 bg-error/10">
             <CardContent className="py-3 text-sm text-error font-bold flex items-center gap-2">
-                <AlertCircle className="size-4" />
-                {error}
+              <AlertCircle className="size-4" />
+              {error}
             </CardContent>
           </Card>
         ) : null}
@@ -221,18 +221,18 @@ export default function CourseManagementPage() {
 
               <div className="flex flex-col sm:flex-row gap-3 min-w-0 lg:min-w-[500px]">
                 <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/50" />
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/70" />
                   <Input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search title, code, or category..."
-                    className="h-11 rounded-xl border-transparent bg-muted/50 pl-9 font-medium focus:border-primary/20 focus:bg-background"
+                    className="h-11 rounded-xl border-transparent bg-muted/60 pl-9 font-medium focus:border-primary/20 focus:bg-background"
                   />
                 </div>
 
                 <div className="w-full sm:w-[200px]">
-                  <Select 
-                    value={categoryFilter} 
+                  <Select
+                    value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}
                     className="h-11 rounded-xl border-input bg-background px-4 text-sm"
                   >
@@ -251,7 +251,7 @@ export default function CourseManagementPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left text-sm">
-                <thead className="border-y border-border/40 bg-muted/30 text-xs uppercase text-muted-foreground">
+                <thead className="border-y border-border/40 bg-muted/60 text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-8 py-5 font-semibold">Course</th>
                     <th className="px-6 py-5 font-semibold">Details</th>
@@ -265,86 +265,86 @@ export default function CourseManagementPage() {
                     <tr>
                       <td colSpan={5} className="px-8 py-20 text-center">
                         <div className="flex flex-col items-center gap-3 opacity-40">
-                            <BookOpen className="size-12 mb-2" />
-                            <p className="text-base font-semibold">No results found</p>
-                            <p className="text-sm font-medium">Try adjusting your search criteria.</p>
+                          <BookOpen className="size-12 mb-2" />
+                          <p className="text-base font-semibold">No results found</p>
+                          <p className="text-sm font-medium">Try adjusting your search criteria.</p>
                         </div>
                       </td>
                     </tr>
                   ) : (
                     filteredCourses.map((course) => (
-                      <tr key={course.id} className="hover:bg-muted/10 transition-colors group">
+                      <tr key={course.id} className="hover:bg-muted/40 transition-colors group">
                         <td className="px-8 py-6">
-                            <div className="flex items-start gap-4">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/5 bg-primary/5 text-primary">
-                                    <BookOpen className="size-5" />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <button 
-                                        onClick={() => navigate(`/dashboard/courses/${course.id}`)}
-                                        className="text-left text-base font-semibold text-foreground hover:text-primary transition-colors"
-                                    >
-                                        {course.title}
-                                    </button>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline" className="rounded-md border-border/60 px-1.5 py-0 font-mono text-xs">{course.code}</Badge>
-                                        {course.category ? (
-                                            <Badge variant="outline" className="rounded-md border-transparent bg-muted/30 px-1.5 py-0 text-xs uppercase">
-                                                {course.category}
-                                            </Badge>
-                                        ) : null}
-                                    </div>
-                                </div>
+                          <div className="flex items-start gap-4">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/15 text-primary">
+                              <BookOpen className="size-5" />
                             </div>
+                            <div className="space-y-1.5">
+                              <button
+                                onClick={() => navigate(`/dashboard/courses/${course.id}`)}
+                                className="text-left text-base font-semibold text-foreground hover:text-primary transition-colors"
+                              >
+                                {course.title}
+                              </button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="rounded-md border-border/60 px-1.5 py-0 font-mono text-xs">{course.code}</Badge>
+                                {course.category ? (
+                                  <Badge variant="outline" className="rounded-md border-transparent bg-muted/60 px-1.5 py-0 text-xs uppercase">
+                                    {course.category}
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-6 py-6">
-                            <div className="space-y-1">
-                                <p className="text-xs font-semibold text-muted-foreground/70">Order: {course.orderIndex}</p>
-                                <div className="flex items-center gap-1.5">
-                                    <Repeat className="size-4 text-primary" />
-                                    <p className="text-sm font-bold text-foreground/80">{course.courseRuns.length} Active Runs</p>
-                                </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-muted-foreground/80">Order: {course.orderIndex}</p>
+                            <div className="flex items-center gap-1.5">
+                              <Repeat className="size-4 text-primary" />
+                              <p className="text-sm font-bold text-foreground">{course.courseRuns.length} Active Runs</p>
                             </div>
+                          </div>
                         </td>
                         <td className="px-6 py-6 text-center">
-                            <div className="inline-flex size-10 items-center justify-center rounded-xl bg-muted/60 font-semibold text-foreground ring-1 ring-border/20">
-                                {countLessons(course)}
-                            </div>
+                          <div className="inline-flex size-10 items-center justify-center rounded-xl bg-muted/60 font-semibold text-foreground ring-1 ring-border/20">
+                            {countLessons(course)}
+                          </div>
                         </td>
                         <td className="px-6 py-6">
                           {course.level ? (
                             <Badge className={cn("rounded-full border px-3 py-0.5 text-xs font-semibold uppercase tracking-wide shadow-none", getLevelColor(course.level))}>
-                                {course.level}
+                              {course.level}
                             </Badge>
                           ) : (
-                            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/50 italic">Undefined</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/80 italic">Undefined</span>
                           )}
                         </td>
                         <td className="px-8 py-6 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger className="inline-flex size-9 items-center justify-center rounded-xl hover:bg-muted">
                               <span className="sr-only">Open actions</span>
-                                <MoreVertical className="size-5" />
+                              <MoreVertical className="size-5" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl border-border p-2">
                               <DropdownMenuLabel className="px-3 py-2 text-xs text-muted-foreground">Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="cursor-pointer gap-3 rounded-xl px-3 py-3 font-medium focus:bg-primary/5 focus:text-primary" 
+                              <DropdownMenuItem
+                                className="cursor-pointer gap-3 rounded-xl px-3 py-3 font-medium focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                                 onClick={() => navigate(`/dashboard/courses/${course.id}`)}
                               >
                                 <Eye className="size-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="rounded-xl px-3 py-3 font-bold gap-3 cursor-pointer focus:bg-primary/5 focus:text-primary" 
+                              <DropdownMenuItem
+                                className="rounded-xl px-3 py-3 font-bold gap-3 cursor-pointer focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                                 onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}
                               >
                                 <Plus className="size-5" />
                                 Create run
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="rounded-xl px-3 py-3 font-bold gap-3 cursor-pointer focus:bg-primary/5 focus:text-primary" 
+                              <DropdownMenuItem
+                                className="rounded-xl px-3 py-3 font-bold gap-3 cursor-pointer focus:bg-primary/15 focus:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                                 onClick={() => navigate(`/dashboard/courses/${course.id}/edit`)}
                               >
                                 <PencilLine className="size-5" />
@@ -375,42 +375,42 @@ export default function CourseManagementPage() {
       <Sheet open={Boolean(deletingCourse)} onOpenChange={(open) => !open && setDeletingCourse(null)}>
         <SheetContent side="right" className="w-full sm:max-w-[480px] border-l-border bg-background p-0">
           <div className="h-full flex flex-col p-8 items-start justify-between">
-              <div className="w-full">
-                <SheetHeader className="space-y-3">
-                    <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
-                        <Trash2 className="size-7" />
-                    </div>
-                    <SheetTitle className="text-xl font-semibold tracking-tight">Delete course</SheetTitle>
-                    <SheetDescription className="text-sm font-medium leading-relaxed">
-                        You are about to delete this course. All related runs, chapters, and lessons will also be removed.
-                    </SheetDescription>
-                </SheetHeader>
-
-                <div className="mt-10 space-y-4">
-                    <div className="space-y-1 rounded-xl border border-destructive/20 bg-destructive/5 p-6">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-destructive">Course to delete</p>
-                        <p className="text-base font-semibold text-foreground tracking-tight">{deletingCourse?.title}</p>
-                        <p className="text-sm font-mono text-muted-foreground opacity-70">{deletingCourse?.code}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground font-medium px-2">Please confirm. This action cannot be undone.</p>
+            <div className="w-full">
+              <SheetHeader className="space-y-3">
+                <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+                  <Trash2 className="size-7" />
                 </div>
+                <SheetTitle className="text-xl font-semibold tracking-tight">Delete course</SheetTitle>
+                <SheetDescription className="text-sm font-medium leading-relaxed">
+                  You are about to delete this course. All related runs, chapters, and lessons will also be removed.
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-10 space-y-4">
+                <div className="space-y-1 rounded-xl border border-destructive/30 bg-destructive/10 p-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-destructive">Course to delete</p>
+                  <p className="text-base font-semibold text-foreground tracking-tight">{deletingCourse?.title}</p>
+                  <p className="text-sm font-mono text-muted-foreground/80">{deletingCourse?.code}</p>
+                </div>
+                <p className="text-sm text-muted-foreground font-medium px-2">Please confirm. This action cannot be undone.</p>
               </div>
+            </div>
 
             <SheetFooter className="w-full border-t border-border pt-8 flex gap-3 sm:gap-3 items-center">
-                <Button 
-                    variant="ghost" 
-                    className="h-10 flex-1 rounded-xl text-sm font-medium text-muted-foreground" 
-                    onClick={() => setDeletingCourse(null)}
-                >
-                    Cancel
-                </Button>
-                <Button 
-                    variant="destructive" 
-                    className="h-10 flex-1 rounded-xl text-sm font-medium"
-                    onClick={() => void handleDeleteCourse()}
-                >
-                    Confirm Delete
-                </Button>
+              <Button
+                variant="ghost"
+                className="h-10 flex-1 rounded-xl text-sm font-medium text-muted-foreground"
+                onClick={() => setDeletingCourse(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-10 flex-1 rounded-xl text-sm font-medium"
+                onClick={() => void handleDeleteCourse()}
+              >
+                Confirm Delete
+              </Button>
             </SheetFooter>
           </div>
         </SheetContent>

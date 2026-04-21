@@ -195,7 +195,7 @@ export default function CreateEventPage() {
           {/* Event Essentials */}
           <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary/15 rounded-xl flex items-center justify-center">
                 <Info className="size-5 text-primary" />
               </div>
               <h3 className="text-lg font-semibold text-foreground">Event Essentials</h3>
@@ -211,7 +211,7 @@ export default function CreateEventPage() {
                     if (formErrors.eventName) setFormErrors((prev) => ({ ...prev, eventName: undefined }))
                   }}
                   placeholder="e.g. Q4 Executive Leadership Summit"
-                  className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
+                  className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none transition-colors"
                 />
                 {formErrors.eventName ? <p className="mt-1 text-xs text-error">{formErrors.eventName}</p> : null}
               </div>
@@ -238,7 +238,7 @@ export default function CreateEventPage() {
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="One sentence pitch..."
-                    className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
+                    className="w-full border-b border-border bg-transparent px-0 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -248,7 +248,7 @@ export default function CreateEventPage() {
           {/* Speaker & Content */}
           <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary/15 rounded-xl flex items-center justify-center">
                 <FileText className="size-5 text-primary" />
               </div>
               <h3 className="text-lg font-semibold text-foreground">Speaker & Content</h3>
@@ -259,13 +259,13 @@ export default function CreateEventPage() {
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Speaker / Instructor</label>
                   <div className="relative border-b border-border focus-within:border-primary transition-colors">
-                    <User className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                    <User className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/80" />
                     <input
                       type="text"
                       value={speaker}
                       onChange={(e) => setSpeaker(e.target.value)}
                       placeholder="e.g. Dr. Aris Thorne, Sarah Jenkins..."
-                      className="w-full bg-transparent py-2 pl-6 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                      className="w-full bg-transparent py-2 pl-6 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -278,7 +278,7 @@ export default function CreateEventPage() {
                     type="button"
                     variant="outline"
                     onClick={() => bannerRef.current?.click()}
-                    className="relative group min-h-20 w-full flex-col gap-1 overflow-hidden rounded-xl border border-border bg-muted/20 py-4 hover:bg-muted/30"
+                    className="relative group min-h-20 w-full flex-col gap-1 overflow-hidden rounded-xl border border-border bg-muted/50 py-4 hover:bg-muted/60"
                   >
                     {bannerPreview ? (
                       <>
@@ -289,7 +289,7 @@ export default function CreateEventPage() {
                       </>
                     ) : (
                       <>
-                        <Upload className="size-6 text-muted-foreground/60" />
+                        <Upload className="size-6 text-muted-foreground/80" />
                         <span className="text-xs font-medium text-muted-foreground">Upload banner (16:9)</span>
                       </>
                     )}
@@ -413,7 +413,7 @@ export default function CreateEventPage() {
                       if (formErrors.venue) setFormErrors((prev) => ({ ...prev, venue: undefined }))
                     }}
                     placeholder="Enter venue address..."
-                    className="w-full rounded-xl border border-input bg-muted py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/40"
+                    className="w-full rounded-xl border border-input bg-muted py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40"
                   />
                 </div>
                 {formErrors.venue ? <p className="mt-1 text-xs text-error">{formErrors.venue}</p> : null}
@@ -430,13 +430,13 @@ export default function CreateEventPage() {
                   </a>
                 ) : (
                   <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-muted px-3 py-2">
-                    <Map className="size-4 text-muted-foreground/60" />
+                    <Map className="size-4 text-muted-foreground/80" />
                     <span className="text-xs font-medium text-muted-foreground">Type an address to preview on map</span>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3 rounded-xl bg-primary/10 px-4 py-4">
+              <div className="flex items-center gap-3 rounded-xl bg-primary/15 px-4 py-4">
                 <Video className="size-6 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-foreground">Online Event</p>
