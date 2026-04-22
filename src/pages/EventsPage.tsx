@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { MoreVertical, Plus, Search, CalendarDays, MapPin, Info, TriangleAlert } from "lucide-react"
+import { Plus, Search, CalendarDays, MapPin, Info, TriangleAlert } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,14 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -162,9 +154,9 @@ export default function EventsPage() {
       />
 
       <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="relative flex-1 max-w-md group">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search events..."
               className="pl-9"
@@ -173,21 +165,21 @@ export default function EventsPage() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto h-10"
+              className="w-full sm:w-auto"
             />
-            <Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="h-10 text-xs font-semibold">
+            <Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full sm:w-[180px]">
               <option value="ALL">All Categories</option>
               <option value="WORKSHOP">Workshop</option>
               <option value="SUMMIT">Summit</option>
               <option value="TALK">Talk</option>
               <option value="WEBINAR">Webinar</option>
             </Select>
-            <Select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="h-10 text-xs font-semibold">
+            <Select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full sm:w-[180px]">
               <option value="ALL">All Statuses</option>
               <option value="PUBLISHED">Published</option>
               <option value="DRAFT">Draft</option>
@@ -200,6 +192,7 @@ export default function EventsPage() {
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
+                <TableHead className="px-6 h-12 w-16">STT</TableHead>
                 <TableHead className="px-6 h-12">Event</TableHead>
                 <TableHead className="px-6 h-12">Category</TableHead>
                 <TableHead className="px-6 h-12">Status</TableHead>
@@ -211,7 +204,7 @@ export default function EventsPage() {
             </TableHeader>
             <TableBody>
               {filteredEvents.length > 0 ? (
-                filteredEvents.map((event) => {
+                filteredEvents.map((event, idx) => {
                   const category = getCategory(event)
                   const registration = getRegistration(event)
                   const startTime = new Date(event.startTime)
@@ -221,6 +214,9 @@ export default function EventsPage() {
 
                   return (
                     <TableRow key={event.id} className="group border-none hover:bg-muted/40">
+                      <TableCell className="px-6 py-4 text-muted-foreground">
+                        {idx + 1}
+                      </TableCell>
                       <TableCell className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
@@ -275,40 +271,56 @@ export default function EventsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/dashboard/events/edit/${event.id}`)}
+                          >
+                            <CalendarDays className="mr-2 size-4" />
+                            Edit
+                          </Button>
+                          {event.status === "DRAFT" ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() =>
+                                setPendingAction({ kind: "publish", eventId: event.id, title: event.title })
+                              }
+                            >
+                              <Info className="mr-2 size-4" />
+                              Publish
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => navigate(`/dashboard/events/edit/${event.id}`)}>
-                              <CalendarDays className="mr-2 h-4 w-4" /> Edit Details
-                            </DropdownMenuItem>
-                            {event.status === "DRAFT" ? (
-                              <DropdownMenuItem onClick={() => setPendingAction({ kind: "publish", eventId: event.id, title: event.title })}>
-                                <Info className="mr-2 h-4 w-4" /> Publish
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => setPendingAction({ kind: "unpublish", eventId: event.id, title: event.title })}>
-                                <Info className="mr-2 h-4 w-4" /> Move to Draft
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => setPendingAction({ kind: "delete", eventId: event.id, title: event.title })}>
-                              <MoreVertical className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() =>
+                                setPendingAction({ kind: "unpublish", eventId: event.id, title: event.title })
+                              }
+                            >
+                              <Info className="mr-2 size-4" />
+                              Draft
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() =>
+                              setPendingAction({ kind: "delete", eventId: event.id, title: event.title })
+                            }
+                          >
+                            <TriangleAlert className="mr-2 size-4" />
+                            Delete
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     No events found.
                   </TableCell>
                 </TableRow>

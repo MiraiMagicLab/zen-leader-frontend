@@ -1,11 +1,8 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  BookOpen,
   CheckCircle2,
   ChevronDown,
-  Eye,
-  EyeOff,
   FileText,
   GripVertical,
   Inbox,
@@ -17,8 +14,6 @@ import {
   PlayCircle,
   Plus,
   PlusCircle,
-  Settings,
-  Star,
   Trash2,
   ClipboardList,
   Image as ImageIcon,
@@ -39,12 +34,23 @@ import {
   verticalListSortingStrategy,
   useSortable
 } from "@dnd-kit/sortable"
+import { Select } from "@/components/ui/select"
 import { CSS } from "@dnd-kit/utilities"
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +76,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   type ChapterResponse,
   type LessonResponse
@@ -114,20 +119,22 @@ function toLessonAttachment(meta?: Record<string, unknown>): LessonAttachment | 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const typeIconMap = {
-  video: PlayCircle,
-  article: FileText,
-  photo: ImageIcon,
-  document: FileText,
-  resource: Link,
+  TEXT: FileText,
+  VIDEO: PlayCircle,
+  ARTICLE: FileText,
+  PHOTO: ImageIcon,
+  DOCUMENT: FileText,
+  RESOURCE: Link,
 }
 
 // Minimalist type styling using semantic tokens
 const typeStyleMap: Record<string, string> = {
-  video: "text-primary bg-primary/15",
-  article: "text-muted-foreground bg-muted",
-  photo: "text-primary bg-primary/15",
-  document: "text-muted-foreground bg-muted",
-  resource: "text-primary bg-primary/15",
+  TEXT: "text-muted-foreground bg-muted",
+  VIDEO: "text-primary bg-primary/15",
+  ARTICLE: "text-muted-foreground bg-muted",
+  PHOTO: "text-primary bg-primary/15",
+  DOCUMENT: "text-muted-foreground bg-muted",
+  RESOURCE: "text-primary bg-primary/15",
 }
 
 // ─── Sortable Components ───────────────────────────────────────────────────
@@ -309,11 +316,13 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
   const [editingLesson, setEditingLesson] = useState<LessonResponse | null>(null)
   const [lessonSheetOpen, setLessonSheetOpen] = useState(false)
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
+  const [chapterToDelete, setChapterToDelete] = useState<{ id: string; title: string } | null>(null)
+  const [lessonToDelete, setLessonToDelete] = useState<{ id: string; title: string } | null>(null)
 
   const [chapterForm, setChapterForm] = useState({ title: "", description: "" })
   const [lessonForm, setLessonForm] = useState({
     title: "",
-    type: "video",
+    type: "TEXT",
     description: "",
     markdownContent: "",
     isHidden: false,
@@ -378,7 +387,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
       setEditingLesson(null)
       setLessonForm({
         title: "",
-        type: "video",
+        type: "TEXT",
         description: "",
         markdownContent: "",
         isHidden: false,
@@ -519,12 +528,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                 isExpanded={!!expandedChapters[chapter.id]}
                 onToggle={() => setExpandedChapters(prev => ({ ...prev, [chapter.id]: !prev[chapter.id] }))}
                 onEdit={() => handleOpenChapterDialog(chapter)}
-                onDelete={() => {
-                  if (confirm("Remove chapter and all its lessons?")) {
-                    deleteChapter.mutate(chapter.id)
-                    toast.success("Chapter removed")
-                  }
-                }}
+                onDelete={() => setChapterToDelete({ id: chapter.id, title: chapter.title })}
                 onAddLesson={() => handleOpenLessonSheet(chapter.id)}
               >
                 <SortableContext items={chapter.lessons?.map(l => `lesson-${l.id}`) || []} strategy={verticalListSortingStrategy}>
@@ -534,13 +538,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                         key={lesson.id}
                         lesson={lesson}
                         onEdit={() => handleOpenLessonSheet(chapter.id, lesson)}
-                        onDelete={() => {
-                          if (confirm("Remove this lesson?")) {
-                            deleteLesson.mutate(lesson.id, {
-                              onSuccess: () => toast.success("Lesson removed")
-                            })
-                          }
-                        }}
+                        onDelete={() => setLessonToDelete({ id: lesson.id, title: lesson.title })}
                       />
                     ))}
                   </div>
@@ -553,7 +551,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
 
       {/* Chapter Dialog */}
       <Dialog open={chapterDialogOpen} onOpenChange={setChapterDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-xl border-border p-6">
+        <DialogContent className="sm:max-w-[800px] p-6">
           <DialogHeader>
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
               {editingChapter ? <Pencil className="size-4" /> : <PlusCircle className="size-4" />}
@@ -562,7 +560,7 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
               {editingChapter ? "Edit Chapter" : "Create Chapter"}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground font-medium pt-1">
-              Organize your curriculum into manageable sections.
+              Organize your curriculum into manageable sections. Description supports rich Markdown editing.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 py-4">
@@ -577,12 +575,13 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
             </div>
             <div className="space-y-2">
               <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</Label>
-              <Input
-                value={chapterForm.description}
-                onChange={e => setChapterForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Brief summary (optional)"
-                className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
-              />
+              <div className="overflow-hidden rounded-md border border-border bg-background">
+                <MarkdownEditor
+                  value={chapterForm.description}
+                  onChange={(val) => setChapterForm((prev) => ({ ...prev, description: val || "" }))}
+                  height={220}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0 sm:justify-between">
@@ -594,9 +593,71 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={!!chapterToDelete} onOpenChange={(open) => (!open ? setChapterToDelete(null) : null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chapter?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {chapterToDelete
+                ? `This will remove "${chapterToDelete.title}" and all its lessons.`
+                : "This will remove the chapter and all its lessons."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteChapter.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteChapter.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (!chapterToDelete) return
+                deleteChapter.mutate(chapterToDelete.id, {
+                  onSuccess: () => {
+                    toast.success("Chapter removed")
+                    setChapterToDelete(null)
+                  },
+                  onError: () => toast.error("Failed to remove chapter"),
+                })
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!lessonToDelete} onOpenChange={(open) => (!open ? setLessonToDelete(null) : null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete lesson?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {lessonToDelete ? `This will remove "${lessonToDelete.title}".` : "This will remove the lesson."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLesson.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteLesson.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (!lessonToDelete) return
+                deleteLesson.mutate(lessonToDelete.id, {
+                  onSuccess: () => {
+                    toast.success("Lesson removed")
+                    setLessonToDelete(null)
+                  },
+                  onError: () => toast.error("Failed to remove lesson"),
+                })
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Lesson Sheet */}
       <Sheet open={lessonSheetOpen} onOpenChange={setLessonSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-[760px] flex flex-col overflow-hidden border-border p-0 rounded-l-xl">
+        <SheetContent side="right" className="!w-full sm:!max-w-[800px] flex flex-col overflow-hidden border-border p-0">
           <SheetHeader className="relative border-b border-border/20 bg-muted/50 p-6">
             <div className="flex items-start justify-between">
               <div>
@@ -620,116 +681,65 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
-            <Tabs defaultValue="content" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="content" className="flex items-center gap-2">
-                  <BookOpen className="size-4" />
-                  Curriculum
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="flex items-center gap-2">
-                  <Settings className="size-4" />
-                  Configuration
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="content" className="mt-0 space-y-8 outline-none">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson Title</Label>
-                    <Input
-                      value={lessonForm.title}
-                      onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))}
-                      placeholder="e.g. Introduction to Physics"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content Type</Label>
-                    <Select
-                      value={lessonForm.type}
-                      onChange={(e) => setLessonForm((p) => ({ ...p, type: e.target.value }))}
-                    >
-                      <option value="video">Video Lecture</option>
-                      <option value="article">Article / Reading</option>
-                      <option value="photo">Visual Asset</option>
-                      <option value="document">Technical Document</option>
-                      <option value="resource">External Link</option>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Primary Media</Label>
-                  <LessonMediaUploader
-                    value={lessonForm.fileAttachment?.url}
-                    fileName={lessonForm.fileAttachment?.fileName}
-                    onChange={(url, meta) => setLessonForm((p) => ({ ...p, fileAttachment: url ? toLessonAttachment(meta) : null }))}
-                    accept={lessonForm.type === "video" ? "video/*" : lessonForm.type === "photo" ? "image/*" : "application/pdf"}
-                    label={lessonForm.type === "video" ? "Upload Video" : "Upload File"}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Written Content (Markdown)</Label>
-                  <div className="overflow-hidden rounded-xl border border-border bg-background">
-                    <MarkdownEditor
-                      value={lessonForm.markdownContent}
-                      onChange={val => setLessonForm(p => ({ ...p, markdownContent: val || "" }))}
-                      height={400}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="settings" className="mt-0 space-y-6 outline-none">
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Internal Description</Label>
+                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson Title</Label>
                   <Input
-                    value={lessonForm.description}
-                    onChange={e => setLessonForm(p => ({ ...p, description: e.target.value }))}
-                    placeholder="Notes for instructors..."
-                    className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
+                    value={lessonForm.title}
+                    onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g. Introduction to Physics"
                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    className={cn(
-                      "cursor-pointer select-none rounded-xl border p-5 transition-colors",
-                      lessonForm.isHidden ? "bg-destructive/10 border-destructive/30" : "bg-card border-border hover:border-muted-foreground/40"
-                    )}
-                    onClick={() => setLessonForm(p => ({ ...p, isHidden: !p.isHidden }))}
+                <div className="space-y-2">
+                  <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content Type</Label>
+                  <Select
+                    value={lessonForm.type}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setLessonForm((p) => ({ ...p, type: e.target.value }))
+                    }
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isHidden ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground")}>
-                        {lessonForm.isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">Private Lesson</p>
-                        <p className="text-xs font-medium leading-relaxed text-muted-foreground">Hidden from learner view.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "cursor-pointer select-none rounded-xl border p-5 transition-colors",
-                      lessonForm.isOptional ? "bg-primary/15 border-primary/30" : "bg-card border-border hover:border-muted-foreground/40"
-                    )}
-                    onClick={() => setLessonForm(p => ({ ...p, isOptional: !p.isOptional }))}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", lessonForm.isOptional ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        <Star className="size-4" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">Elective Task</p>
-                        <p className="text-xs font-medium leading-relaxed text-muted-foreground">Does not affect completion.</p>
-                      </div>
-                    </div>
-                  </div>
+                    <option value="TEXT">TEXT</option>
+                    <option value="VIDEO">VIDEO</option>
+                    <option value="ARTICLE">ARTICLE</option>
+                    <option value="PHOTO">PHOTO</option>
+                    <option value="DOCUMENT">DOCUMENT</option>
+                    <option value="RESOURCE">RESOURCE</option>
+                  </Select>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Primary Media</Label>
+                <LessonMediaUploader
+                  value={lessonForm.fileAttachment?.url}
+                  fileName={lessonForm.fileAttachment?.fileName}
+                  onChange={(url, meta) => setLessonForm((p) => ({ ...p, fileAttachment: url ? toLessonAttachment(meta) : null }))}
+                  accept={lessonForm.type === "VIDEO" ? "video/*" : lessonForm.type === "PHOTO" ? "image/*" : "application/pdf"}
+                  label={lessonForm.type === "VIDEO" ? "Upload Video" : "Upload File"}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Written Content (Markdown)</Label>
+                <div className="overflow-hidden rounded-xl border border-border bg-background">
+                  <MarkdownEditor
+                    value={lessonForm.markdownContent}
+                    onChange={val => setLessonForm(p => ({ ...p, markdownContent: val || "" }))}
+                    height={400}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Internal Description</Label>
+                <Input
+                  value={lessonForm.description}
+                  onChange={e => setLessonForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Notes for instructors..."
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between border-t border-border/20 bg-muted/60 p-6">

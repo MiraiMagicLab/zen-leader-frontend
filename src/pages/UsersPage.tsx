@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Search,
-  MoreVertical,
   User as UserIcon,
   Mail,
   Download,
@@ -14,14 +13,6 @@ import { userApi } from "@/lib/api"
 import type { UserResponse } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -43,14 +34,7 @@ import { PageLoading } from "@/components/common/PageLoading"
 import { cn, formatNumber } from "@/lib/utils"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SmartPagination } from "@/components/common/SmartPagination"
-
-const formatDate = (dateString: string) => {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(dateString))
-}
+import { formatUtcDate } from "@/lib/time"
 
 function escapeCsvCell(value: string): string {
   if (/[",\n\r]/.test(value)) {
@@ -285,32 +269,42 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                      {formatDate(user.createdAt)}
+                      {formatUtcDate(user.createdAt)}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => void handleViewUserDetails(user.id)}>
-                            <UserIcon className="mr-2 h-4 w-4" /> View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => void handleRefreshUser(user.id)}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => void handleCopy(user.email, "Email")}>
-                            <Mail className="mr-2 h-4 w-4" /> Copy Email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => void handleCopy(user.id, "User ID")}>
-                            <Copy className="mr-2 h-4 w-4" /> Copy ID
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => void handleViewUserDetails(user.id)}
+                        >
+                          <UserIcon className="mr-2 size-4" />
+                          Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleRefreshUser(user.id)}
+                        >
+                          <RefreshCw className="mr-2 size-4" />
+                          Refresh
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void handleCopy(user.email, "Email")}
+                        >
+                          <Mail className="mr-2 size-4" />
+                          Copy email
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void handleCopy(user.id, "User ID")}
+                        >
+                          <Copy className="mr-2 size-4" />
+                          Copy ID
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -355,10 +349,10 @@ export default function UsersPage() {
                   <code className="text-xs font-mono font-medium bg-muted/50 p-2 rounded-lg break-all border border-border/40">{selectedUser.id}</code>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Joined</span>
-                  <span className="font-bold text-base text-foreground/80">{formatDate(selectedUser.createdAt)}</span>
+                  <span className="font-bold text-base text-foreground/80">{formatUtcDate(selectedUser.createdAt)}</span>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Sign In</span>
-                  <span className="font-bold text-base text-foreground/80">{selectedUser.lastSignInAt ? formatDate(selectedUser.lastSignInAt) : "Never"}</span>
+                  <span className="font-bold text-base text-foreground/80">{selectedUser.lastSignInAt ? formatUtcDate(selectedUser.lastSignInAt) : "Never"}</span>
                 </div>
 
                 <div className="pt-6 border-t border-border/40">

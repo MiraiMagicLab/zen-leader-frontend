@@ -71,10 +71,13 @@ export default function CourseRunSheet() {
       await updateStatusMutation.mutateAsync({
         id: run.id,
         data: {
-          ...run,
+          courseId: run.courseId,
+          code: run.code,
           status: nextStatus,
           startsAt: run.startsAt || new Date().toISOString(),
           endsAt: run.endsAt || new Date().toISOString(),
+          timezone: run.timezone ?? "UTC",
+          metadata: run.metadata ?? {},
         }
       })
       toast.success(`Status updated to ${nextStatus}`)

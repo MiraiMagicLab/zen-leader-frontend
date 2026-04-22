@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Textarea } from "@/components/ui/textarea"
 
-type CourseFormErrors = Partial<Record<"courseCode" | "courseTitle" | "orderIndex", string>>
+type CourseFormErrors = Partial<Record<"courseCode" | "courseTitle" | "orderIndex" | "description", string>>
 
 const createCourseSchema = z.object({
   courseCode: z
@@ -24,17 +25,20 @@ const createCourseSchema = z.object({
     .trim()
     .min(3, "Course title must be at least 3 characters.")
     .max(160, "Course title must be at most 160 characters."),
+  description: z.string().trim().max(2000, "Description must be at most 2000 characters."),
   orderIndex: z.number().int("Order index must be an integer.").min(0, "Order index must be 0 or greater."),
 })
 
 function validateForm(input: {
   courseCode: string
   courseTitle: string
+  description: string
   orderIndex: number
 }): CourseFormErrors {
   const result = createCourseSchema.safeParse({
     courseCode: input.courseCode,
     courseTitle: input.courseTitle,
+    description: input.description,
     orderIndex: input.orderIndex,
   })
   if (result.success) return {}
@@ -43,6 +47,7 @@ function validateForm(input: {
   return {
     courseCode: flattened.courseCode?.[0],
     courseTitle: flattened.courseTitle?.[0],
+    description: flattened.description?.[0],
     orderIndex: flattened.orderIndex?.[0],
   }
 }
@@ -58,6 +63,7 @@ export default function CreateCourseSheet() {
 
   const [courseTitle, setCourseTitle] = useState("")
   const [courseCode, setCourseCode] = useState("")
+  const [description, setDescription] = useState("")
   const [orderIndex, setOrderIndex] = useState(0)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null)
@@ -81,6 +87,7 @@ export default function CreateCourseSheet() {
     const errors = validateForm({
       courseCode,
       courseTitle,
+      description,
       orderIndex,
     })
     if (Object.keys(errors).length > 0) {
@@ -110,7 +117,7 @@ export default function CreateCourseSheet() {
       const createdCourse = await courseApi.create({
         code: courseCode.trim(),
         title: courseTitle.trim(),
-        description: null,
+        description: description.trim() || null,
         level: null,
         thumbnailUrl,
         category: null,
@@ -191,6 +198,20 @@ export default function CreateCourseSheet() {
                 placeholder="High Performance Culture"
               />
               {formErrors.courseTitle ? <p className="text-xs text-destructive">{formErrors.courseTitle}</p> : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="course-description">Description</Label>
+              <Textarea
+                id="course-description"
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value)
+                  if (formErrors.description) setFormErrors((prev) => ({ ...prev, description: undefined }))
+                }}
+                placeholder="Optional"
+              />
+              {formErrors.description ? <p className="text-xs text-destructive">{formErrors.description}</p> : null}
             </div>
 
             <div className="space-y-2">

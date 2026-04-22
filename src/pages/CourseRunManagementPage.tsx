@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { BookOpen, CalendarRange, ChevronRight, Clock3, Search, Workflow } from "lucide-react"
+import { ChevronRight, Clock3, Search, Workflow } from "lucide-react"
 
 import { courseRunApi, courseApi, type CourseRunResponse, type CourseResponse } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageHeader } from "@/components/common/PageHeader"
 import { PageLoading } from "@/components/common/PageLoading"
@@ -63,60 +62,57 @@ export default function CourseRunManagementPage() {
         actions={<Button onClick={() => navigate("/dashboard/programs")}><Workflow className="mr-2 size-4" /> Browse Courses</Button>}
       />
 
-      <Card className="border shadow-sm">
-        <CardContent className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search run code or course title..."
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md group">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search run code or course title..."
+            className="pl-9"
+          />
+        </div>
+      </div>
 
-      <Card className="border shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-16">STT</TableHead>
-                <TableHead>Run</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Chapters</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <div className="rounded-md bg-background border overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="px-6 h-12 w-16">STT</TableHead>
+              <TableHead className="px-6 h-12">Run</TableHead>
+              <TableHead className="px-6 h-12">Course</TableHead>
+              <TableHead className="px-6 h-12">Schedule</TableHead>
+              <TableHead className="px-6 h-12">Chapters</TableHead>
+              <TableHead className="px-6 h-12 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {filtered.length ? filtered.map((run, idx) => {
                 const course = courseMap.get(run.courseId)
                 return (
                   <TableRow key={run.id} className="hover:bg-muted/40">
-                    <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4 text-muted-foreground">{idx + 1}</TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="space-y-0.5">
                         <div className="font-semibold">{run.code}</div>
                         <Badge variant={run.status === "PUBLISHED" ? "default" : "secondary"}>{run.status}</Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="space-y-0.5">
                         <div className="font-medium">{course?.title ?? "Unknown course"}</div>
                         <div className="text-xs text-muted-foreground">{course?.code ?? run.courseId}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="px-6 py-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Clock3 className="size-4" /> {formatRange(run.startsAt, run.endsAt)}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4">
                       <Badge variant="secondary">{run.chapters.length}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="px-6 py-4 text-right">
                       <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>Open detail</Button>
                     </TableCell>
                   </TableRow>
@@ -128,10 +124,9 @@ export default function CourseRunManagementPage() {
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

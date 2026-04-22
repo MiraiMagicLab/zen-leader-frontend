@@ -5,7 +5,8 @@ import {
   lessonApi, 
   assetApi,
   type ChapterUpsertRequest,
-  type LessonUpsertRequest
+  type LessonUpsertRequest,
+  type CourseRunUpsertRequest,
 } from "@/lib/api"
 
 // --- Course Run Hooks ---
@@ -21,7 +22,7 @@ export function useCourseRun(id?: string) {
 export function useUpdateCourseRun() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+    mutationFn: ({ id, data }: { id: string; data: CourseRunUpsertRequest }) =>
       courseRunApi.update(id, data),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ["course-run", id] })

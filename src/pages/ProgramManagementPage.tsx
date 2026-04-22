@@ -5,7 +5,6 @@ import {
   BookOpen,
   FolderKanban,
   Layers3,
-  MoreVertical,
   Plus,
   Search,
   Trash2,
@@ -14,8 +13,17 @@ import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Table,
   TableBody,
@@ -24,13 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   assetApi,
   programApi,
@@ -41,6 +42,7 @@ import { PageLoading } from "@/components/common/PageLoading"
 import { formatNumber } from "@/lib/utils"
 import { PageHeader } from "@/components/common/PageHeader"
 import { SmartPagination } from "@/components/common/SmartPagination"
+import { formatUtcDate } from "@/lib/time"
 import {
   ProgramUpsertSheet,
   type ProgramFormErrors,
@@ -86,12 +88,6 @@ function validateProgramForm(form: ProgramFormState): ProgramFormErrors {
   }
 }
 
-function countCourseRuns(program: Program) {
-  return program.courses.reduce(
-    (total, course) => total + course.courseRuns.length,
-    0,
-  )
-}
 function toProgramFormState(program: Program): ProgramFormState {
   return {
     code: program.code,
@@ -124,6 +120,7 @@ export default function ProgramManagementPage() {
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
+  const [programToDelete, setProgramToDelete] = useState<Program | null>(null)
   const [filterSearch, setFilterSearch] = useState("")
   const [programForm, setProgramForm] =
     useState<ProgramFormState>(EMPTY_PROGRAM_FORM)
@@ -248,108 +245,112 @@ export default function ProgramManagementPage() {
           </Button>
         }
       />
-      <Card className="border shadow-sm">
-        <CardContent className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={filterSearch}
-              onChange={(e) => setFilterSearch(e.target.value)}
-              placeholder="Search programs..."
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="border shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-16">STT</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Courses</TableHead>
-                <TableHead>Runs</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md group">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Search programs..."
+            className="pl-9"
+          />
+        </div>
+      </div>
+      <div className="rounded-md bg-background border overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="px-6 h-12 w-16">STT</TableHead>
+              <TableHead className="px-6 h-12">Program</TableHead>
+              <TableHead className="px-6 h-12">Created</TableHead>
+              <TableHead className="px-6 h-12">Updated</TableHead>
+              <TableHead className="px-6 h-12">Status</TableHead>
+              <TableHead className="px-6 h-12 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {paginatedPrograms.length ? (
                 paginatedPrograms.map((program, idx) => (
                   <TableRow key={program.id} className="hover:bg-muted/40">
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="px-6 py-4 text-muted-foreground">
                       {(page - 1) * limit + idx + 1}
                     </TableCell>
-                    <TableCell>
-                      <div className="space-y-0.5">
-                        <button
-                          className="font-semibold hover:text-primary"
-                          onClick={() =>
-                            navigate(`/dashboard/programs/${program.id}`)
-                          }
-                        >
-                          {program.title}
-                        </button>
-                        <div className="text-xs text-muted-foreground font-mono">
-                          {program.code}
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-muted">
+                          {program.thumbnailUrl ? (
+                            <img
+                              src={program.thumbnailUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <FolderKanban className="h-5 w-5 text-muted-foreground/70" />
+                          )}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <button
+                            className="font-semibold hover:text-primary"
+                            onClick={() =>
+                              navigate(`/dashboard/programs/${program.id}`)
+                            }
+                          >
+                            {program.title}
+                          </button>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {program.code}
+                          </div>
+                          {program.description ? (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {program.description}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{program.courses.length}</Badge>
+                    <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                      {formatUtcDate(program.createdAt)}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {countCourseRuns(program)}
-                      </Badge>
+                    <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                      {formatUtcDate(program.updatedAt)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4">
                       <Badge
                         variant={program.isPublished ? "default" : "secondary"}
                       >
                         {program.isPublished ? "Published" : "Draft"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(`/dashboard/programs/${program.id}`)
-                            }
-                          >
-                            <BookOpen className="mr-2 size-4" /> View courses
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setProgramForm(toProgramFormState(program))
-                              setSheetMode("settings")
-                            }}
-                          >
-                            <Layers3 className="mr-2 size-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={async () => {
-                              if (!confirm("Delete this program?")) return
-                              await programApi.remove(program.id)
-                              setPrograms((current) =>
-                                current.filter((p) => p.id !== program.id),
-                              )
-                              toast.success("Program deleted.")
-                            }}
-                          >
-                            <Trash2 className="mr-2 size-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/dashboard/programs/${program.id}`)}
+                        >
+                          <BookOpen className="mr-2 size-4" />
+                          Courses
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setProgramForm(toProgramFormState(program))
+                            setSheetMode("settings")
+                          }}
+                        >
+                          <Layers3 className="mr-2 size-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setProgramToDelete(program)}
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -363,10 +364,9 @@ export default function ProgramManagementPage() {
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          </TableBody>
+        </Table>
+      </div>
       <SmartPagination
         page={page}
         totalPages={totalPages}
@@ -388,6 +388,41 @@ export default function ProgramManagementPage() {
             : handleSaveProgramSettings
         }
       />
+
+      <AlertDialog open={!!programToDelete} onOpenChange={(open) => (!open ? setProgramToDelete(null) : null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete program?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {programToDelete
+                ? `This will permanently delete "${programToDelete.title}".`
+                : "This will permanently delete the program."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                if (!programToDelete) return
+                void programApi
+                  .remove(programToDelete.id)
+                  .then(() => {
+                    setPrograms((current) => current.filter((p) => p.id !== programToDelete.id))
+                    toast.success("Program deleted.")
+                    setProgramToDelete(null)
+                  })
+                  .catch((err) => {
+                    const message = err instanceof Error ? err.message : "Failed to delete program."
+                    toast.error(message)
+                  })
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1,24 +1,18 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, ChevronRight, Workflow, ExternalLink } from "lucide-react"
+import { ChevronRight, Workflow, ExternalLink, Pencil } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { courseApi, type CourseResponse } from "@/lib/api"
 import { PageLoading } from "@/components/common/PageLoading"
 import { PageHeader } from "@/components/common/PageHeader"
-import { formatNumber } from "@/lib/utils"
-
-function countLessons(course: CourseResponse) {
-  return course.courseRuns.reduce((total, run) => total + run.chapters.reduce((chapterTotal, chapter) => chapterTotal + chapter.lessons.length, 0), 0)
-}
+import { formatUtcDate } from "@/lib/time"
 
 function formatDateRange(startsAt: string | null, endsAt: string | null) {
   if (!startsAt && !endsAt) return "Not scheduled"
-  const formatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" })
-  return `${startsAt ? formatter.format(new Date(startsAt)) : "TBD"} - ${endsAt ? formatter.format(new Date(endsAt)) : "TBD"}`
+  return `${startsAt ? formatUtcDate(startsAt) : "TBD"} - ${endsAt ? formatUtcDate(endsAt) : "TBD"}`
 }
 
 export default function CourseDetailPage() {
@@ -32,8 +26,6 @@ export default function CourseDetailPage() {
     if (!courseId) return
     courseApi.getById(courseId).then(setCourse).finally(() => setLoading(false))
   }, [courseId])
-
-  const totalLessons = useMemo(() => (course ? countLessons(course) : 0), [course])
 
   if (loading) return <PageLoading />
   if (!course) return <div className="p-10 text-center">Course not found.</div>
@@ -51,47 +43,70 @@ export default function CourseDetailPage() {
       <PageHeader
         title={course.title}
         subtitle={course.description || "Course overview and run management."}
-        stats={[
-          { label: "Code", value: course.code },
-          { label: "Runs", value: formatNumber(course.courseRuns.length) },
-          { label: "Lessons", value: formatNumber(totalLessons) },
-        ]}
-        actions={<div className="flex gap-3"><Button variant="outline" onClick={() => navigate(`/dashboard/programs/${course.programId}`)}><ArrowLeft className="mr-2 size-4" /> Back</Button><Button onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}><Workflow className="mr-2 size-4" /> Create Run</Button></div>}
+        actions={
+          <Button onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}>
+            <Workflow className="mr-2 size-4" /> Create Run
+          </Button>
+        }
       />
 
-      <Card className="border shadow-sm overflow-hidden">
-        <CardHeader className="bg-muted/30">
-          <CardTitle className="text-base">Course Runs</CardTitle>
-          <CardDescription>Manage each run from this course.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/20">
-              <TableRow><TableHead>Run</TableHead><TableHead>Status</TableHead><TableHead>Schedule</TableHead><TableHead>Chapters</TableHead><TableHead className="text-right">Action</TableHead></TableRow>
-            </TableHeader>
-            <TableBody>
-              {course.courseRuns.length ? course.courseRuns.map((run) => (
+      <div className="rounded-md bg-background border overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="px-6 h-12 w-16">STT</TableHead>
+              <TableHead className="px-6 h-12">Run</TableHead>
+              <TableHead className="px-6 h-12">Status</TableHead>
+              <TableHead className="px-6 h-12">Schedule</TableHead>
+              <TableHead className="px-6 h-12">Chapters</TableHead>
+              <TableHead className="px-6 h-12 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {course.courseRuns.length ? (
+              course.courseRuns.map((run, idx) => (
                 <TableRow key={run.id} className="hover:bg-muted/40">
-                  <TableCell>
-                    <div>
+                  <TableCell className="px-6 py-4 text-muted-foreground">{idx + 1}</TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className="space-y-0.5">
                       <div className="font-semibold">{run.code}</div>
                       <div className="text-xs text-muted-foreground">{run.id}</div>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant={run.status === "PUBLISHED" ? "default" : "outline"}>{run.status}</Badge></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateRange(run.startsAt, run.endsAt)}</TableCell>
-                  <TableCell><Badge variant="secondary">{run.chapters.length}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
-                      <ExternalLink className="mr-2 size-4" /> Open
-                    </Button>
+                  <TableCell className="px-6 py-4">
+                    <Badge variant={run.status === "PUBLISHED" ? "default" : "secondary"}>{run.status}</Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                    {formatDateRange(run.startsAt, run.endsAt)}
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge variant="secondary">{run.chapters.length}</Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/dashboard/runs/${run.id}/edit`)}
+                      >
+                        <Pencil className="mr-2 size-4" /> Edit
+                      </Button>
+                      <Button variant="outline" onClick={() => navigate(`/dashboard/runs/${run.id}`)}>
+                        <ExternalLink className="mr-2 size-4" /> Open
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              )) : <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No runs created yet.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  No runs created yet.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

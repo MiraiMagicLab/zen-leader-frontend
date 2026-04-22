@@ -21,8 +21,8 @@ import CreateEventSheet from "@/components/sheets/CreateEventSheet"
 import EditEventSheet from "@/components/sheets/EditEventSheet"
 import CreateCourseSheet from "@/components/sheets/CreateCourseSheet"
 import EditCourseSheet from "./components/sheets/EditCourseSheet"
-import CreateCourseRunSheet from "@/components/sheets/CreateCourseRunSheet"
-import CourseRunSheet from "@/components/sheets/CourseRunSheet"
+import CreateCourseRunDialog from "@/components/dialogs/CreateCourseRunDialog"
+import EditCourseRunDialog from "@/components/dialogs/EditCourseRunDialog"
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const token = authStorage.getToken()
@@ -68,11 +68,11 @@ function App() {
             <Route path="events/edit/:id" element={<EditEventSheet />} />
             <Route path="programs/:programId" element={<CourseManagementPage />} />
             <Route path="programs/:programId/courses/create" element={<CreateCourseSheet />} />
-            <Route path="courses/:id/runs/create" element={<CreateCourseRunSheet />} />
+            <Route path="courses/:id/runs/create" element={<CreateCourseRunDialog />} />
             <Route path="courses/:id" element={<CourseDetailPage />} />
             <Route path="runs" element={<CourseRunManagementPage />} />
             <Route path="runs/:runId" element={<CourseRunDetailPage />} />
-            <Route path="runs/:runId/workbench" element={<CourseRunSheet />} />
+            <Route path="runs/:runId/edit" element={<EditCourseRunDialog />} />
             <Route path="courses/:id/edit" element={<EditCourseSheet />} />
             <Route path="programs" element={<ProgramManagementPage />} />
             <Route path="users" element={<UsersPage />} />

@@ -263,7 +263,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-6">
                     <div className="relative group">
-                      <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+                      <Avatar className="h-24 w-24">
                         <AvatarImage src={avatarPreview ?? (profileForm.avatarUrl || undefined)} className="object-cover" />
                         <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">{initials(profileForm.displayName)}</AvatarFallback>
                       </Avatar>

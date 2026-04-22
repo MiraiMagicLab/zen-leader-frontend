@@ -8,59 +8,33 @@ import MarkdownEditor from "@/components/MarkdownEditor"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
-type EventFormErrors = Partial<Record<"eventName" | "eventDate" | "startTime" | "endTime" | "venue", string>>
+type EventFormErrors = Partial<Record<"eventName" | "startAt" | "endAt", string>>
 
-const createEventSchema = z
-  .object({
-    eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
-    eventDate: z.string().min(1, "Please select an event date."),
-    startTime: z.string().min(1, "Please select a start time."),
-    endTime: z.string().min(1, "Please select an end time."),
-    locationType: z.enum(["Physical", "Online"]),
-    venue: z.string(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.locationType === "Physical" && !value.venue.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["venue"],
-        message: "Please enter a venue for physical events.",
-      })
-    }
-  })
+const createEventSchema = z.object({
+  eventName: z.string().trim().min(3, "Event name must be at least 3 characters."),
+  startAt: z.string().min(1, "Please select a start date & time."),
+  endAt: z.string().min(1, "Please select an end date & time."),
+})
 
 export default function CreateEventSheet() {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [open, setOpen] = useState(true)
 
-  // Event Essentials
+  // Backend fields
   const [eventName, setEventName] = useState("")
-  const [category, setCategory] = useState("Workshop")
-  const [summary, setSummary] = useState("")
-
-  // Speaker & Content
-  const [speaker, setSpeaker] = useState("")
+  const [summary, setSummary] = useState("") // backend: description
   const [description, setDescription] = useState("")
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
 
-  // Date & Time
-  const [eventDate, setEventDate] = useState("")
-  const [startTime, setStartTime] = useState("")
-  const [endTime, setEndTime] = useState("")
+  const [startAt, setStartAt] = useState("")
+  const [endAt, setEndAt] = useState("")
 
-  // Location
-  const [locationType, setLocationType] = useState<"Physical" | "Online">("Physical")
-  const [venue, setVenue] = useState("")
-
-  // Registration
-  const [capacity, setCapacity] = useState(50)
   const [formErrors, setFormErrors] = useState<EventFormErrors>({})
 
   const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,20 +47,15 @@ export default function CreateEventSheet() {
   const saveEvent = async (status: "open" | "draft") => {
     const validation = createEventSchema.safeParse({
       eventName,
-      eventDate,
-      startTime,
-      endTime,
-      locationType,
-      venue,
+      startAt,
+      endAt,
     })
     if (!validation.success) {
       const fieldErrors = validation.error.flatten().fieldErrors
       setFormErrors({
         eventName: fieldErrors.eventName?.[0],
-        eventDate: fieldErrors.eventDate?.[0],
-        startTime: fieldErrors.startTime?.[0],
-        endTime: fieldErrors.endTime?.[0],
-        venue: fieldErrors.venue?.[0],
+        startAt: fieldErrors.startAt?.[0],
+        endAt: fieldErrors.endAt?.[0],
       })
       toast.error("Please resolve validation issues.")
       return
@@ -101,8 +70,8 @@ export default function CreateEventSheet() {
         finalThumbnailUrl = uploadRes.url
       }
 
-      const startDt = new Date(`${eventDate}T${startTime}:00`)
-      const endDt = new Date(`${eventDate}T${endTime}:00`)
+      const startDt = new Date(startAt)
+      const endDt = new Date(endAt)
 
       const payload = {
         title: eventName.trim(),
@@ -110,13 +79,6 @@ export default function CreateEventSheet() {
         content: description,
         startTime: startDt.toISOString(),
         endTime: endDt.toISOString(),
-        metadata: {
-          category: category.toUpperCase(),
-          locationType,
-          venue: locationType === "Physical" ? venue : "Online",
-          capacity,
-          speaker,
-        },
         publishImmediately: status === "open",
         thumbnailUrl: finalThumbnailUrl,
       }
@@ -164,22 +126,6 @@ export default function CreateEventSheet() {
                 {formErrors.eventName ? <p className="text-xs text-destructive">{formErrors.eventName}</p> : null}
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="event-category">Category</Label>
-                  <Select id="event-category" value={category} onChange={(e) => setCategory(e.target.value)}>
-                    <option>Workshop</option>
-                    <option>Talk</option>
-                    <option>Summit</option>
-                    <option>Webinar</option>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event-speaker">Speaker</Label>
-                  <Input id="event-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="Optional" />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="event-summary">Summary</Label>
                 <Input id="event-summary" value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Optional" />
@@ -187,64 +133,32 @@ export default function CreateEventSheet() {
 
               <div className="grid gap-6 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="event-date">Date</Label>
-                  <Input id="event-date" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} aria-invalid={Boolean(formErrors.eventDate)} />
-                  {formErrors.eventDate ? <p className="text-xs text-destructive">{formErrors.eventDate}</p> : null}
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="event-start">Start</Label>
-                  <Input id="event-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} aria-invalid={Boolean(formErrors.startTime)} />
-                  {formErrors.startTime ? <p className="text-xs text-destructive">{formErrors.startTime}</p> : null}
+                  <Input
+                    id="event-start"
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                    aria-invalid={Boolean(formErrors.startAt)}
+                  />
+                  {formErrors.startAt ? <p className="text-xs text-destructive">{formErrors.startAt}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="event-end">End</Label>
-                  <Input id="event-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-invalid={Boolean(formErrors.endTime)} />
-                  {formErrors.endTime ? <p className="text-xs text-destructive">{formErrors.endTime}</p> : null}
+                  <Input
+                    id="event-end"
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(e) => setEndAt(e.target.value)}
+                    aria-invalid={Boolean(formErrors.endAt)}
+                  />
+                  {formErrors.endAt ? <p className="text-xs text-destructive">{formErrors.endAt}</p> : null}
                 </div>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-1">
                 <div className="space-y-2">
-                  <Label htmlFor="event-location-type">Location type</Label>
-                  <Select
-                    id="event-location-type"
-                    value={locationType}
-                    onChange={(e) => setLocationType(e.target.value as "Physical" | "Online")}
-                  >
-                    <option value="Physical">Physical</option>
-                    <option value="Online">Online</option>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event-venue">Venue</Label>
-                  <Input
-                    id="event-venue"
-                    value={venue}
-                    onChange={(e) => {
-                      setVenue(e.target.value)
-                      if (formErrors.venue) setFormErrors((prev) => ({ ...prev, venue: undefined }))
-                    }}
-                    disabled={locationType !== "Physical"}
-                    placeholder={locationType === "Physical" ? "Enter venue" : "Online event"}
-                    aria-invalid={Boolean(formErrors.venue)}
-                  />
-                  {formErrors.venue ? <p className="text-xs text-destructive">{formErrors.venue}</p> : null}
-                </div>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="event-capacity">Capacity</Label>
-                  <Input
-                    id="event-capacity"
-                    type="number"
-                    min={0}
-                    value={capacity}
-                    onChange={(e) => setCapacity(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event-banner">Banner (optional)</Label>
+                  <Label htmlFor="event-banner">Thumbnail (optional)</Label>
                   {bannerPreview ? (
                     <img src={bannerPreview} alt="Banner preview" className="aspect-video w-full rounded-lg border object-cover" />
                   ) : null}
