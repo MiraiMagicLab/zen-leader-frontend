@@ -177,7 +177,7 @@ export default function ProfilePage() {
       setIsSavingProfile(true)
       let avatarUrl = profileForm.avatarUrl.trim()
       if (avatarFile) {
-        const uploaded = await assetApi.upload(avatarFile)
+        const uploaded = await assetApi.uploadLessonAsset(avatarFile)
         avatarUrl = uploaded.url
       }
 

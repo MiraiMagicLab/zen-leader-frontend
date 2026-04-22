@@ -15,7 +15,6 @@ import {
   type UserResponse,
   type EnrollmentImportResponse
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
 
 interface EnrollmentTabProps {
   runId: string
@@ -106,15 +105,15 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
     <div className="space-y-8">
       <div className="grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-6">
-          <Card className="overflow-hidden border-border bg-card text-card-foreground shadow-sm rounded-xl">
-            <CardHeader className="p-8 border-b border-border/50 flex flex-row items-center justify-between">
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xl font-semibold tracking-tight">Active Roster</CardTitle>
                 <CardDescription className="text-muted-foreground font-medium">
                   {enrollments.length} learners currently participating in this cycle.
                 </CardDescription>
               </div>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-primary" onClick={onRefresh}>
+              <Button variant="ghost" size="icon" onClick={onRefresh}>
                 <RefreshCw className="size-4" />
               </Button>
             </CardHeader>
@@ -157,10 +156,7 @@ export function EnrollmentTab({ runId, enrollments, users, loading, onRefresh }:
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn(
-                            "rounded-full border-none px-3 py-0.5 text-xs font-semibold tracking-wide shadow-sm",
-                            en.status === "ACTIVE" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                          )}>
+                          <Badge variant={en.status === "ACTIVE" ? "default" : "secondary"}>
                             {en.status}
                           </Badge>
                         </TableCell>

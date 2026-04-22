@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff } from "lucide-react"
 import { authApi, userApi } from "@/lib/api"
 import { authStorage } from "@/lib/storage"
@@ -145,18 +145,6 @@ export default function LoginPage() {
             Don&apos;t have admin access? Contact your system administrator.
           </CardFooter>
         </Card>
-
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-          <Link to="/privacy" className="hover:text-primary">
-            Privacy
-          </Link>
-          <Link to="/terms" className="hover:text-primary">
-            Terms
-          </Link>
-          <Link to="/support" className="hover:text-primary">
-            Support
-          </Link>
-        </div>
       </div>
     </div>
   )

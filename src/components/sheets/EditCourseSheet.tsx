@@ -101,7 +101,7 @@ export default function EditCourseSheet() {
     if (!file) return
     setIsThumbnailUploading(true)
     try {
-      const uploaded = await assetApi.upload(file)
+      const uploaded = await assetApi.uploadLessonAsset(file)
       setThumbnailPreview(uploaded.url)
     } catch {
       toast.error("Thumbnail upload failed.")
@@ -166,7 +166,7 @@ export default function EditCourseSheet() {
               <div className="mb-6 border-b border-border/40 pb-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-6">
-                    <Button variant="ghost" size="icon" className="size-10 rounded-xl" onClick={() => navigate(-1)}>
+                    <Button variant="ghost" size="icon" className="size-10" onClick={() => navigate(-1)}>
                       <ChevronLeft className="size-6" />
                     </Button>
                     <div>
@@ -179,7 +179,7 @@ export default function EditCourseSheet() {
                   </div>
                   <div className="flex items-center gap-4">
                     <Button variant="ghost" className="h-10 px-4 text-sm font-medium" onClick={handleSave}>Save draft</Button>
-                    <Button onClick={handleSave} disabled={saveState === "saving"} className="h-10 gap-2 rounded-xl px-5 text-sm font-semibold">
+                    <Button onClick={handleSave} disabled={saveState === "saving"} className="h-10 gap-2 px-5 text-sm font-semibold">
                       {saveState === "saving" ? <Loader2 className="size-5 animate-spin" /> : <Save className="size-5" />}
                       Save changes
                     </Button>
@@ -189,17 +189,17 @@ export default function EditCourseSheet() {
 
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                 <div className="lg:col-span-4 space-y-8">
-                  <Card className="overflow-hidden border bg-card shadow-sm rounded-xl">
-                    <CardHeader className="p-8 border-b border-border/40 bg-muted/30">
+                  <Card className="overflow-hidden">
+                    <CardHeader className="border-b bg-muted/30">
                       <CardTitle className="flex items-center gap-3 text-lg font-semibold">
                         <ImageIcon className="size-5 text-primary" />
                         Thumbnail
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-6">
+                    <CardContent className="space-y-6">
                       <div
                         className={cn(
-                          "relative aspect-video w-full overflow-hidden border border-border/40 group rounded-xl",
+                          "relative aspect-video w-full overflow-hidden border border-border/40 group rounded-lg",
                           !thumbnailPreview && "bg-muted/60 flex items-center justify-center",
                         )}
                       >
@@ -227,12 +227,12 @@ export default function EditCourseSheet() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course code</Label>
-                          <Input value={courseCode} onChange={(e) => setCourseCode(e.target.value.toUpperCase())} className="h-10 rounded-xl border-transparent bg-muted/60 font-mono font-semibold" />
+                          <Input value={courseCode} onChange={(e) => setCourseCode(e.target.value.toUpperCase())} className="font-mono font-semibold" />
                           {formErrors.courseCode ? <p className="text-xs text-destructive font-bold ml-1">{formErrors.courseCode}</p> : null}
                         </div>
                         <div className="space-y-2">
                           <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hierarchy position</Label>
-                          <Input type="number" value={orderIndex} onChange={(e) => setOrderIndex(Number(e.target.value))} className="h-10 rounded-xl border-transparent bg-muted/60 font-semibold" />
+                          <Input type="number" value={orderIndex} onChange={(e) => setOrderIndex(Number(e.target.value))} className="font-semibold" />
                           {formErrors.orderIndex ? <p className="text-xs text-destructive font-bold ml-1">{formErrors.orderIndex}</p> : null}
                         </div>
                       </div>
@@ -241,31 +241,31 @@ export default function EditCourseSheet() {
                 </div>
 
                 <div className="lg:col-span-8 space-y-8">
-                  <Card className="overflow-hidden border bg-card shadow-sm rounded-xl">
-                    <CardHeader className="p-8 border-b border-border/40 bg-muted/30">
+                  <Card className="overflow-hidden">
+                    <CardHeader className="border-b bg-muted/30">
                       <CardTitle className="flex items-center gap-3 text-lg font-semibold">
                         <FileText className="size-5 text-primary" />
                         Course details
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-6">
+                    <CardContent className="space-y-6">
                       <div className="space-y-2">
                         <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course title</Label>
-                        <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-10 rounded-xl border-transparent bg-muted/60 text-base font-semibold" />
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-base font-semibold" />
                         {formErrors.title ? <p className="text-xs text-destructive font-bold ml-1">{formErrors.title}</p> : null}
                       </div>
                       <div className="space-y-2">
                         <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</Label>
-                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[220px] rounded-xl bg-muted/60 border-transparent font-medium leading-relaxed" />
+                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[220px]" />
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Category</Label>
-                          <Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 rounded-xl border-transparent bg-muted/60" />
+                          <Input value={category} onChange={(e) => setCategory(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                           <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Level</Label>
-                          <Input value={level} onChange={(e) => setLevel(e.target.value)} className="h-10 rounded-xl border-transparent bg-muted/60" />
+                          <Input value={level} onChange={(e) => setLevel(e.target.value)} />
                         </div>
                       </div>
                     </CardContent>

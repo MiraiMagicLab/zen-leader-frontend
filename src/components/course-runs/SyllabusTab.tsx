@@ -619,14 +619,14 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
             </div>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-6">
             <Tabs defaultValue="content" className="w-full">
-              <TabsList className="mb-6 h-11 space-x-1 rounded-xl bg-muted p-1">
-                <TabsTrigger value="content" className="flex items-center gap-2 rounded-lg px-5 font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-primary">
+              <TabsList className="mb-6">
+                <TabsTrigger value="content" className="flex items-center gap-2">
                   <BookOpen className="size-4" />
                   Curriculum
                 </TabsTrigger>
-                <TabsTrigger value="settings" className="flex items-center gap-2 rounded-lg px-5 font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-primary">
+                <TabsTrigger value="settings" className="flex items-center gap-2">
                   <Settings className="size-4" />
                   Configuration
                 </TabsTrigger>
@@ -640,25 +640,20 @@ export function SyllabusTab({ runId }: SyllabusTabProps) {
                       value={lessonForm.title}
                       onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))}
                       placeholder="e.g. Introduction to Physics"
-                      className="h-10 rounded-xl border-border bg-muted/50 text-sm font-medium focus:bg-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Content Type</Label>
-                    <div className="relative group">
-                      <select
-                        value={lessonForm.type}
-                        onChange={e => setLessonForm(p => ({ ...p, type: e.target.value }))}
-                        className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-border bg-muted/50 px-4 pr-10 text-sm font-medium hover:bg-background focus:ring-2 focus:ring-primary/35 outline-none"
-                      >
-                        <option value="video">Video Lecture</option>
-                        <option value="article">Article / Reading</option>
-                        <option value="photo">Visual Asset</option>
-                        <option value="document">Technical Document</option>
-                        <option value="resource">External Link</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground group-hover:text-primary" />
-                    </div>
+                    <Select
+                      value={lessonForm.type}
+                      onChange={(e) => setLessonForm((p) => ({ ...p, type: e.target.value }))}
+                    >
+                      <option value="video">Video Lecture</option>
+                      <option value="article">Article / Reading</option>
+                      <option value="photo">Visual Asset</option>
+                      <option value="document">Technical Document</option>
+                      <option value="resource">External Link</option>
+                    </Select>
                   </div>
                 </div>
 

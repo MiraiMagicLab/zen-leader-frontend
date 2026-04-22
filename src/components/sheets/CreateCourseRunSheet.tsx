@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Select } from "@/components/ui/select"
 
 type RunDraft = {
   id: number
@@ -41,12 +42,12 @@ function createDefaultRun(index: number, id: number): RunDraft {
 export default function CreateCourseRunSheet() {
   const { id: courseId } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const nextRunId = useRef(1)
+  const nextRunId = useRef(2)
   const [open, setOpen] = useState(true)
 
   const [courseTitle, setCourseTitle] = useState("")
   const [isSaving, setIsSaving] = useState(false)
-  const [runs, setRuns] = useState<RunDraft[]>([createDefaultRun(1, nextRunId.current++)])
+  const [runs, setRuns] = useState<RunDraft[]>(() => [createDefaultRun(1, 1)])
 
   useEffect(() => {
     if (!courseId) return
@@ -123,7 +124,7 @@ export default function CreateCourseRunSheet() {
         if (!next) navigate(-1)
       }}
     >
-      <SheetContent className="!w-full sm:!max-w-[900px] max-h-screen p-0 flex flex-col overflow-hidden">
+      <SheetContent className="!w-full sm:!max-w-[800px] max-h-screen p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>Create course runs</SheetTitle>
           <SheetDescription>Schedule cohorts for {courseTitle || "this course"}.</SheetDescription>
@@ -135,7 +136,7 @@ export default function CreateCourseRunSheet() {
               <CardHeader className="bg-muted/30 border-b p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Workflow className="size-6" />
                     </div>
                     <div>
@@ -143,7 +144,7 @@ export default function CreateCourseRunSheet() {
                       <CardDescription>Configure multiple operational schedules in a single session.</CardDescription>
                     </div>
                   </div>
-                  <Button variant="outline" className="h-10 font-semibold" onClick={addRun}>
+                  <Button variant="outline" onClick={addRun}>
                     <Plus className="mr-2 size-4" />
                     Add cohort
                   </Button>
@@ -151,20 +152,20 @@ export default function CreateCourseRunSheet() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 {runs.map((run, index) => (
-                  <div key={run.id} className="relative group p-6 rounded-2xl bg-muted/20 border border-transparent hover:border-border transition-all">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/40">
+                  <div key={run.id} className="rounded-lg border bg-card p-6">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b">
                       <div className="flex items-center gap-3">
-                        <div className="size-8 rounded-lg bg-background border flex items-center justify-center text-xs font-bold shadow-sm">
+                        <div className="size-8 rounded-md bg-muted flex items-center justify-center text-xs font-semibold">
                           {index + 1}
                         </div>
-                        <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Cohort</h4>
+                        <h4 className="text-sm font-semibold">Cohort</h4>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeRun(run.id)}
                         disabled={runs.length === 1}
-                        className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="mr-2 size-3.5" />
                         Remove
@@ -173,34 +174,31 @@ export default function CreateCourseRunSheet() {
 
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Code</Label>
-                        <Input value={run.code} onChange={(e) => updateRun(run.id, { code: e.target.value })} className="h-11 rounded-xl font-semibold bg-background" />
+                        <Label htmlFor={`run-code-${run.id}`}>Code</Label>
+                        <Input id={`run-code-${run.id}`} value={run.code} onChange={(e) => updateRun(run.id, { code: e.target.value })} />
                       </div>
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Status</Label>
-                        <div className="relative">
-                          <select
-                            value={run.status}
-                            onChange={(e) => updateRun(run.id, { status: e.target.value as RunDraft["status"] })}
-                            className="w-full appearance-none h-11 rounded-xl border border-input bg-background px-3 font-semibold text-sm"
-                          >
-                            <option value="DRAFT">DRAFT</option>
-                            <option value="PUBLISHED">PUBLISHED</option>
-                          </select>
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">▼</div>
-                        </div>
+                        <Label htmlFor={`run-status-${run.id}`}>Status</Label>
+                        <Select
+                          id={`run-status-${run.id}`}
+                          value={run.status}
+                          onChange={(e) => updateRun(run.id, { status: e.target.value as RunDraft["status"] })}
+                        >
+                          <option value="DRAFT">DRAFT</option>
+                          <option value="PUBLISHED">PUBLISHED</option>
+                        </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Starts at</Label>
-                        <Input type="datetime-local" value={run.startsAt} onChange={(e) => updateRun(run.id, { startsAt: e.target.value })} className="h-11 rounded-xl font-medium bg-background" />
+                        <Label htmlFor={`run-starts-${run.id}`}>Starts at</Label>
+                        <Input id={`run-starts-${run.id}`} type="datetime-local" value={run.startsAt} onChange={(e) => updateRun(run.id, { startsAt: e.target.value })} />
                       </div>
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Ends at</Label>
-                        <Input type="datetime-local" value={run.endsAt} onChange={(e) => updateRun(run.id, { endsAt: e.target.value })} className="h-11 rounded-xl font-medium bg-background" />
+                        <Label htmlFor={`run-ends-${run.id}`}>Ends at</Label>
+                        <Input id={`run-ends-${run.id}`} type="datetime-local" value={run.endsAt} onChange={(e) => updateRun(run.id, { endsAt: e.target.value })} />
                       </div>
                       <div className="space-y-2">
-                        <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Timezone</Label>
-                        <Input value={run.timezone} onChange={(e) => updateRun(run.id, { timezone: e.target.value })} placeholder="e.g. UTC, GMT+7" className="h-11 rounded-xl font-medium bg-background" />
+                        <Label htmlFor={`run-timezone-${run.id}`}>Timezone</Label>
+                        <Input id={`run-timezone-${run.id}`} value={run.timezone} onChange={(e) => updateRun(run.id, { timezone: e.target.value })} placeholder="UTC" />
                       </div>
                     </div>
                   </div>

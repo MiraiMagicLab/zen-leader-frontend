@@ -78,8 +78,9 @@ export default function CourseRunSheet() {
         }
       })
       toast.success(`Status updated to ${nextStatus}`)
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update status."
+      toast.error(message)
     }
   }
 
@@ -119,7 +120,7 @@ export default function CourseRunSheet() {
         if (!next) navigate(-1)
       }}
     >
-      <SheetContent className="!w-full sm:!max-w-[1100px] max-h-screen p-0 flex flex-col overflow-hidden">
+      <SheetContent className="!w-full sm:!max-w-[900px] max-h-screen p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>{run.code}</SheetTitle>
           <SheetDescription>
@@ -160,7 +161,6 @@ export default function CourseRunSheet() {
                     variant={run.status === "PUBLISHED" ? "default" : "secondary"}
                     onClick={toggleStatus}
                     disabled={updateStatusMutation.isPending}
-                    className="min-w-[120px]"
                   >
                     {updateStatusMutation.isPending ? (
                       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -174,7 +174,7 @@ export default function CourseRunSheet() {
                   <Button variant="outline" size="icon" onClick={() => queryRun.refetch()}>
                     <RefreshCw className="size-4" />
                   </Button>
-                  <Button variant="ghost" onClick={() => setOpen(false)}>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
                     <ArrowLeft className="mr-2 size-4" />
                     Back
                   </Button>
@@ -183,16 +183,16 @@ export default function CourseRunSheet() {
             />
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="mb-6 h-12 w-full justify-start gap-1 p-1 bg-muted/40">
-                <TabsTrigger value="syllabus" className="flex-1 lg:flex-none px-8 font-semibold data-[state=active]:bg-background">
+              <TabsList className="mb-6 h-12 w-full justify-start">
+                <TabsTrigger value="syllabus" className="flex-1 lg:flex-none">
                   <BookOpen className="mr-2 size-4" />
                   Syllabus
                 </TabsTrigger>
-                <TabsTrigger value="enrollment" className="flex-1 lg:flex-none px-8 font-semibold data-[state=active]:bg-background">
+                <TabsTrigger value="enrollment" className="flex-1 lg:flex-none">
                   <Users className="mr-2 size-4" />
                   Students
                 </TabsTrigger>
-                <TabsTrigger value="info" className="flex-1 lg:flex-none px-8 font-semibold data-[state=active]:bg-background">
+                <TabsTrigger value="info" className="flex-1 lg:flex-none">
                   <Info className="mr-2 size-4" />
                   Overview
                 </TabsTrigger>

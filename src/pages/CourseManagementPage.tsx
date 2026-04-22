@@ -142,76 +142,80 @@ export default function CourseManagementPage() {
       />
 
       <Card className="border shadow-sm">
-        <CardContent className="p-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative max-w-md flex-1">
+        <CardContent className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search course code or title..." className="pl-9" />
           </div>
-          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full lg:w-[220px]">
+          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full sm:w-[220px]">
             <option value="ALL">All categories</option>
             {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
           </Select>
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Course</TableHead>
-              <TableHead>Runs</TableHead>
-              <TableHead>Lessons</TableHead>
-              <TableHead>Level</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedCourses.length ? paginatedCourses.map((course) => (
-              <TableRow key={course.id} className="hover:bg-muted/40">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10">
-                      <BookOpen className="size-5" />
-                    </div>
-                    <div>
-                      <button className="font-semibold hover:text-primary" onClick={() => navigate(`/dashboard/courses/${course.id}`)}>{course.title}</button>
-                      <div className="text-xs text-muted-foreground font-mono">{course.code}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell><Badge variant="secondary">{course.courseRuns.length}</Badge></TableCell>
-                <TableCell><Badge variant="secondary">{countLessons(course)}</Badge></TableCell>
-                <TableCell>{course.level ? <Badge variant="outline" className={cn("uppercase text-[10px]", getLevelColor(course.level))}>{course.level}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="ghost" size="icon"><MoreVertical className="size-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
-                        <Layers3 className="mr-2 size-4" /> Course detail
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={async () => {
-                        if (!confirm("Delete this course?")) return
-                        await courseApi.remove(course.id)
-                        setCourses((prev) => prev.filter((item) => item.id !== course.id))
-                        toast.success("Course deleted.")
-                      }}>
-                        <Trash2 className="mr-2 size-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <Card className="border shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-16">STT</TableHead>
+                <TableHead>Course</TableHead>
+                <TableHead>Runs</TableHead>
+                <TableHead>Lessons</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )) : (
-              <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No courses found.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {paginatedCourses.length ? paginatedCourses.map((course, idx) => (
+                <TableRow key={course.id} className="hover:bg-muted/40">
+                  <TableCell className="text-muted-foreground">
+                    {(page - 1) * limit + idx + 1}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <BookOpen className="size-5 text-muted-foreground" />
+                      <div>
+                        <button className="font-semibold hover:text-primary" onClick={() => navigate(`/dashboard/courses/${course.id}`)}>{course.title}</button>
+                        <div className="text-xs text-muted-foreground font-mono">{course.code}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell><Badge variant="secondary">{course.courseRuns.length}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary">{countLessons(course)}</Badge></TableCell>
+                  <TableCell>{course.level ? <Badge variant="outline" className={cn("uppercase text-[10px]", getLevelColor(course.level))}>{course.level}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" size="icon"><MoreVertical className="size-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
+                          <Layers3 className="mr-2 size-4" /> Course detail
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={async () => {
+                          if (!confirm("Delete this course?")) return
+                          await courseApi.remove(course.id)
+                          setCourses((prev) => prev.filter((item) => item.id !== course.id))
+                          toast.success("Course deleted.")
+                        }}>
+                          <Trash2 className="mr-2 size-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">No courses found.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <SmartPagination page={page} totalPages={totalPages} totalItems={filteredCourses.length} onPageChange={setPage} itemName="courses" />
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, BookCopy, CalendarRange, ChevronRight, Layers3, Workflow, ExternalLink } from "lucide-react"
+import { ArrowLeft, ChevronRight, Workflow, ExternalLink } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -59,24 +59,6 @@ export default function CourseDetailPage() {
         actions={<div className="flex gap-3"><Button variant="outline" onClick={() => navigate(`/dashboard/programs/${course.programId}`)}><ArrowLeft className="mr-2 size-4" /> Back</Button><Button onClick={() => navigate(`/dashboard/courses/${course.id}/runs/create`)}><Workflow className="mr-2 size-4" /> Create Run</Button></div>}
       />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {[
-          { label: "Course Runs", value: course.courseRuns.length, icon: CalendarRange },
-          { label: "Total Lessons", value: totalLessons, icon: Layers3 },
-          { label: "Tags", value: course.tags.length || "-", icon: BookCopy },
-        ].map((stat) => (
-          <Card key={stat.label} className="border shadow-sm">
-            <CardContent className="flex items-center justify-between p-6">
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
-              </div>
-              <div className="rounded-xl bg-primary/10 p-3 text-primary"><stat.icon className="size-5" /></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Card className="border shadow-sm overflow-hidden">
         <CardHeader className="bg-muted/30">
           <CardTitle className="text-base">Course Runs</CardTitle>
@@ -108,16 +90,6 @@ export default function CourseDetailPage() {
               )) : <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No runs created yet.</TableCell></TableRow>}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      <Card className="border shadow-sm">
-        <CardHeader className="bg-muted/30"><CardTitle className="text-base">Metadata</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 p-6 md:grid-cols-2">
-          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Category</p><p className="mt-1 font-medium">{course.category || "—"}</p></div>
-          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Level</p><p className="mt-1 font-medium">{course.level || "—"}</p></div>
-          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Order index</p><p className="mt-1 font-medium">{course.orderIndex}</p></div>
-          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Program</p><p className="mt-1 font-medium">{course.programCode || course.programId}</p></div>
         </CardContent>
       </Card>
     </div>

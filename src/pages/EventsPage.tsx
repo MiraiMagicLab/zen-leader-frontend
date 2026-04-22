@@ -151,10 +151,9 @@ export default function EventsPage() {
           { label: "Active", value: formatNumber(allEvents.filter(e => e.status === "PUBLISHED").length) }
         ]}
         actions={
-          <Button 
-            onClick={() => navigate("/dashboard/events/create")} 
+          <Button
+            onClick={() => navigate("/dashboard/events/create")}
             size="lg"
-            className="font-bold shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             <Plus className="mr-2 size-5" />
             Create Event

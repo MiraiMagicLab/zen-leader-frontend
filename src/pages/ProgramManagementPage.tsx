@@ -122,6 +122,7 @@ export default function ProgramManagementPage() {
   const navigate = useNavigate()
   const [programs, setPrograms] = useState<Program[]>([])
   const [loading, setLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
   const [filterSearch, setFilterSearch] = useState("")
   const [programForm, setProgramForm] =
@@ -169,41 +170,57 @@ export default function ProgramManagementPage() {
 
   async function resolveProgramThumbnailUrl() {
     return programForm.thumbnailFile
-      ? (await assetApi.upload(programForm.thumbnailFile)).url
+      ? (await assetApi.uploadLessonAsset(programForm.thumbnailFile)).url
       : programForm.thumbnailUrl.trim() || null
   }
   async function handleCreateProgram() {
+    if (isSubmitting) return
     const nextErrors = validateProgramForm(programForm)
     if (Object.keys(nextErrors).length)
       return void setProgramFormErrors(nextErrors)
-    const thumbnailUrl = await resolveProgramThumbnailUrl()
-    const created = await programApi.create(
-      toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }),
-    )
-    setPrograms((current) => [created, ...current])
-    setSheetMode(null)
-    toast.success("New program created.")
-    navigate(`/dashboard/programs/${created.id}`)
+    setIsSubmitting(true)
+    try {
+      const thumbnailUrl = await resolveProgramThumbnailUrl()
+      const created = await programApi.create(
+        toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }),
+      )
+      setPrograms((current) => [created, ...current])
+      setSheetMode(null)
+      toast.success("New program created.")
+      navigate(`/dashboard/programs/${created.id}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create program.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   async function handleSaveProgramSettings() {
+    if (isSubmitting) return
     const editingProgram = programs.find((p) => p.code === programForm.code)
     if (!editingProgram) return
     const nextErrors = validateProgramForm(programForm)
     if (Object.keys(nextErrors).length)
       return void setProgramFormErrors(nextErrors)
-    const thumbnailUrl = await resolveProgramThumbnailUrl()
-    const updated = await programApi.update(
-      editingProgram.id,
-      toProgramPayload(
-        { ...programForm, thumbnailUrl: thumbnailUrl ?? "" },
-        editingProgram.publishedAt,
-      ),
-    )
-    setPrograms((current) =>
-      current.map((p) => (p.id === updated.id ? updated : p)),
-    )
-    setSheetMode(null)
-    toast.success("Program updated.")
+    setIsSubmitting(true)
+    try {
+      const thumbnailUrl = await resolveProgramThumbnailUrl()
+      const updated = await programApi.update(
+        editingProgram.id,
+        toProgramPayload(
+          { ...programForm, thumbnailUrl: thumbnailUrl ?? "" },
+          editingProgram.publishedAt,
+        ),
+      )
+      setPrograms((current) =>
+        current.map((p) => (p.id === updated.id ? updated : p)),
+      )
+      setSheetMode(null)
+      toast.success("Program updated.")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update program.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (loading && programs.length === 0) return <PageLoading />
@@ -232,8 +249,8 @@ export default function ProgramManagementPage() {
         }
       />
       <Card className="border shadow-sm">
-        <CardContent className="p-4">
-          <div className="relative max-w-md">
+        <CardContent className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={filterSearch}
@@ -244,27 +261,28 @@ export default function ProgramManagementPage() {
           </div>
         </CardContent>
       </Card>
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Program</TableHead>
-              <TableHead>Courses</TableHead>
-              <TableHead>Runs</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedPrograms.length ? (
-              paginatedPrograms.map((program) => (
-                <TableRow key={program.id} className="hover:bg-muted/40">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10">
-                        <FolderKanban className="size-5" />
-                      </div>
-                      <div>
+      <Card className="border shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-16">STT</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Courses</TableHead>
+                <TableHead>Runs</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedPrograms.length ? (
+                paginatedPrograms.map((program, idx) => (
+                  <TableRow key={program.id} className="hover:bg-muted/40">
+                    <TableCell className="text-muted-foreground">
+                      {(page - 1) * limit + idx + 1}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-0.5">
                         <button
                           className="font-semibold hover:text-primary"
                           onClick={() =>
@@ -277,78 +295,78 @@ export default function ProgramManagementPage() {
                           {program.code}
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{program.courses.length}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {countCourseRuns(program)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={program.isPublished ? "default" : "outline"}
-                    >
-                      {program.isPublished ? "Published" : "Draft"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            navigate(`/dashboard/programs/${program.id}`)
-                          }
-                        >
-                          <BookOpen className="mr-2 size-4" /> View courses
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setProgramForm(toProgramFormState(program))
-                            setSheetMode("settings")
-                          }}
-                        >
-                          <Layers3 className="mr-2 size-4" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={async () => {
-                            if (!confirm("Delete this program?")) return
-                            await programApi.remove(program.id)
-                            setPrograms((current) =>
-                              current.filter((p) => p.id !== program.id),
-                            )
-                            toast.success("Program deleted.")
-                          }}
-                        >
-                          <Trash2 className="mr-2 size-4" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{program.courses.length}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {countCourseRuns(program)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={program.isPublished ? "default" : "secondary"}
+                      >
+                        {program.isPublished ? "Published" : "Draft"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate(`/dashboard/programs/${program.id}`)
+                            }
+                          >
+                            <BookOpen className="mr-2 size-4" /> View courses
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setProgramForm(toProgramFormState(program))
+                              setSheetMode("settings")
+                            }}
+                          >
+                            <Layers3 className="mr-2 size-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={async () => {
+                              if (!confirm("Delete this program?")) return
+                              await programApi.remove(program.id)
+                              setPrograms((current) =>
+                                current.filter((p) => p.id !== program.id),
+                              )
+                              toast.success("Program deleted.")
+                            }}
+                          >
+                            <Trash2 className="mr-2 size-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="h-32 text-center text-muted-foreground"
+                  >
+                    No programs found.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-32 text-center text-muted-foreground"
-                >
-                  No programs found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       <SmartPagination
         page={page}
         totalPages={totalPages}
@@ -363,6 +381,7 @@ export default function ProgramManagementPage() {
         errors={programFormErrors}
         onChange={setProgramForm}
         onOpenChange={(open) => !open && setSheetMode(null)}
+        isSubmitting={isSubmitting}
         onSubmit={
           sheetMode === "create"
             ? handleCreateProgram

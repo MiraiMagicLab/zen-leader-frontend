@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FolderKanban, ImageOff } from "lucide-react"
+import { FolderKanban, ImageOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,12 +33,14 @@ function ProgramForm({
   onSubmit,
   submitLabel,
   errors,
+  isSubmitting,
 }: {
   form: ProgramFormState
   onChange: (next: ProgramFormState) => void
   onSubmit: () => void
   submitLabel: string
   errors: ProgramFormErrors
+  isSubmitting: boolean
 }) {
   const isInvalid = !form.code.trim() || !form.title.trim()
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
@@ -59,7 +61,7 @@ function ProgramForm({
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!isInvalid) onSubmit()
+        if (!isInvalid && !isSubmitting) onSubmit()
       }}
     >
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-1 pb-4 no-scrollbar">
@@ -143,9 +145,10 @@ function ProgramForm({
       <SheetFooter className="mt-auto pt-6 border-t">
         <Button
           type="submit"
-          disabled={isInvalid}
+          disabled={isInvalid || isSubmitting}
           className="w-full h-11"
         >
+          {isSubmitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
           {submitLabel}
         </Button>
       </SheetFooter>
@@ -161,6 +164,7 @@ export function ProgramUpsertSheet({
   onChange,
   onSubmit,
   onOpenChange,
+  isSubmitting,
 }: {
   open: boolean
   mode: ProgramSheetMode
@@ -169,10 +173,11 @@ export function ProgramUpsertSheet({
   onChange: (next: ProgramFormState) => void
   onSubmit: () => void
   onOpenChange: (open: boolean) => void
+  isSubmitting: boolean
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[540px] flex flex-col p-0">
+      <SheetContent side="right" className="!w-full sm:!max-w-[800px] flex flex-col p-0">
         <SheetHeader className="p-6 border-b">
           <div className="flex size-14 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
             <FolderKanban className="size-7" />
@@ -189,6 +194,7 @@ export function ProgramUpsertSheet({
             errors={errors}
             onSubmit={onSubmit}
             submitLabel={mode === "create" ? "Create Program" : "Save Changes"}
+            isSubmitting={isSubmitting}
           />
         </div>
       </SheetContent>

@@ -13,7 +13,6 @@ import { toast } from "sonner"
 import { userApi } from "@/lib/api"
 import type { UserResponse } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -336,20 +335,13 @@ export default function UsersPage() {
       </div>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-lg overflow-hidden rounded-xl border bg-card p-0">
-          <div className="bg-muted/50 p-6 border-b border-border/50">
-            <DialogHeader className="space-y-4">
-              <div className="flex size-16 items-center justify-center rounded-xl bg-card text-primary ring-1 ring-border/50">
-                <UserIcon className="size-8" />
-              </div>
-              <DialogTitle className="text-2xl font-semibold tracking-tight">User Profile</DialogTitle>
-              <DialogDescription className="text-sm font-medium leading-relaxed opacity-70">
-                Detailed account information from the system.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>User profile</DialogTitle>
+            <DialogDescription>Detailed account information from the system.</DialogDescription>
+          </DialogHeader>
 
-          <CardContent className="p-6 space-y-8">
+          <div className="space-y-8">
             {selectedUser ? (
               <div className="space-y-8">
                 <div className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-6 text-sm">
@@ -374,7 +366,7 @@ export default function UsersPage() {
                   <div className="flex flex-wrap gap-2">
                     {selectedUser.roles.length > 0 ? (
                       selectedUser.roles.map((role) => (
-                        <Badge key={role} variant="outline" className="rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-none">
+                        <Badge key={role} variant="outline" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {role}
                         </Badge>
                       ))
@@ -385,14 +377,13 @@ export default function UsersPage() {
                 </div>
               </div>
             ) : null}
-          </CardContent>
+          </div>
 
-          <DialogFooter className="p-6 border-t border-border/40 bg-muted/30 flex gap-3">
-            <Button variant="ghost" className="h-10 flex-1 rounded-xl text-sm font-medium text-muted-foreground" onClick={() => selectedUser && void handleRefreshUser(selectedUser.id)}>
+          <DialogFooter className="flex gap-3">
+            <Button variant="outline" onClick={() => selectedUser && void handleRefreshUser(selectedUser.id)}>
               Refresh
             </Button>
             <Button
-              className="h-10 flex-1 rounded-xl text-sm font-medium"
               onClick={() => selectedUser && void handleCopy(selectedUser.id, "User ID")}
             >
               Copy ID
