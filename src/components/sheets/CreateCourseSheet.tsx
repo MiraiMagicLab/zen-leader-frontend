@@ -65,6 +65,8 @@ export default function CreateCourseSheet() {
   const [courseCode, setCourseCode] = useState("")
   const [description, setDescription] = useState("")
   const [orderIndex, setOrderIndex] = useState(0)
+  const [appleProductId, setAppleProductId] = useState("")
+  const [androidProductId, setAndroidProductId] = useState("")
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null)
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false)
@@ -121,6 +123,8 @@ export default function CreateCourseSheet() {
         level: null,
         thumbnailUrl,
         category: null,
+        appleProductId: appleProductId.trim() || null,
+        androidProductId: androidProductId.trim() || null,
         programId,
         orderIndex,
         tags: [],
@@ -228,6 +232,27 @@ export default function CreateCourseSheet() {
               />
               {formErrors.orderIndex ? <p className="text-xs text-destructive">{formErrors.orderIndex}</p> : null}
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="apple-product-id">Apple product ID</Label>
+                <Input
+                  id="apple-product-id"
+                  value={appleProductId}
+                  onChange={(e) => setAppleProductId(e.target.value)}
+                  placeholder="com.zenleader.course.strat101.ios"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="android-product-id">Android product ID</Label>
+                <Input
+                  id="android-product-id"
+                  value={androidProductId}
+                  onChange={(e) => setAndroidProductId(e.target.value)}
+                  placeholder="com.zenleader.course.strat101.android"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -244,4 +269,3 @@ export default function CreateCourseSheet() {
     </Sheet>
   )
 }
-

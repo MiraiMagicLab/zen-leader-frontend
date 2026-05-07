@@ -19,7 +19,7 @@ import { Select } from "@/components/ui/select"
 
 type RunDraft = {
   code: string
-  status: "DRAFT" | "PUBLISHED"
+  status: "DRAFT" | "OPEN"
   startsAt: string
   endsAt: string
 }
@@ -127,7 +127,7 @@ export default function CreateCourseRunDialog() {
                 }
               >
                 <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
+                <option value="OPEN">OPEN</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -164,4 +164,3 @@ export default function CreateCourseRunDialog() {
     </Dialog>
   )
 }
-

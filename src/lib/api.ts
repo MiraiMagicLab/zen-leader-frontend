@@ -228,6 +228,8 @@ export interface CourseResponse {
   level: string | null
   thumbnailUrl: string | null
   category: string | null
+  appleProductId: string | null
+  androidProductId: string | null
   programId: string
   programCode: string | null
   orderIndex: number
@@ -353,6 +355,8 @@ export interface CourseUpsertRequest {
   level?: string | null
   thumbnailUrl?: string | null
   category?: string | null
+  appleProductId?: string | null
+  androidProductId?: string | null
   programId: string
   orderIndex: number
   tags?: string[]

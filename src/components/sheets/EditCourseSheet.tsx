@@ -68,6 +68,8 @@ export default function EditCourseSheet() {
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
   const [level, setLevel] = useState("")
+  const [appleProductId, setAppleProductId] = useState("")
+  const [androidProductId, setAndroidProductId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [orderIndex, setOrderIndex] = useState(0)
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null)
@@ -87,6 +89,8 @@ export default function EditCourseSheet() {
         setDescription(course.description ?? "")
         setCategory(course.category ?? "")
         setLevel(course.level ?? "")
+        setAppleProductId(course.appleProductId ?? "")
+        setAndroidProductId(course.androidProductId ?? "")
         setTags(course.tags ?? [])
         setOrderIndex(course.orderIndex)
         setSelectedProgramId(course.programId)
@@ -130,6 +134,8 @@ export default function EditCourseSheet() {
         level: level.trim() || null,
         thumbnailUrl: thumbnailPreview,
         category: category.trim() || null,
+        appleProductId: appleProductId.trim() || null,
+        androidProductId: androidProductId.trim() || null,
         programId: selectedProgramId!,
         orderIndex,
         tags,
@@ -141,7 +147,7 @@ export default function EditCourseSheet() {
       setSaveState("error")
       toast.error("Failed to update course.")
     }
-  }, [apiCourse, saveState, courseCode, title, selectedProgramId, orderIndex, courseId, description, level, thumbnailPreview, category, tags])
+  }, [apiCourse, saveState, courseCode, title, selectedProgramId, orderIndex, courseId, description, level, thumbnailPreview, category, appleProductId, androidProductId, tags])
 
   if (loading) return <PageLoading className="min-h-screen" />
   if (!apiCourse) return <PageLoading className="min-h-screen" />
@@ -266,6 +272,24 @@ export default function EditCourseSheet() {
                         <div className="space-y-2">
                           <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Level</Label>
                           <Input value={level} onChange={(e) => setLevel(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Apple product ID</Label>
+                          <Input
+                            value={appleProductId}
+                            onChange={(e) => setAppleProductId(e.target.value)}
+                            placeholder="com.zenleader.course.strat101.ios"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="ml-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Android product ID</Label>
+                          <Input
+                            value={androidProductId}
+                            onChange={(e) => setAndroidProductId(e.target.value)}
+                            placeholder="com.zenleader.course.strat101.android"
+                          />
                         </div>
                       </div>
                     </CardContent>

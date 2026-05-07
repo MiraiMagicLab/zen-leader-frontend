@@ -4,6 +4,7 @@ import { ChevronRight, Workflow, ExternalLink, Pencil } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { courseApi, type CourseResponse } from "@/lib/api"
 import { PageLoading } from "@/components/common/PageLoading"
@@ -50,6 +51,29 @@ export default function CourseDetailPage() {
         }
       />
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Apple product</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <code className="block rounded-md bg-muted px-3 py-2 text-sm">
+              {course.appleProductId || "Not configured"}
+            </code>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Android product</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <code className="block rounded-md bg-muted px-3 py-2 text-sm">
+              {course.androidProductId || "Not configured"}
+            </code>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="rounded-md bg-background border overflow-hidden">
         <Table>
           <TableHeader className="bg-muted/50">
@@ -74,7 +98,7 @@ export default function CourseDetailPage() {
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-4">
-                    <Badge variant={run.status === "PUBLISHED" ? "default" : "secondary"}>{run.status}</Badge>
+                    <Badge variant={run.status === "OPEN" ? "default" : "secondary"}>{run.status}</Badge>
                   </TableCell>
                   <TableCell className="px-6 py-4 text-sm text-muted-foreground">
                     {formatDateRange(run.startsAt, run.endsAt)}

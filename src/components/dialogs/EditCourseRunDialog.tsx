@@ -20,7 +20,7 @@ import { PageLoading } from "@/components/common/PageLoading"
 
 type RunDraft = {
   code: string
-  status: "DRAFT" | "PUBLISHED"
+  status: "DRAFT" | "OPEN"
   startsAt: string
   endsAt: string
 }
@@ -148,7 +148,7 @@ export default function EditCourseRunDialog() {
                 }
               >
                 <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
+                <option value="OPEN">OPEN</option>
               </Select>
             </div>
 
@@ -187,4 +187,3 @@ export default function EditCourseRunDialog() {
     </Dialog>
   )
 }
-
