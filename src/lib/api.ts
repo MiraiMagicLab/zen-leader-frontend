@@ -370,6 +370,10 @@ export interface CourseRunUpsertRequest {
   endsAt: string     // ISO 8601 — backend: Instant (@NotNull)
   timezone: string
   metadata?: Record<string, unknown>
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
+  capacity?: number | null
+  prerequisiteCourseRunId?: string | null
 }
 
 export interface ManualEnrollmentRequest {
