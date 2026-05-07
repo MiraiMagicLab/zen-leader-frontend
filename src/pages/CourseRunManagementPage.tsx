@@ -95,7 +95,7 @@ export default function CourseRunManagementPage() {
                     <TableCell className="px-6 py-4">
                       <div className="space-y-0.5">
                         <div className="font-semibold">{run.code}</div>
-                        <Badge variant={run.status === "PUBLISHED" ? "default" : "secondary"}>{run.status}</Badge>
+                        <Badge variant={run.status === "OPEN" ? "default" : "secondary"}>{run.status}</Badge>
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">

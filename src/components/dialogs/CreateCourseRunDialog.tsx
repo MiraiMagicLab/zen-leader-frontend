@@ -19,9 +19,14 @@ import { Select } from "@/components/ui/select"
 
 type RunDraft = {
   code: string
-  status: "DRAFT" | "PUBLISHED"
+  status: "DRAFT" | "OPEN"
   startsAt: string
   endsAt: string
+  timezone: string
+  enrollmentStartDate: string
+  enrollmentEndDate: string
+  capacity: string
+  prerequisiteCourseRunId: string
 }
 
 function createDefaultRun(): RunDraft {
@@ -37,6 +42,11 @@ function createDefaultRun(): RunDraft {
     status: "DRAFT",
     startsAt: toLocalInput(now),
     endsAt: toLocalInput(oneHourLater),
+    timezone: "UTC",
+    enrollmentStartDate: "",
+    enrollmentEndDate: "",
+    capacity: "",
+    prerequisiteCourseRunId: "",
   }
 }
 
@@ -46,14 +56,17 @@ export default function CreateCourseRunDialog() {
   const [open, setOpen] = useState(true)
 
   const [courseTitle, setCourseTitle] = useState("")
+  const [availableRuns, setAvailableRuns] = useState<Array<{ id: string; code: string }>>([])
   const [isSaving, setIsSaving] = useState(false)
   const [run, setRun] = useState<RunDraft>(() => createDefaultRun())
 
   useEffect(() => {
     if (!courseId) return
-    void courseApi
-      .getById(courseId)
-      .then((course) => setCourseTitle(course.title))
+    void Promise.all([courseApi.getById(courseId), courseRunApi.getAll()])
+      .then(([course, runs]) => {
+        setCourseTitle(course.title)
+        setAvailableRuns(runs.map((item) => ({ id: item.id, code: item.code })))
+      })
       .catch((error) => {
         toast.error(error instanceof Error ? error.message : "Failed to load course.")
       })
@@ -65,6 +78,10 @@ export default function CreateCourseRunDialog() {
       toast.error("Please complete all required fields.")
       return
     }
+    if (new Date(run.endsAt) <= new Date(run.startsAt)) {
+      toast.error("End time must be after start time.")
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -74,8 +91,12 @@ export default function CreateCourseRunDialog() {
         status: run.status,
         startsAt: new Date(run.startsAt).toISOString(),
         endsAt: new Date(run.endsAt).toISOString(),
-        timezone: "UTC",
+        timezone: run.timezone.trim() || "UTC",
         metadata: {},
+        enrollmentStartDate: run.enrollmentStartDate ? new Date(run.enrollmentStartDate).toISOString() : null,
+        enrollmentEndDate: run.enrollmentEndDate ? new Date(run.enrollmentEndDate).toISOString() : null,
+        capacity: run.capacity.trim() ? Number(run.capacity) : null,
+        prerequisiteCourseRunId: run.prerequisiteCourseRunId.trim() || null,
       })
       toast.success("Course run created.")
       navigate(`/dashboard/runs/${created.id}`)
@@ -127,7 +148,7 @@ export default function CreateCourseRunDialog() {
                 }
               >
                 <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
+                <option value="OPEN">OPEN</option>
               </Select>
             </div>
             <div className="space-y-2">
@@ -148,6 +169,61 @@ export default function CreateCourseRunDialog() {
                 onChange={(e) => setRun((prev) => ({ ...prev, endsAt: e.target.value }))}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="run-timezone">Timezone</Label>
+              <Input
+                id="run-timezone"
+                value={run.timezone}
+                onChange={(e) => setRun((prev) => ({ ...prev, timezone: e.target.value }))}
+                placeholder="UTC"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="run-capacity">Capacity</Label>
+              <Input
+                id="run-capacity"
+                type="number"
+                min={1}
+                value={run.capacity}
+                onChange={(e) => setRun((prev) => ({ ...prev, capacity: e.target.value }))}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="run-enrollment-start">Enrollment opens</Label>
+              <Input
+                id="run-enrollment-start"
+                type="datetime-local"
+                value={run.enrollmentStartDate}
+                onChange={(e) => setRun((prev) => ({ ...prev, enrollmentStartDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="run-enrollment-end">Enrollment closes</Label>
+              <Input
+                id="run-enrollment-end"
+                type="datetime-local"
+                value={run.enrollmentEndDate}
+                onChange={(e) => setRun((prev) => ({ ...prev, enrollmentEndDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="run-prerequisite">Prerequisite run</Label>
+              <Select
+                id="run-prerequisite"
+                value={run.prerequisiteCourseRunId}
+                onChange={(e) =>
+                  setRun((prev) => ({ ...prev, prerequisiteCourseRunId: e.target.value }))
+                }
+              >
+                <option value="">No prerequisite</option>
+                {availableRuns.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -164,4 +240,3 @@ export default function CreateCourseRunDialog() {
     </Dialog>
   )
 }
-

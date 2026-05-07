@@ -55,7 +55,7 @@ export default function CourseRunDetailPage() {
 
   const nextStatus = useMemo(() => {
     if (!run) return null
-    return run.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
+    return run.status === "OPEN" ? "DRAFT" : "OPEN"
   }, [run])
 
   const toggleStatus = async () => {
@@ -138,18 +138,18 @@ export default function CourseRunDetailPage() {
               Edit
             </Button>
             <Button
-              variant={run.status === "PUBLISHED" ? "default" : "secondary"}
+              variant={run.status === "OPEN" ? "default" : "secondary"}
               onClick={() => setConfirmStatusOpen(true)}
               disabled={updateStatusMutation.isPending}
             >
               {updateStatusMutation.isPending ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : run.status === "PUBLISHED" ? (
+              ) : run.status === "OPEN" ? (
                 <CheckCircle2 className="mr-2 size-4" />
               ) : (
                 <AlertCircle className="mr-2 size-4" />
               )}
-              {run.status === "PUBLISHED" ? "Published" : "Draft"}
+              {run.status === "OPEN" ? "Open" : "Draft"}
             </Button>
             <Button variant="outline" size="icon" onClick={() => queryRun.refetch()} aria-label="Refresh">
               <RefreshCw className="size-4" />
@@ -201,4 +201,3 @@ export default function CourseRunDetailPage() {
     </div>
   )
 }
-

@@ -66,7 +66,7 @@ export default function CourseRunSheet() {
 
   const toggleStatus = async () => {
     if (!run || updateStatusMutation.isPending) return
-    const nextStatus = run.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
+    const nextStatus = run.status === "OPEN" ? "DRAFT" : "OPEN"
     try {
       await updateStatusMutation.mutateAsync({
         id: run.id,
@@ -161,18 +161,18 @@ export default function CourseRunSheet() {
               actions={
                 <div className="flex gap-3">
                   <Button
-                    variant={run.status === "PUBLISHED" ? "default" : "secondary"}
+                    variant={run.status === "OPEN" ? "default" : "secondary"}
                     onClick={toggleStatus}
                     disabled={updateStatusMutation.isPending}
                   >
                     {updateStatusMutation.isPending ? (
                       <Loader2 className="mr-2 size-4 animate-spin" />
                     ) : (
-                      run.status === "PUBLISHED"
+                      run.status === "OPEN"
                         ? <CheckCircle2 className="mr-2 size-4" />
                         : <AlertCircle className="mr-2 size-4" />
                     )}
-                    {run.status === "PUBLISHED" ? "Published" : "Draft"}
+                    {run.status === "OPEN" ? "Open" : "Draft"}
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => queryRun.refetch()}>
                     <RefreshCw className="size-4" />

@@ -51,7 +51,7 @@ export interface StoredCourseRun {
   id: string
   courseId: string
   code: string
-  status: string        // "DRAFT" | "PUBLISHED"
+  status: string        // "DRAFT" | "OPEN"
   startsAt: string      // ISO 8601 string (backend: Instant)
   endsAt: string        // ISO 8601 string (backend: Instant)
   timezone: string

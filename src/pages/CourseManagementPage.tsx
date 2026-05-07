@@ -36,7 +36,7 @@ import { courseApi, programApi, type CourseResponse, type ProgramResponse } from
 import { PageHeader } from "@/components/common/PageHeader"
 import { SmartPagination } from "@/components/common/SmartPagination"
 
-type CourseStatusFilter = "ALL" | "PUBLISHED" | "DRAFT"
+type CourseStatusFilter = "ALL" | "OPEN" | "DRAFT"
 
 function sortCourses(courses: CourseResponse[]) {
   return [...courses].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -77,8 +77,8 @@ export default function CourseManagementPage() {
   }, [fetchData])
 
   const getDerivedStatus = useCallback((course: CourseResponse): CourseStatusFilter => {
-    const hasPublishedRun = course.courseRuns.some((run) => (run.status ?? "").toUpperCase() === "PUBLISHED")
-    return hasPublishedRun ? "PUBLISHED" : "DRAFT"
+    const hasOpenRun = course.courseRuns.some((run) => (run.status ?? "").toUpperCase() === "OPEN")
+    return hasOpenRun ? "OPEN" : "DRAFT"
   }, [])
 
   const filteredCourses = useMemo(() => {
@@ -138,7 +138,7 @@ export default function CourseManagementPage() {
           className="w-full sm:w-[220px]"
         >
           <option value="ALL">All statuses</option>
-          <option value="PUBLISHED">Published</option>
+          <option value="OPEN">Open</option>
           <option value="DRAFT">Draft</option>
         </Select>
       </div>

@@ -228,6 +228,8 @@ export interface CourseResponse {
   level: string | null
   thumbnailUrl: string | null
   category: string | null
+  appleProductId: string | null
+  androidProductId: string | null
   programId: string
   programCode: string | null
   orderIndex: number
@@ -353,6 +355,8 @@ export interface CourseUpsertRequest {
   level?: string | null
   thumbnailUrl?: string | null
   category?: string | null
+  appleProductId?: string | null
+  androidProductId?: string | null
   programId: string
   orderIndex: number
   tags?: string[]
@@ -366,6 +370,10 @@ export interface CourseRunUpsertRequest {
   endsAt: string     // ISO 8601 — backend: Instant (@NotNull)
   timezone: string
   metadata?: Record<string, unknown>
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
+  capacity?: number | null
+  prerequisiteCourseRunId?: string | null
 }
 
 export interface ManualEnrollmentRequest {
