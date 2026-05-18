@@ -21,13 +21,24 @@ export default function CourseDetailPage() {
   const courseId = id ?? ""
   const [course, setCourse] = useState<CourseResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!courseId) return
-    courseApi.getById(courseId).then(setCourse).finally(() => setLoading(false))
+    setLoading(true)
+    setError(null)
+    courseApi
+      .getById(courseId)
+      .then(setCourse)
+      .catch((err) => {
+        setCourse(null)
+        setError(err instanceof Error ? err.message : "Failed to load course.")
+      })
+      .finally(() => setLoading(false))
   }, [courseId])
 
   if (loading) return <PageLoading />
+  if (error) return <div className="p-10 text-center text-muted-foreground">{error}</div>
   if (!course) return <div className="p-10 text-center">Course not found.</div>
 
   return (

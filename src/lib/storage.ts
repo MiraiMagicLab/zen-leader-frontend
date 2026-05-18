@@ -3,6 +3,7 @@ const KEYS = {
   courses: "zl_courses",
   programs: "zl_programs",
   token: "zl_token",
+  refreshToken: "zl_refresh_token",
   user: "zl_user",
 } as const
 
@@ -169,6 +170,12 @@ export const authStorage = {
   setToken(token: string): void {
     localStorage.setItem(KEYS.token, token)
   },
+  getRefreshToken(): string | null {
+    return localStorage.getItem(KEYS.refreshToken)
+  },
+  setRefreshToken(token: string): void {
+    localStorage.setItem(KEYS.refreshToken, token)
+  },
   getUser(): AuthUser | null {
     const raw = localStorage.getItem(KEYS.user)
     return raw ? JSON.parse(raw) as AuthUser : null
@@ -178,9 +185,11 @@ export const authStorage = {
   },
   clearAuth(): void {
     localStorage.removeItem(KEYS.token)
+    localStorage.removeItem(KEYS.refreshToken)
     localStorage.removeItem(KEYS.user)
   },
   clearToken(): void {
     localStorage.removeItem(KEYS.token)
+    localStorage.removeItem(KEYS.refreshToken)
   },
 }

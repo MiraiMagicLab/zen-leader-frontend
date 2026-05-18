@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select } from "@/components/ui/select"
+import { getUserTimeZone } from "@/lib/time"
 
 type RunDraft = {
   code: string
@@ -65,6 +66,10 @@ export default function CreateCourseRunDialog() {
       toast.error("Please complete all required fields.")
       return
     }
+    if (new Date(run.endsAt).getTime() <= new Date(run.startsAt).getTime()) {
+      toast.error("End time must be later than start time.")
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -74,7 +79,7 @@ export default function CreateCourseRunDialog() {
         status: run.status,
         startsAt: new Date(run.startsAt).toISOString(),
         endsAt: new Date(run.endsAt).toISOString(),
-        timezone: "UTC",
+        timezone: getUserTimeZone(),
         metadata: {},
       })
       toast.success("Course run created.")

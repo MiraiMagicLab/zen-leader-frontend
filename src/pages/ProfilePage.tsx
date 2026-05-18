@@ -116,22 +116,30 @@ export default function ProfilePage() {
   })
   const [passwordErrors, setPasswordErrors] = useState<PasswordFormErrors>({})
 
-  useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true)
-        const me = await userApi.getMe()
-        setUser(me)
-        setProfileForm(buildInitialProfileForm(me))
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load profile."
-        toast.error(message)
-      } finally {
-        setLoading(false)
-      }
+  const refreshProfile = async () => {
+    try {
+      setLoading(true)
+      const me = await userApi.getMe()
+      setUser(me)
+      setProfileForm(buildInitialProfileForm(me))
+      authStorage.setUser({
+        id: me.id,
+        email: me.email,
+        displayName: me.displayName,
+        avatarUrl: me.avatarUrl,
+        roles: me.roles,
+        appMetadata: me.appMetadata,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load profile."
+      toast.error(message)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    void run()
+  useEffect(() => {
+    void refreshProfile()
   }, [])
 
   const avatarPreview = useMemo(() => {
@@ -189,6 +197,7 @@ export default function ProfilePage() {
       setUser(updated)
       setProfileForm(buildInitialProfileForm(updated))
       setAvatarFile(null)
+      setProfileErrors({})
       authStorage.setUser({
         id: updated.id,
         email: updated.email,
@@ -196,6 +205,17 @@ export default function ProfilePage() {
         avatarUrl: updated.avatarUrl,
         roles: updated.roles,
         appMetadata: updated.appMetadata,
+      })
+      const latest = await userApi.getMe()
+      setUser(latest)
+      setProfileForm(buildInitialProfileForm(latest))
+      authStorage.setUser({
+        id: latest.id,
+        email: latest.email,
+        displayName: latest.displayName,
+        avatarUrl: latest.avatarUrl,
+        roles: latest.roles,
+        appMetadata: latest.appMetadata,
       })
       toast.success("Profile updated.")
     } catch (error) {
@@ -236,8 +256,8 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-8 max-w-5xl">
       <PageHeader
-        title="Profile Settings"
-        subtitle="Control your personal presence and security preferences."
+        title="Profile"
+        subtitle="Manage your account details, avatar, and sign-in password."
         stats={[
           { label: "Status", value: accountStatusText },
           { label: "Privileges", value: user?.roles?.[0] || "User" }
@@ -302,10 +322,10 @@ export default function ProfilePage() {
                       {profileErrors.displayName && <p className="text-xs font-bold text-destructive ml-1">{profileErrors.displayName}</p>}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Email Address</Label>
-                      <Input
-                        value={user?.email}
+                  <div className="space-y-2">
+                    <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Email Address</Label>
+                    <Input
+                      value={user?.email}
                         disabled
                         className="h-11 rounded-xl bg-muted/60 border-transparent font-medium opacity-70"
                       />
@@ -316,7 +336,7 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between pt-6 border-t">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       <Shield className="size-4" />
-                      Encrypted Profile Data
+                      Account details
                     </div>
                     <Button type="submit" size="lg" disabled={isSavingProfile} className="min-w-[160px] font-bold shadow-lg shadow-primary/10">
                       {isSavingProfile ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
@@ -336,8 +356,8 @@ export default function ProfilePage() {
                     <Key className="size-6" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Credentials Security</CardTitle>
-                    <CardDescription>Update your login credentials to a unique, strong password.</CardDescription>
+                    <CardTitle className="text-lg">Password</CardTitle>
+                    <CardDescription>Change the password used for your account sign-in.</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -368,7 +388,7 @@ export default function ProfilePage() {
                       {passwordErrors.newPassword && <p className="text-xs font-bold text-destructive ml-1">{passwordErrors.newPassword}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Confirm Selection</Label>
+                      <Label className="ml-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Confirm Password</Label>
                       <Input
                         type="password"
                         value={passwordForm.confirmPassword}
@@ -382,7 +402,7 @@ export default function ProfilePage() {
                   <div className="pt-6">
                     <Button type="submit" size="lg" disabled={isChangingPassword} className="w-full font-bold">
                       {isChangingPassword ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
-                      Establish New Password
+                      Update Password
                     </Button>
                   </div>
                 </form>

@@ -1,5 +1,11 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom"
-import { CalendarDays, FolderKanban, LayoutDashboard, LogOut, Users } from "lucide-react"
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  CalendarDays,
+  FolderKanban,
+  LayoutDashboard,
+  LogOut,
+  Users,
+} from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -11,37 +17,44 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/ui/ThemeToggle"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { authStorage } from "@/lib/storage"
-import { cn } from "@/lib/utils"
-import zenleaderLogo from "@/assets/logo-zenleader.png"
+} from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { authStorage } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+import zenleaderLogo from "@/assets/logo-zenleader.png";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/dashboard/programs", label: "Programs", icon: FolderKanban, end: false },
+  {
+    to: "/dashboard/programs",
+    label: "Programs",
+    icon: FolderKanban,
+    end: false,
+  },
   { to: "/dashboard/events", label: "Events", icon: CalendarDays, end: false },
   { to: "/dashboard/users", label: "Users", icon: Users, end: false },
-] as const
+] as const;
 
 export function DashboardLayout() {
-  const navigate = useNavigate()
-  const user = authStorage.getUser()
+  const navigate = useNavigate();
+  const user = authStorage.getUser();
 
-  const displayName = user?.displayName || "Zen User"
-  const avatarUrl = user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`
+  const displayName = user?.displayName || "Zen User";
+  const avatarUrl =
+    user?.avatarUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
 
   const handleLogout = () => {
-    authStorage.clearAuth()
-    navigate("/login")
-  }
+    authStorage.clearAuth();
+    navigate("/login");
+  };
 
-  const roleLabel = user?.roles?.some(r => r.toUpperCase().includes("ADMIN"))
+  const roleLabel = user?.roles?.some((r) => r.toUpperCase().includes("ADMIN"))
     ? "ADMINISTRATOR"
-    : (user?.roles?.[0] || "USER")
+    : user?.roles?.[0] || "USER";
 
   return (
     <SidebarProvider>
@@ -53,10 +66,16 @@ export function DashboardLayout() {
         <SidebarHeader className="px-3 py-5">
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/15 p-1">
-              <img src={zenleaderLogo} alt="Zenleader" className="h-7 w-7 object-contain" />
+              <img
+                src={zenleaderLogo}
+                alt="Zenleader"
+                className="h-7 w-7 object-contain"
+              />
             </span>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <h1 className="font-headline text-xl font-extrabold text-foreground tracking-tight">Zenleader</h1>
+              <h1 className="font-headline text-xl font-extrabold text-foreground tracking-tight">
+                Zenleader
+              </h1>
               <p className="text-xs font-medium text-primary">Admin Panel</p>
             </div>
           </div>
@@ -74,11 +93,13 @@ export function DashboardLayout() {
                         "h-10 rounded-xl px-3 text-sm font-medium",
                         isActive
                           ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
                       <item.icon className="size-4 shrink-0" />
-                      <span className="group-data-[collapsible=icon]:hidden ml-2">{item.label}</span>
+                      <span className="group-data-[collapsible=icon]:hidden ml-2">
+                        {item.label}
+                      </span>
                     </SidebarMenuButton>
                   )}
                 </NavLink>
@@ -96,7 +117,9 @@ export function DashboardLayout() {
             <span className="flex size-6 shrink-0 items-center justify-center">
               <LogOut className="size-4" />
             </span>
-            <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
+            <span className="group-data-[collapsible=icon]:hidden">
+              Log Out
+            </span>
           </Button>
         </SidebarFooter>
       </Sidebar>
@@ -105,8 +128,13 @@ export function DashboardLayout() {
         <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-border/50 bg-background px-6 lg:px-10">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="h-10 w-10 rounded-xl bg-muted/50 hover:bg-muted" />
-            <Separator orientation="vertical" className="h-6 opacity-30 hidden sm:block" />
-            <p className="hidden text-xs font-semibold uppercase tracking-wide text-muted-foreground/80 sm:block">Zen Leader Dashboard</p>
+            <Separator
+              orientation="vertical"
+              className="h-6 opacity-30 hidden sm:block"
+            />
+            <p className="hidden text-xs font-semibold uppercase tracking-wide text-muted-foreground/80 sm:block">
+              Zen Leader Dashboard
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -120,12 +148,18 @@ export function DashboardLayout() {
               onClick={() => navigate("/dashboard/profile")}
             >
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-semibold leading-tight text-foreground">{displayName}</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">{roleLabel}</p>
+                <p className="text-xs font-semibold leading-tight text-foreground">
+                  {displayName}
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">
+                  {roleLabel}
+                </p>
               </div>
               <Avatar className="size-10 rounded-xl ring-2 ring-primary/25">
                 <AvatarImage alt="User Profile" src={avatarUrl} />
-                <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {displayName.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </div>
@@ -136,5 +170,5 @@ export function DashboardLayout() {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

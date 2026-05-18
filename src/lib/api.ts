@@ -34,20 +34,83 @@ export interface SpringPage<T> {
   number: number
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+let isRefreshing = false
+let refreshSubscribers: ((token: string) => void)[] = []
+
+function onRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token))
+  refreshSubscribers = []
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+  refreshSubscribers.push(cb)
+}
+
+async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const token = authStorage.getToken()
+  const headers = new Headers(init?.headers)
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
+
+  let res = await fetch(url, { ...init, headers })
+
+  if (res.status === 401 && token) {
+    const refreshToken = authStorage.getRefreshToken()
+    if (!refreshToken) {
+      authStorage.clearAuth()
+      window.location.href = "/login"
+      return res
+    }
+
+    if (!isRefreshing) {
+      isRefreshing = true
+      try {
+        const refreshResponse = await fetch(`${BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        })
+
+        if (!refreshResponse.ok) {
+          throw new Error("Refresh failed")
+        }
+
+        const json: ApiResponse<AuthenticationResponse> = await refreshResponse.json()
+        authStorage.setToken(json.data.accessToken)
+        authStorage.setRefreshToken(json.data.refreshToken)
+        isRefreshing = false
+        onRefreshed(json.data.accessToken)
+      } catch (err) {
+        isRefreshing = false
+        authStorage.clearAuth()
+        window.location.href = "/login"
+        return res
+      }
+    }
+
+    const newToken = await new Promise<string>((resolve) => {
+      addRefreshSubscriber(resolve)
+    })
+
+    const retryHeaders = new Headers(init?.headers)
+    retryHeaders.set("Authorization", `Bearer ${newToken}`)
+    res = await fetch(url, { ...init, headers: retryHeaders })
+  }
+
+  return res
+}
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...init?.headers as Record<string, string>,
   }
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
-  }
-
-  const res = await fetch(`${BASE}${path}`, {
-    headers,
+  const res = await fetchWithAuth(`${BASE}${path}`, {
     ...init,
+    headers,
   })
   if (!res.ok) throw new Error(buildHttpErrorMessage(res))
   const json: ApiResponse<T> = await res.json()
@@ -67,27 +130,11 @@ async function reqPublic<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function reqForm<T>(path: string, formData: FormData): Promise<T> {
-  const token = authStorage.getToken()
   const headers: Record<string, string> = {}
-  if (token) headers["Authorization"] = `Bearer ${token}`
-  const res = await fetch(`${BASE}${path}`, { method: "POST", body: formData, headers })
+  const res = await fetchWithAuth(`${BASE}${path}`, { method: "POST", body: formData, headers })
   if (!res.ok) throw new Error(buildHttpErrorMessage(res))
   const json: ApiResponse<T> = await res.json()
   return json.data
-}
-
-async function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string): Promise<void> {
-  const res = await fetch(uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: {
-      "Content-Type": contentType,
-    },
-  })
-
-  if (!res.ok) {
-    throw new Error(buildHttpErrorMessage(res))
-  }
 }
 
 // ─── Response types (mirrors backend DTOs) ────────────────────────────────────
@@ -303,6 +350,10 @@ export interface IntrospectRequest {
   token: string
 }
 
+export interface RefreshTokenRequest {
+  refreshToken: string
+}
+
 export interface RegisterRequest {
   displayName: string
   email: string
@@ -411,6 +462,9 @@ export type UpdateEventRequest = CreateEventRequest;
 export const authApi = {
   login: (data: AuthenticationRequest) =>
     reqPublic<AuthenticationResponse>("/auth/token", { method: "POST", body: JSON.stringify(data) }),
+
+  refreshToken: (data: RefreshTokenRequest) =>
+    reqPublic<AuthenticationResponse>("/auth/refresh", { method: "POST", body: JSON.stringify(data) }),
 
   introspect: (data: IntrospectRequest) =>
     req<IntrospectResponse>("/auth/introspect", { method: "POST", body: JSON.stringify(data) }),
@@ -524,16 +578,14 @@ export const enrollmentApi = {
     req<EnrollmentResponse>("/enrollments/manual", { method: "POST", body: JSON.stringify(data) }),
 
   importByExcel: async (courseRunId: string, file: File, dryRun = false) => {
-    const token = authStorage.getToken()
     const headers: Record<string, string> = {}
-    if (token) headers["Authorization"] = `Bearer ${token}`
 
     const form = new FormData()
     form.append("courseRunId", courseRunId)
     form.append("file", file)
     form.append("dryRun", String(dryRun))
 
-    const res = await fetch(`${BASE}/enrollments/import`, {
+    const res = await fetchWithAuth(`${BASE}/enrollments/import`, {
       method: "POST",
       headers,
       body: form,
@@ -544,10 +596,8 @@ export const enrollmentApi = {
   },
 
   downloadImportTemplate: async () => {
-    const token = authStorage.getToken()
     const headers: Record<string, string> = {}
-    if (token) headers["Authorization"] = `Bearer ${token}`
-    const res = await fetch(`${BASE}/enrollments/import-template`, { headers })
+    const res = await fetchWithAuth(`${BASE}/enrollments/import-template`, { headers })
     if (!res.ok) throw new Error(buildHttpErrorMessage(res))
     return res.blob()
   },
@@ -627,15 +677,6 @@ export const assetApi = {
     return reqForm<AssetResponse>("/assets/upload", form)
   },
   uploadLessonAsset: async (file: File) => {
-    const fileName = encodeURIComponent(file.name)
-    const contentType = encodeURIComponent(file.type || "application/octet-stream")
-    const presigned = await req<PresignedUploadResponse>(`/assets/r2/presigned-upload?fileName=${fileName}&contentType=${contentType}`)
-
-    await uploadToPresignedUrl(presigned.uploadUrl, file, file.type || "application/octet-stream")
-
-    return {
-      url: presigned.downloadUrl,
-      publicId: presigned.publicId,
-    } satisfies AssetResponse
+    return assetApi.upload(file)
   },
 }

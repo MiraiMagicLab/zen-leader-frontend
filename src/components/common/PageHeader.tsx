@@ -14,15 +14,15 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, actions, stats, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-col md:flex-row md:items-end justify-between gap-4", className)}>
+    <div className={cn("flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between", className)}>
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-start gap-4 xl:justify-end">
         {stats && stats.length > 0 && (
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 lg:flex">
             {stats.map((stat, index) => (
               <div
                 key={index}

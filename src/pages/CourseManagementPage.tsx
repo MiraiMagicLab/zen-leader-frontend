@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
+  BadgeCheck,
   BookOpen,
   ChevronRight,
   Layers3,
@@ -150,6 +151,7 @@ export default function CourseManagementPage() {
               <TableHead className="px-6 h-12 w-16">STT</TableHead>
               <TableHead className="px-6 h-12">Course</TableHead>
               <TableHead className="px-6 h-12">Level</TableHead>
+              <TableHead className="px-6 h-12">Status</TableHead>
               <TableHead className="px-6 h-12 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -177,6 +179,12 @@ export default function CourseManagementPage() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      <BadgeCheck className="size-3.5" />
+                      <span>{getDerivedStatus(course)}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -199,7 +207,7 @@ export default function CourseManagementPage() {
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground">No courses found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No courses found.</TableCell></TableRow>
               )}
           </TableBody>
         </Table>

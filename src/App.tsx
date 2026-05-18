@@ -34,7 +34,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Check for admin role
   const roles = user?.roles || []
-  const isAdmin = roles.some((role) => role.toUpperCase() === "ADMIN")
+  const isAdmin = roles.some((role) => {
+    const normalized = role.trim().toUpperCase()
+    return normalized === "ADMIN" || normalized === "ROLE_ADMIN" || normalized.endsWith("_ADMIN")
+  })
 
   if (!isAdmin) {
     // If not admin, logout and redirect to login

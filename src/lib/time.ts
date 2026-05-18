@@ -22,3 +22,11 @@ export function formatUtcDateTime(utcIsoString: string): string {
   }).format(new Date(utcIsoString))
 }
 
+export function formatLocalDateInput(utcIsoString: string): string {
+  const date = new Date(utcIsoString)
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+

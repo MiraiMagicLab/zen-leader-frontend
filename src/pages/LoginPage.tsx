@@ -30,6 +30,9 @@ export default function LoginPage() {
       const resp = await authApi.login({ email, passwordHash: password })
       if (resp.authenticated && resp.accessToken) {
         authStorage.setToken(resp.accessToken)
+        if (resp.refreshToken) {
+          authStorage.setRefreshToken(resp.refreshToken)
+        }
 
         try {
           const user = await userApi.getMe()

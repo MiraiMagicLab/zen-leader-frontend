@@ -120,6 +120,7 @@ export default function ProgramManagementPage() {
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sheetMode, setSheetMode] = useState<ProgramSheetMode>(null)
+  const [editingProgramId, setEditingProgramId] = useState<string | null>(null)
   const [programToDelete, setProgramToDelete] = useState<Program | null>(null)
   const [filterSearch, setFilterSearch] = useState("")
   const [programForm, setProgramForm] =
@@ -181,8 +182,11 @@ export default function ProgramManagementPage() {
       const created = await programApi.create(
         toProgramPayload({ ...programForm, thumbnailUrl: thumbnailUrl ?? "" }),
       )
-      setPrograms((current) => [created, ...current])
+      await loadData()
+      setProgramFormErrors({})
+      setProgramForm(EMPTY_PROGRAM_FORM)
       setSheetMode(null)
+      setEditingProgramId(null)
       toast.success("New program created.")
       navigate(`/dashboard/programs/${created.id}`)
     } catch (e) {
@@ -193,7 +197,7 @@ export default function ProgramManagementPage() {
   }
   async function handleSaveProgramSettings() {
     if (isSubmitting) return
-    const editingProgram = programs.find((p) => p.code === programForm.code)
+    const editingProgram = programs.find((p) => p.id === editingProgramId)
     if (!editingProgram) return
     const nextErrors = validateProgramForm(programForm)
     if (Object.keys(nextErrors).length)
@@ -201,17 +205,18 @@ export default function ProgramManagementPage() {
     setIsSubmitting(true)
     try {
       const thumbnailUrl = await resolveProgramThumbnailUrl()
-      const updated = await programApi.update(
+      await programApi.update(
         editingProgram.id,
         toProgramPayload(
           { ...programForm, thumbnailUrl: thumbnailUrl ?? "" },
           editingProgram.publishedAt,
         ),
       )
-      setPrograms((current) =>
-        current.map((p) => (p.id === updated.id ? updated : p)),
-      )
+      await loadData()
+      setProgramFormErrors({})
+      setProgramForm(EMPTY_PROGRAM_FORM)
       setSheetMode(null)
+      setEditingProgramId(null)
       toast.success("Program updated.")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update program.")
@@ -238,7 +243,9 @@ export default function ProgramManagementPage() {
           <Button
             onClick={() => {
               setProgramForm(EMPTY_PROGRAM_FORM)
+              setProgramFormErrors({})
               setSheetMode("create")
+              setEditingProgramId(null)
             }}
           >
             <Plus className="mr-2 size-4" /> Create Program
@@ -336,6 +343,8 @@ export default function ProgramManagementPage() {
                           variant="secondary"
                           onClick={() => {
                             setProgramForm(toProgramFormState(program))
+                            setProgramFormErrors({})
+                            setEditingProgramId(program.id)
                             setSheetMode("settings")
                           }}
                         >
@@ -380,7 +389,12 @@ export default function ProgramManagementPage() {
         form={programForm}
         errors={programFormErrors}
         onChange={setProgramForm}
-        onOpenChange={(open) => !open && setSheetMode(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSheetMode(null)
+            setEditingProgramId(null)
+          }
+        }}
         isSubmitting={isSubmitting}
         onSubmit={
           sheetMode === "create"
@@ -407,8 +421,8 @@ export default function ProgramManagementPage() {
                 if (!programToDelete) return
                 void programApi
                   .remove(programToDelete.id)
-                  .then(() => {
-                    setPrograms((current) => current.filter((p) => p.id !== programToDelete.id))
+                  .then(async () => {
+                    await loadData()
                     toast.success("Program deleted.")
                     setProgramToDelete(null)
                   })

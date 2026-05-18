@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Search,
   User as UserIcon,
@@ -66,69 +66,69 @@ function exportUsersCsv(rows: UserResponse[], filename: string) {
   URL.revokeObjectURL(url)
 }
 
+const LIMIT = 10
+
 export default function UsersPage() {
   const [users, setUsers] = useState<UserResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [page, setPage] = useState(1)
-  const limit = 10
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [reloadToken, setReloadToken] = useState(0)
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true)
-      const pageSize = 100
-      const firstPage = await userApi.getUsers({
-        page: 1,
-        size: pageSize,
-        direction: "DESC",
-        field: "createdAt",
-      })
-      const allUsers = [...firstPage.data]
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setPage(1)
+      setSearchQuery(searchInput.trim())
+    }, 300)
 
-      if (firstPage.totalPages > 1) {
-        const restPages = await Promise.all(
-          Array.from({ length: firstPage.totalPages - 1 }, (_, i) =>
-            userApi.getUsers({
-              page: i + 2,
-              size: pageSize,
-              direction: "DESC",
-              field: "createdAt",
-            }),
-          ),
-        )
-        restPages.forEach((page) => allUsers.push(...page.data))
+    return () => window.clearTimeout(timeoutId)
+  }, [searchInput])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        const response = await userApi.getUsers({
+          page,
+          size: LIMIT,
+          direction: "DESC",
+          field: "createdAt",
+          keyword: searchQuery || undefined,
+        })
+
+        if (cancelled) return
+
+        setUsers(response.data)
+        setTotalPages(response.totalPages)
+        setTotalUsers(response.totalElement)
+      } catch (error) {
+        if (cancelled) return
+        const message = error instanceof Error ? error.message : "Failed to load users."
+        toast.error(message)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
-
-      setUsers(allUsers)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load users."
-      toast.error(message)
-    } finally {
-      setLoading(false)
     }
-  }, [])
 
-  useEffect(() => {
     void fetchUsers()
-  }, [fetchUsers])
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
-
-  useEffect(() => {
-    setPage(1)
-  }, [searchQuery])
-
-  const paginatedUsers = filteredUsers.slice((page - 1) * limit, page * limit)
-  const totalPages = Math.ceil(filteredUsers.length / limit)
+    return () => {
+      cancelled = true
+    }
+  }, [page, reloadToken, searchQuery])
 
   const updateUserInList = (nextUser: UserResponse) => {
     setUsers((prev) => prev.map((u) => (u.id === nextUser.id ? nextUser : u)))
+    setSelectedUser((prev) => (prev?.id === nextUser.id ? nextUser : prev))
   }
 
   const handleCopy = async (value: string, label: string) => {
@@ -138,6 +138,10 @@ export default function UsersPage() {
     } catch {
       toast.error(`Failed to copy ${label.toLowerCase()}.`)
     }
+  }
+
+  const handleRefreshPage = () => {
+    setReloadToken((prev) => prev + 1)
   }
 
   const handleRefreshUser = async (userId: string) => {
@@ -164,13 +168,14 @@ export default function UsersPage() {
   }
 
   const handleExport = () => {
-    if (filteredUsers.length === 0) {
+    if (users.length === 0) {
       toast.error("No users to export.")
       return
     }
+
     const stamp = new Date().toISOString().slice(0, 10)
-    exportUsersCsv(filteredUsers, `zenleader-users-${stamp}.csv`)
-    toast.success(`Exported ${filteredUsers.length} user(s).`)
+    exportUsersCsv(users, `zenleader-users-page-${page}-${stamp}.csv`)
+    toast.success(`Exported ${users.length} user(s) from the current page.`)
   }
 
   if (loading && users.length === 0) {
@@ -181,29 +186,29 @@ export default function UsersPage() {
     <div className="flex flex-col gap-8">
       <PageHeader
         title="User Management"
-        subtitle="Manage all users in the system including students, instructors, and staff."
+        subtitle="Browse user accounts from the backend with server-side search and pagination."
         stats={[
-          { label: "Total Users", value: formatNumber(users.length) },
-          { label: "Students", value: formatNumber(users.filter(u => u.roles.includes("STUDENT")).length) || 0 }
+          { label: "Total Users", value: formatNumber(totalUsers) },
+          { label: "Verified On Page", value: formatNumber(users.filter((u) => u.isVerified).length) },
         ]}
         actions={
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="lg"
-              onClick={() => void fetchUsers()}
+              onClick={handleRefreshPage}
               disabled={loading}
             >
-              <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} />
+              <RefreshCw className={cn("mr-2 size-4", loading && "animate-spin")} />
               Refresh
             </Button>
             <Button
               size="lg"
               onClick={handleExport}
-              disabled={loading || filteredUsers.length === 0}
+              disabled={loading || users.length === 0}
             >
-              <Download className="size-4 mr-2" />
-              Export CSV
+              <Download className="mr-2 size-4" />
+              Export Page CSV
             </Button>
           </div>
         }
@@ -211,31 +216,31 @@ export default function UsersPage() {
 
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md group">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <div className="relative max-w-md flex-1 group">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
               placeholder="Search by name or email..."
               className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="rounded-md bg-background border overflow-hidden">
+        <div className="overflow-hidden rounded-md border bg-background">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead className="px-6 h-12">User</TableHead>
-                <TableHead className="px-6 h-12">Roles</TableHead>
-                <TableHead className="px-6 h-12">Status</TableHead>
-                <TableHead className="px-6 h-12">Joined</TableHead>
-                <TableHead className="px-6 h-12 text-right">Actions</TableHead>
+                <TableHead className="h-12 px-6">User</TableHead>
+                <TableHead className="h-12 px-6">Roles</TableHead>
+                <TableHead className="h-12 px-6">Status</TableHead>
+                <TableHead className="h-12 px-6">Joined</TableHead>
+                <TableHead className="h-12 px-6 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.length > 0 ? (
-                paginatedUsers.map((user) => (
+              {users.length > 0 ? (
+                users.map((user) => (
                   <TableRow key={user.id} className="group border-none hover:bg-muted/40">
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -255,7 +260,7 @@ export default function UsersPage() {
                     <TableCell className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-[10px] uppercase px-1.5 py-0">
+                          <Badge key={idx} variant="secondary" className="px-1.5 py-0 text-[10px] uppercase">
                             {role}
                           </Badge>
                         ))}
@@ -263,9 +268,13 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       {user.isVerified ? (
-                        <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5">Verified</Badge>
+                        <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                          Verified
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">Unverified</Badge>
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Unverified
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm text-muted-foreground">
@@ -273,10 +282,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => void handleViewUserDetails(user.id)}
-                        >
+                        <Button size="sm" onClick={() => void handleViewUserDetails(user.id)}>
                           <UserIcon className="mr-2 size-4" />
                           Details
                         </Button>
@@ -322,7 +328,7 @@ export default function UsersPage() {
         <SmartPagination
           page={page}
           totalPages={totalPages}
-          totalItems={filteredUsers.length}
+          totalItems={totalUsers}
           onPageChange={setPage}
           itemName="users"
         />
@@ -343,19 +349,21 @@ export default function UsersPage() {
                   <span className="text-lg font-semibold tracking-tight text-foreground">{selectedUser.displayName}</span>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</span>
-                  <span className="font-bold text-base text-foreground/80">{selectedUser.email}</span>
+                  <span className="text-base font-bold text-foreground/80">{selectedUser.email}</span>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">User ID</span>
-                  <code className="text-xs font-mono font-medium bg-muted/50 p-2 rounded-lg break-all border border-border/40">{selectedUser.id}</code>
+                  <code className="break-all rounded-lg border border-border/40 bg-muted/50 p-2 font-mono text-xs font-medium">{selectedUser.id}</code>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Joined</span>
-                  <span className="font-bold text-base text-foreground/80">{formatUtcDate(selectedUser.createdAt)}</span>
+                  <span className="text-base font-bold text-foreground/80">{formatUtcDate(selectedUser.createdAt)}</span>
 
                   <span className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Sign In</span>
-                  <span className="font-bold text-base text-foreground/80">{selectedUser.lastSignInAt ? formatUtcDate(selectedUser.lastSignInAt) : "Never"}</span>
+                  <span className="text-base font-bold text-foreground/80">
+                    {selectedUser.lastSignInAt ? formatUtcDate(selectedUser.lastSignInAt) : "Never"}
+                  </span>
                 </div>
 
-                <div className="pt-6 border-t border-border/40">
+                <div className="border-t border-border/40 pt-6">
                   <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roles</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedUser.roles.length > 0 ? (
@@ -377,9 +385,7 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => selectedUser && void handleRefreshUser(selectedUser.id)}>
               Refresh
             </Button>
-            <Button
-              onClick={() => selectedUser && void handleCopy(selectedUser.id, "User ID")}
-            >
+            <Button onClick={() => selectedUser && void handleCopy(selectedUser.id, "User ID")}>
               Copy ID
             </Button>
           </DialogFooter>
